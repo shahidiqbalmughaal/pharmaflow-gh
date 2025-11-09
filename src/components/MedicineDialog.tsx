@@ -199,7 +199,7 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="quantity">
-                {sellingType === "per_packet" ? "Total Tablets *" : "Quantity *"}
+                {sellingType === "per_packet" ? "Total Tablets *" : "Quantity (Tablets) *"}
               </Label>
               <Input
                 id="quantity"
@@ -222,7 +222,7 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="purchase_price">Purchase Price *</Label>
+              <Label htmlFor="purchase_price">Purchase Price (Per Tablet) *</Label>
               <Input
                 id="purchase_price"
                 type="number"
@@ -234,7 +234,9 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="selling_price">Selling Price *</Label>
+              <Label htmlFor="selling_price">
+                {sellingType === "per_packet" ? "Selling Price (Per Tablet) *" : "Price Per Tablet (Selling) *"}
+              </Label>
               <Input
                 id="selling_price"
                 type="number"
@@ -243,6 +245,11 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
               />
               {errors.selling_price && (
                 <p className="text-sm text-destructive">{errors.selling_price.message}</p>
+              )}
+              {sellingType === "per_tablet" && quantity > 0 && watch("selling_price") > 0 && (
+                <p className="text-xs text-success font-medium">
+                  Total Value: {quantity} × {watch("selling_price")} = {(quantity * (watch("selling_price") || 0)).toFixed(2)}
+                </p>
               )}
             </div>
             <div className="space-y-2">
