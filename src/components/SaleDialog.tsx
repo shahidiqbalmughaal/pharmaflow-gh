@@ -96,6 +96,17 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
       for (const item of saleItems) {
         if (!item.itemId) throw new Error("Please select an item for all rows");
         if (item.quantity < 1) throw new Error("Quantity must be at least 1");
+        if (item.unitPrice < 0) throw new Error(`${item.itemName}: Rate must be positive`);
+        if (item.totalPrice < 0) throw new Error(`${item.itemName}: Total Price must be positive`);
+        
+        // Validate Quantity × Rate = Total Price
+        const calculatedTotal = item.quantity * item.unitPrice;
+        const difference = Math.abs(calculatedTotal - item.totalPrice);
+        if (difference >= 0.01) {
+          throw new Error(
+            `${item.itemName}: Total Price (${formatCurrency(item.totalPrice)}) does not match Quantity (${item.quantity}) × Rate (${formatCurrency(item.unitPrice)}) = ${formatCurrency(calculatedTotal)}`
+          );
+        }
 
         // Validate stock availability
         const availableItems = item.itemType === "medicine" ? medicines : cosmetics;
@@ -391,17 +402,47 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
 
       item.quantity = qty;
       
+      // Auto-calculate Total Price: Total = Quantity × Rate
+      item.totalPrice = item.unitPrice * qty;
+      
       // Update totals based on selling type
       if (item.sellingType === "per_packet" && item.tabletsPerPacket) {
         item.totalPackets = qty;
         item.totalTablets = qty * item.tabletsPerPacket;
-        item.totalPrice = item.unitPrice * qty;
         item.profit = (item.unitPrice - item.purchasePrice) * qty;
       } else {
         item.totalTablets = qty;
         item.totalPackets = 0;
-        item.totalPrice = item.unitPrice * qty;
         item.profit = (item.unitPrice - item.purchasePrice) * qty;
+      }
+    } else if (field === "unitPrice") {
+      const rate = Number(value);
+      
+      if (rate < 0) {
+        toast.error("Rate must be positive");
+        return;
+      }
+      
+      item.unitPrice = rate;
+      
+      // Auto-calculate Total Price: Total = Quantity × Rate
+      item.totalPrice = item.quantity * rate;
+      item.profit = (rate - item.purchasePrice) * item.quantity;
+      
+    } else if (field === "totalPrice") {
+      const total = Number(value);
+      
+      if (total < 0) {
+        toast.error("Total Price must be positive");
+        return;
+      }
+      
+      item.totalPrice = total;
+      
+      // Auto-calculate Rate: Rate = Total ÷ Quantity
+      if (item.quantity > 0) {
+        item.unitPrice = total / item.quantity;
+        item.profit = (item.unitPrice - item.purchasePrice) * item.quantity;
       }
     } else {
       (item as any)[field] = value;
@@ -484,56 +525,96 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
             </div>
             {saleItems.map((item, index) => (
               <div key={index} className="space-y-2">
-                <div className="grid grid-cols-6 gap-2 p-2 border rounded">
-                  <Select
-                    value={item.itemType}
-                    onValueChange={(value) => updateItem(index, "itemType", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="medicine">Medicine</SelectItem>
-                      <SelectItem value="cosmetic">Cosmetic</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={item.itemId}
-                    onValueChange={(value) => updateItem(index, "itemId", value)}
-                  >
-                    <SelectTrigger className="col-span-2">
-                      <SelectValue placeholder="Select item" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(item.itemType === "medicine" ? medicines : cosmetics)?.map((i) => (
-                        <SelectItem key={i.id} value={i.id}>
-                          {i[item.itemType === "medicine" ? "medicine_name" : "product_name"]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(index, "quantity", e.target.value)}
-                    placeholder={item.sellingType === "per_packet" ? "Packets" : "Qty"}
-                  />
-                  <div className="flex items-center">
-                    <span className="text-sm">{formatCurrency(item.totalPrice)}</span>
+                <div className="grid grid-cols-12 gap-2 p-3 border rounded bg-card">
+                  <div className="col-span-2">
+                    <Label className="text-xs">Type</Label>
+                    <Select
+                      value={item.itemType}
+                      onValueChange={(value) => updateItem(index, "itemType", value)}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="medicine">Medicine</SelectItem>
+                        <SelectItem value="cosmetic">Cosmetic</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeItem(index)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  <div className="col-span-4">
+                    <Label className="text-xs">Item Name</Label>
+                    <Select
+                      value={item.itemId}
+                      onValueChange={(value) => updateItem(index, "itemId", value)}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select item" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(item.itemType === "medicine" ? medicines : cosmetics)?.map((i) => (
+                          <SelectItem key={i.id} value={i.id}>
+                            {i[item.itemType === "medicine" ? "medicine_name" : "product_name"]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-xs">Quantity</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      step="1"
+                      className="h-9"
+                      value={item.quantity}
+                      onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                      placeholder={item.sellingType === "per_packet" ? "Packets" : "Qty"}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-xs">Rate</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="h-9"
+                      value={item.unitPrice}
+                      onChange={(e) => updateItem(index, "unitPrice", e.target.value)}
+                      placeholder="Rate"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-xs">Total Price</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="h-9"
+                      value={item.totalPrice}
+                      onChange={(e) => updateItem(index, "totalPrice", e.target.value)}
+                      placeholder="Total"
+                    />
+                  </div>
+                  <div className="col-span-12 sm:col-span-1 flex items-end justify-center">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9"
+                      onClick={() => removeItem(index)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
                 {item.sellingType === "per_packet" && item.tabletsPerPacket && item.itemId && (
                   <p className="text-xs text-muted-foreground px-2">
-                    Each packet = {item.tabletsPerPacket} tablets | Total = {item.totalTablets} tablets ({item.quantity} packets × {formatCurrency(item.unitPrice)})
+                    Each packet = {item.tabletsPerPacket} tablets | Total = {item.totalTablets} tablets | Profit: {formatCurrency(item.profit)}
+                  </p>
+                )}
+                {item.itemId && item.quantity > 0 && (
+                  <p className="text-xs text-success font-medium px-2">
+                    Profit: {formatCurrency(item.profit)} | Rate × Qty = {formatCurrency(item.unitPrice * item.quantity)}
                   </p>
                 )}
               </div>

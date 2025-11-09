@@ -236,9 +236,9 @@ export const saleItemSchema = z.object({
     .int("Quantity must be a whole number")
     .min(1, "Quantity must be at least 1"),
   unitPrice: z.number()
-    .positive("Unit price must be positive"),
+    .min(0, "Rate must be positive"),
   totalPrice: z.number()
-    .min(0, "Total price cannot be negative"),
+    .min(0, "Total price must be positive"),
   profit: z.number(),
   purchasePrice: z.number()
     .min(0, "Purchase price cannot be negative"),
@@ -246,7 +246,18 @@ export const saleItemSchema = z.object({
   totalTablets: z.number().optional(),
   totalPackets: z.number().optional(),
   sellingType: z.enum(["per_tablet", "per_packet"]).optional(),
-});
+}).refine(
+  (data) => {
+    // Validate that Quantity × Rate matches Total Price (with small tolerance for floating point)
+    const calculatedTotal = data.quantity * data.unitPrice;
+    const difference = Math.abs(calculatedTotal - data.totalPrice);
+    return difference < 0.01; // Allow 1 cent tolerance
+  },
+  {
+    message: "Total Price must equal Quantity × Rate",
+    path: ["totalPrice"],
+  }
+);
 
 // Sale validation schema
 export const saleSchema = z.object({
