@@ -6,6 +6,7 @@ import { Download } from "lucide-react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/currency";
 import { MedicineSalesReport } from "@/components/MedicineSalesReport";
+import { ApiIntegrationSection } from "@/components/ApiIntegrationSection";
 import { exportToCSV } from "@/lib/exportUtils";
 
 const Reports = () => {
@@ -60,6 +61,9 @@ const Reports = () => {
 
       {/* Medicine Sales Report - Main Feature */}
       <MedicineSalesReport />
+
+      {/* API Integration Section */}
+      <ApiIntegrationSection />
 
       {/* Daily Sales Summary */}
       <Card>

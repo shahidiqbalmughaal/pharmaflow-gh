@@ -1,18 +1,79 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ApiSettingsDialog } from "@/components/ApiSettingsDialog";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Shield } from "lucide-react";
 
 const Settings = () => {
+  // Check if user is admin
+  const { data: userRole } = useQuery({
+    queryKey: ["userRole"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+      
+      return data?.role;
+    },
+  });
+
+  const isAdmin = userRole === "admin";
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-foreground">Settings</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-foreground">Settings</h2>
+        {isAdmin && <ApiSettingsDialog />}
+      </div>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Application Settings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Settings configuration coming soon...</p>
-        </CardContent>
-      </Card>
+      {isAdmin ? (
+        <>
+          <Alert>
+            <Shield className="h-4 w-4" />
+            <AlertDescription>
+              Admin-only section: Configure secure API integration settings for external reporting features
+            </AlertDescription>
+          </Alert>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>API Integration</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                Configure external API endpoints and authentication to enable advanced reporting features.
+                Your API credentials are stored securely and never exposed to the client.
+              </p>
+              <div className="space-y-2">
+                <h4 className="font-medium">Available Features:</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                  <li>Daily sold medicines report</li>
+                  <li>Date range sales analysis</li>
+                  <li>Export reports to CSV/Excel</li>
+                  <li>Filter by distributor and date</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Application Settings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              General settings available. Contact your administrator for API integration access.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
