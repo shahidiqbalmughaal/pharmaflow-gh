@@ -1,7 +1,10 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { medicineSchema } from "@/lib/validations";
+import type { z } from "zod";
 import {
   Dialog,
   DialogContent,
@@ -19,9 +22,12 @@ interface MedicineDialogProps {
   medicine?: any;
 }
 
+type MedicineFormData = z.infer<typeof medicineSchema>;
+
 export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps) {
   const queryClient = useQueryClient();
-  const { register, handleSubmit, reset } = useForm({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<MedicineFormData>({
+    resolver: zodResolver(medicineSchema),
     defaultValues: medicine || {},
   });
 
@@ -58,7 +64,7 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
     },
   });
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: MedicineFormData) => {
     saveMutation.mutate(data);
   };
 
@@ -72,27 +78,42 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="medicine_name">Medicine Name *</Label>
-              <Input id="medicine_name" {...register("medicine_name", { required: true })} />
+              <Input id="medicine_name" {...register("medicine_name")} />
+              {errors.medicine_name && (
+                <p className="text-sm text-destructive">{errors.medicine_name.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="batch_no">Batch No *</Label>
-              <Input id="batch_no" {...register("batch_no", { required: true })} />
+              <Input id="batch_no" {...register("batch_no")} />
+              {errors.batch_no && (
+                <p className="text-sm text-destructive">{errors.batch_no.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="company_name">Company Name *</Label>
-              <Input id="company_name" {...register("company_name", { required: true })} />
+              <Input id="company_name" {...register("company_name")} />
+              {errors.company_name && (
+                <p className="text-sm text-destructive">{errors.company_name.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="rack_no">Rack No *</Label>
-              <Input id="rack_no" {...register("rack_no", { required: true })} />
+              <Input id="rack_no" {...register("rack_no")} />
+              {errors.rack_no && (
+                <p className="text-sm text-destructive">{errors.rack_no.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="quantity">Quantity *</Label>
               <Input
                 id="quantity"
                 type="number"
-                {...register("quantity", { required: true, valueAsNumber: true })}
+                {...register("quantity", { valueAsNumber: true })}
               />
+              {errors.quantity && (
+                <p className="text-sm text-destructive">{errors.quantity.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="purchase_price">Purchase Price *</Label>
@@ -100,8 +121,11 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
                 id="purchase_price"
                 type="number"
                 step="0.01"
-                {...register("purchase_price", { required: true, valueAsNumber: true })}
+                {...register("purchase_price", { valueAsNumber: true })}
               />
+              {errors.purchase_price && (
+                <p className="text-sm text-destructive">{errors.purchase_price.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="selling_price">Selling Price *</Label>
@@ -109,28 +133,40 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
                 id="selling_price"
                 type="number"
                 step="0.01"
-                {...register("selling_price", { required: true, valueAsNumber: true })}
+                {...register("selling_price", { valueAsNumber: true })}
               />
+              {errors.selling_price && (
+                <p className="text-sm text-destructive">{errors.selling_price.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="manufacturing_date">Manufacturing Date *</Label>
               <Input
                 id="manufacturing_date"
                 type="date"
-                {...register("manufacturing_date", { required: true })}
+                {...register("manufacturing_date")}
               />
+              {errors.manufacturing_date && (
+                <p className="text-sm text-destructive">{errors.manufacturing_date.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="expiry_date">Expiry Date *</Label>
               <Input
                 id="expiry_date"
                 type="date"
-                {...register("expiry_date", { required: true })}
+                {...register("expiry_date")}
               />
+              {errors.expiry_date && (
+                <p className="text-sm text-destructive">{errors.expiry_date.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="supplier">Supplier *</Label>
-              <Input id="supplier" {...register("supplier", { required: true })} />
+              <Input id="supplier" {...register("supplier")} />
+              {errors.supplier && (
+                <p className="text-sm text-destructive">{errors.supplier.message}</p>
+              )}
             </div>
           </div>
           <div className="flex justify-end gap-2">

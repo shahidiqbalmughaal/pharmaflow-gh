@@ -1,7 +1,10 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { salesmanSchema } from "@/lib/validations";
+import type { z } from "zod";
 import {
   Dialog,
   DialogContent,
@@ -19,9 +22,12 @@ interface SalesmanDialogProps {
   salesman?: any;
 }
 
+type SalesmanFormData = z.infer<typeof salesmanSchema>;
+
 export function SalesmanDialog({ open, onClose, salesman }: SalesmanDialogProps) {
   const queryClient = useQueryClient();
-  const { register, handleSubmit, reset } = useForm({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<SalesmanFormData>({
+    resolver: zodResolver(salesmanSchema),
     defaultValues: salesman || {},
   });
 
@@ -58,7 +64,7 @@ export function SalesmanDialog({ open, onClose, salesman }: SalesmanDialogProps)
     },
   });
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: SalesmanFormData) => {
     saveMutation.mutate(data);
   };
 
@@ -71,27 +77,42 @@ export function SalesmanDialog({ open, onClose, salesman }: SalesmanDialogProps)
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Name *</Label>
-            <Input id="name" {...register("name", { required: true })} />
+            <Input id="name" {...register("name")} />
+            {errors.name && (
+              <p className="text-sm text-destructive">{errors.name.message}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="contact">Contact *</Label>
-            <Input id="contact" {...register("contact", { required: true })} />
+            <Input id="contact" {...register("contact")} placeholder="03XX-XXXXXXX" />
+            {errors.contact && (
+              <p className="text-sm text-destructive">{errors.contact.message}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="cnic">CNIC *</Label>
-            <Input id="cnic" {...register("cnic", { required: true })} />
+            <Input id="cnic" {...register("cnic")} placeholder="12345-1234567-1" />
+            {errors.cnic && (
+              <p className="text-sm text-destructive">{errors.cnic.message}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="joining_date">Joining Date *</Label>
             <Input
               id="joining_date"
               type="date"
-              {...register("joining_date", { required: true })}
+              {...register("joining_date")}
             />
+            {errors.joining_date && (
+              <p className="text-sm text-destructive">{errors.joining_date.message}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="assigned_counter">Assigned Counter *</Label>
-            <Input id="assigned_counter" {...register("assigned_counter", { required: true })} />
+            <Input id="assigned_counter" {...register("assigned_counter")} />
+            {errors.assigned_counter && (
+              <p className="text-sm text-destructive">{errors.assigned_counter.message}</p>
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose}>

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { validateStockAvailability } from "@/lib/validations";
 import {
   Dialog,
   DialogContent,
@@ -74,11 +75,41 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      // Validation
+      if (!salesmanId) throw new Error("Please select a salesman");
+      if (saleItems.length === 0) throw new Error("Please add at least one item");
+
       const salesman = salesmen?.find((s) => s.id === salesmanId);
       if (!salesman) throw new Error("Salesman not found");
-      if (saleItems.length === 0) throw new Error("No items in sale");
+
+      // Validate all items have required fields
+      for (const item of saleItems) {
+        if (!item.itemId) throw new Error("Please select an item for all rows");
+        if (item.quantity < 1) throw new Error("Quantity must be at least 1");
+
+        // Validate stock availability
+        const availableItems = item.itemType === "medicine" ? medicines : cosmetics;
+        const validation = validateStockAvailability(
+          item.itemType,
+          item.itemId,
+          item.quantity,
+          availableItems || []
+        );
+
+        if (!validation.isValid) {
+          throw new Error(`${item.itemName}: ${validation.message}`);
+        }
+      }
 
       const subtotal = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
+      
+      // Validate discount
+      if (discount < 0) throw new Error("Discount cannot be negative");
+      if (discount > subtotal) throw new Error("Discount cannot exceed subtotal");
+      
+      // Validate tax
+      if (tax < 0) throw new Error("Tax cannot be negative");
+
       const totalProfit = saleItems.reduce((sum, item) => sum + item.profit, 0);
       const totalAmount = subtotal - discount + tax;
 
@@ -176,20 +207,62 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
     const newItems = [...saleItems];
     const item = newItems[index];
     
-    if (field === "itemId") {
+    if (field === "itemType") {
+      // Reset item when type changes
+      item.itemType = value as "medicine" | "cosmetic";
+      item.itemId = "";
+      item.itemName = "";
+      item.batchNo = "";
+      item.unitPrice = 0;
+      item.purchasePrice = 0;
+      item.totalPrice = 0;
+      item.profit = 0;
+    } else if (field === "itemId") {
       const allItems = item.itemType === "medicine" ? medicines : cosmetics;
       const selectedItem = allItems?.find((i) => i.id === value);
       if (selectedItem) {
+        const availableQuantity = selectedItem.quantity;
+        
         item.itemId = value;
         item.itemName = selectedItem[item.itemType === "medicine" ? "medicine_name" : "product_name"];
         item.batchNo = selectedItem.batch_no;
         item.unitPrice = Number(selectedItem.selling_price);
         item.purchasePrice = Number(selectedItem.purchase_price);
+        
+        // Validate quantity doesn't exceed available stock
+        if (item.quantity > availableQuantity) {
+          item.quantity = availableQuantity;
+          toast.error(`Quantity adjusted to available stock: ${availableQuantity} units`);
+        }
+        
         item.totalPrice = item.unitPrice * item.quantity;
         item.profit = (item.unitPrice - item.purchasePrice) * item.quantity;
       }
     } else if (field === "quantity") {
-      item.quantity = Number(value);
+      const qty = Number(value);
+      
+      if (qty < 1) {
+        toast.error("Quantity must be at least 1");
+        return;
+      }
+
+      // Validate against available stock
+      if (item.itemId) {
+        const allItems = item.itemType === "medicine" ? medicines : cosmetics;
+        const validation = validateStockAvailability(
+          item.itemType,
+          item.itemId,
+          qty,
+          allItems || []
+        );
+
+        if (!validation.isValid) {
+          toast.error(validation.message);
+          return;
+        }
+      }
+
+      item.quantity = qty;
       item.totalPrice = item.unitPrice * item.quantity;
       item.profit = (item.unitPrice - item.purchasePrice) * item.quantity;
     } else {
