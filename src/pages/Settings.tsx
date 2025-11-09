@@ -5,7 +5,7 @@ import { AlertHistory } from "@/components/AlertHistory";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Shield } from "lucide-react";
+import { Shield, Info } from "lucide-react";
 
 const Settings = () => {
   // Check if user is admin
@@ -72,6 +72,17 @@ const Settings = () => {
           </Card>
 
           <AlertHistory />
+
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Note:</strong> After configuring alert settings, remember to set up your Resend account at{" "}
+              <a href="https://resend.com" target="_blank" rel="noopener noreferrer" className="underline">
+                resend.com
+              </a>{" "}
+              and verify your domain to enable email notifications.
+            </AlertDescription>
+          </Alert>
 
           <Card>
             <CardHeader>

@@ -30,9 +30,9 @@ export function ApiSettingsDialog() {
       const { data, error } = await supabase
         .from("api_settings")
         .select("*")
-        .single();
+        .maybeSingle();
       
-      if (error && error.code !== "PGRST116") {
+      if (error) {
         throw error;
       }
       
