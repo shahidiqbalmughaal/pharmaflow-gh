@@ -14,6 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      alert_history: {
+        Row: {
+          alert_type: string
+          batch_no: string | null
+          created_at: string
+          current_quantity: number | null
+          expiry_date: string | null
+          id: string
+          item_id: string
+          item_name: string
+          item_type: string
+          notification_method: string
+          sent_at: string
+          sent_to: string
+        }
+        Insert: {
+          alert_type: string
+          batch_no?: string | null
+          created_at?: string
+          current_quantity?: number | null
+          expiry_date?: string | null
+          id?: string
+          item_id: string
+          item_name: string
+          item_type: string
+          notification_method: string
+          sent_at?: string
+          sent_to: string
+        }
+        Update: {
+          alert_type?: string
+          batch_no?: string | null
+          created_at?: string
+          current_quantity?: number | null
+          expiry_date?: string | null
+          id?: string
+          item_id?: string
+          item_name?: string
+          item_type?: string
+          notification_method?: string
+          sent_at?: string
+          sent_to?: string
+        }
+        Relationships: []
+      }
+      alert_settings: {
+        Row: {
+          admin_emails: string[]
+          admin_whatsapp_numbers: string[]
+          check_frequency_hours: number
+          created_at: string
+          email_enabled: boolean
+          expiry_warning_days: number
+          id: string
+          low_stock_threshold: number
+          updated_at: string
+          whatsapp_enabled: boolean
+        }
+        Insert: {
+          admin_emails?: string[]
+          admin_whatsapp_numbers?: string[]
+          check_frequency_hours?: number
+          created_at?: string
+          email_enabled?: boolean
+          expiry_warning_days?: number
+          id?: string
+          low_stock_threshold?: number
+          updated_at?: string
+          whatsapp_enabled?: boolean
+        }
+        Update: {
+          admin_emails?: string[]
+          admin_whatsapp_numbers?: string[]
+          check_frequency_hours?: number
+          created_at?: string
+          email_enabled?: boolean
+          expiry_warning_days?: number
+          id?: string
+          low_stock_threshold?: number
+          updated_at?: string
+          whatsapp_enabled?: boolean
+        }
+        Relationships: []
+      }
       api_settings: {
         Row: {
           api_base_url: string
