@@ -12,11 +12,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { EmptyState } from "@/components/EmptyState";
-import { Download, Search, Calendar as CalendarIcon, AlertTriangle, Package } from "lucide-react";
+import { Download, Search, Calendar as CalendarIcon, AlertTriangle, Package, MessageCircle } from "lucide-react";
 import { format, isWithinInterval, addMonths, differenceInDays } from "date-fns";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
-import { exportToCSV } from "@/lib/exportUtils";
+import { exportToCSV, formatForWhatsApp, shareViaWhatsApp } from "@/lib/exportUtils";
+import { toast } from "sonner";
 
 interface MedicineSaleItem {
   id: string;
@@ -190,6 +191,84 @@ export function MedicineSalesReport() {
     exportToCSV(exportData, fileName);
   };
 
+  // WhatsApp sharing function
+  const handleWhatsAppShare = () => {
+    if (!filteredSales || filteredSales.length === 0) {
+      toast.error("No data to share");
+      return;
+    }
+
+    // Group medicines by supplier
+    const supplierGroups = filteredSales.reduce((acc, item) => {
+      const supplier = item.medicine?.supplier || "Unknown Supplier";
+      if (!acc[supplier]) {
+        acc[supplier] = [];
+      }
+      acc[supplier].push(item);
+      return acc;
+    }, {} as Record<string, typeof filteredSales>);
+
+    // Format message
+    let message = `*📋 Medicine Sales Report*\n`;
+    message += `📅 Period: ${format(dateRange.from, "MMM dd, yyyy")} - ${format(dateRange.to, "MMM dd, yyyy")}\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+    Object.entries(supplierGroups).forEach(([supplier, items]) => {
+      message += `*🏢 ${supplier}*\n\n`;
+      
+      items.forEach((item, idx) => {
+        message += `${idx + 1}. *${item.item_name}*\n`;
+        message += `   📦 Batch: ${item.batch_no}\n`;
+        message += `   💊 Quantity: ${item.total_tablets || item.quantity} tablets`;
+        
+        if (item.total_packets) {
+          message += ` (${item.total_packets} packs)\n`;
+        } else {
+          message += `\n`;
+        }
+        
+        message += `   💰 Price: ${formatCurrency(Number(item.total_price))}\n`;
+        message += `   📍 Rack: ${item.medicine?.rack_no || "N/A"}\n`;
+        
+        if (item.medicine?.expiry_date) {
+          const daysUntilExpiry = differenceInDays(new Date(item.medicine.expiry_date), new Date());
+          message += `   📅 Expiry: ${format(new Date(item.medicine.expiry_date), "MMM yyyy")}`;
+          
+          if (daysUntilExpiry <= 30 && daysUntilExpiry > 0) {
+            message += ` ⚠️ (${daysUntilExpiry}d left)`;
+          }
+          message += `\n`;
+        }
+        
+        if (item.medicine?.quantity !== undefined && item.medicine.quantity < 10) {
+          message += `   ⚠️ Low Stock: ${item.medicine.quantity} units\n`;
+        }
+        
+        message += `\n`;
+      });
+
+      // Supplier subtotal
+      const supplierTotal = items.reduce((sum, item) => sum + Number(item.total_price), 0);
+      const supplierQty = items.reduce((sum, item) => sum + (item.total_tablets || item.quantity), 0);
+      message += `*Subtotal for ${supplier}:*\n`;
+      message += `Total Items: ${items.length}\n`;
+      message += `Total Quantity: ${supplierQty} tablets\n`;
+      message += `Total Amount: ${formatCurrency(supplierTotal)}\n`;
+      message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+    });
+
+    // Grand total
+    message += `*📊 GRAND TOTAL*\n`;
+    message += `Total Medicines: ${filteredSales.length}\n`;
+    message += `Total Quantity: ${totals.quantity} tablets\n`;
+    message += `Total Amount: ${formatCurrency(totals.amount)}\n\n`;
+    message += `_Generated from PharmaFlow POS_`;
+
+    // Share via WhatsApp
+    shareViaWhatsApp(message);
+    toast.success("Opening WhatsApp...");
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -198,10 +277,22 @@ export function MedicineSalesReport() {
             <Package className="h-5 w-5" />
             Medicine Sales Report
           </CardTitle>
-          <Button onClick={handleExport} disabled={!filteredSales || filteredSales.length === 0} size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleWhatsAppShare} 
+              disabled={!filteredSales || filteredSales.length === 0} 
+              size="sm"
+              variant="outline"
+              className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700 dark:bg-green-950 dark:hover:bg-green-900 dark:border-green-800 dark:text-green-400"
+            >
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Share via WhatsApp
+            </Button>
+            <Button onClick={handleExport} disabled={!filteredSales || filteredSales.length === 0} size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
