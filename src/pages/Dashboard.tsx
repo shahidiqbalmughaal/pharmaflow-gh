@@ -3,6 +3,23 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { 
   DollarSign, 
   Pill, 
@@ -10,7 +27,8 @@ import {
   TrendingUp, 
   AlertTriangle,
   Clock,
-  ShoppingCart
+  ShoppingCart,
+  History
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/currency";
@@ -18,6 +36,47 @@ import { SaleDialog } from "@/components/SaleDialog";
 
 const Dashboard = () => {
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
+  
+  // Sales history filters
+  const today = new Date();
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(today.getDate() - 7);
+  
+  const [startDate, setStartDate] = useState(format(sevenDaysAgo, "yyyy-MM-dd"));
+  const [endDate, setEndDate] = useState(format(today, "yyyy-MM-dd"));
+  const [selectedSalesman, setSelectedSalesman] = useState<string>("all");
+
+  // Fetch salesmen for filter
+  const { data: salesmen } = useQuery({
+    queryKey: ["salesmen"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("salesmen").select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch sales history with filters
+  const { data: salesHistory, isLoading: isLoadingSalesHistory } = useQuery({
+    queryKey: ["salesHistory", startDate, endDate, selectedSalesman],
+    queryFn: async () => {
+      let query = supabase
+        .from("sales")
+        .select("*")
+        .gte("sale_date", new Date(startDate).toISOString())
+        .lte("sale_date", new Date(endDate + "T23:59:59").toISOString())
+        .order("sale_date", { ascending: false })
+        .limit(50);
+
+      if (selectedSalesman !== "all") {
+        query = query.eq("salesman_id", selectedSalesman);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Fetch today's sales
   const { data: todaySales } = useQuery({
@@ -290,6 +349,135 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Sales History Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Sales History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="space-y-2">
+              <Label htmlFor="start-date">Start Date</Label>
+              <Input
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="end-date">End Date</Label>
+              <Input
+                id="end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="salesman-filter">Salesman</Label>
+              <Select value={selectedSalesman} onValueChange={setSelectedSalesman}>
+                <SelectTrigger id="salesman-filter">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Salesmen</SelectItem>
+                  {salesmen?.map((salesman) => (
+                    <SelectItem key={salesman.id} value={salesman.id}>
+                      {salesman.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Sales Table */}
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date & Time</TableHead>
+                  <TableHead>Salesman</TableHead>
+                  <TableHead className="text-right">Subtotal</TableHead>
+                  <TableHead className="text-right">Discount</TableHead>
+                  <TableHead className="text-right">Tax</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Profit</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoadingSalesHistory ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Loading sales history...
+                    </TableCell>
+                  </TableRow>
+                ) : salesHistory && salesHistory.length > 0 ? (
+                  salesHistory.map((sale) => (
+                    <TableRow key={sale.id}>
+                      <TableCell className="font-medium">
+                        {format(new Date(sale.sale_date), "MMM dd, yyyy HH:mm")}
+                      </TableCell>
+                      <TableCell>{sale.salesman_name}</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(Number(sale.subtotal))}
+                      </TableCell>
+                      <TableCell className="text-right text-warning">
+                        -{formatCurrency(Number(sale.discount))}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        +{formatCurrency(Number(sale.tax))}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {formatCurrency(Number(sale.total_amount))}
+                      </TableCell>
+                      <TableCell className="text-right text-success font-semibold">
+                        {formatCurrency(Number(sale.total_profit))}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No sales found for the selected filters
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {salesHistory && salesHistory.length > 0 && (
+            <div className="mt-4 flex justify-between items-center text-sm text-muted-foreground">
+              <span>Showing {salesHistory.length} transaction(s)</span>
+              <div className="flex gap-4">
+                <span>
+                  Total Sales:{" "}
+                  <span className="font-semibold text-foreground">
+                    {formatCurrency(
+                      salesHistory.reduce((sum, sale) => sum + Number(sale.total_amount), 0)
+                    )}
+                  </span>
+                </span>
+                <span>
+                  Total Profit:{" "}
+                  <span className="font-semibold text-success">
+                    {formatCurrency(
+                      salesHistory.reduce((sum, sale) => sum + Number(sale.total_profit), 0)
+                    )}
+                  </span>
+                </span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <SaleDialog 
         open={isSaleDialogOpen} 
