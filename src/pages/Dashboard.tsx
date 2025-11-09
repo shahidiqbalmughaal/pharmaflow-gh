@@ -232,13 +232,13 @@ const Dashboard = () => {
   const { data: expiryAlerts } = useQuery({
     queryKey: ["expiryAlerts"],
     queryFn: async () => {
-      const thirtyDaysFromNow = new Date();
-      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+      const sixMonthsFromNow = new Date();
+      sixMonthsFromNow.setDate(sixMonthsFromNow.getDate() + 180);
       
       const { data, error } = await supabase
         .from("medicines")
         .select("*")
-        .lte("expiry_date", thirtyDaysFromNow.toISOString())
+        .lte("expiry_date", sixMonthsFromNow.toISOString())
         .order("expiry_date", { ascending: true })
         .limit(5);
       
@@ -374,7 +374,7 @@ const Dashboard = () => {
               {expiryAlerts?.length || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Expiring within 30 days
+              Expiring within 6 months
             </p>
           </CardContent>
         </Card>
