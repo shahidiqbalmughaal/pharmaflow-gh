@@ -1,5 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiSettingsDialog } from "@/components/ApiSettingsDialog";
+import { AlertSettingsDialog } from "@/components/AlertSettingsDialog";
+import { AlertHistory } from "@/components/AlertHistory";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -29,7 +31,12 @@ const Settings = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-foreground">Settings</h2>
-        {isAdmin && <ApiSettingsDialog />}
+        {isAdmin && (
+          <div className="flex gap-2">
+            <AlertSettingsDialog />
+            <ApiSettingsDialog />
+          </div>
+        )}
       </div>
       
       {isAdmin ? (
@@ -37,9 +44,34 @@ const Settings = () => {
           <Alert>
             <Shield className="h-4 w-4" />
             <AlertDescription>
-              Admin-only section: Configure secure API integration settings for external reporting features
+              Admin-only section: Configure alerts and API integration settings
             </AlertDescription>
           </Alert>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Inventory Alerts</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                Configure automatic notifications for low stock levels and near-expiry items.
+                Receive alerts via email or WhatsApp to ensure timely reordering and inventory management.
+              </p>
+              <div className="space-y-2">
+                <h4 className="font-medium">Features:</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                  <li>Low stock threshold alerts</li>
+                  <li>Near expiry date warnings</li>
+                  <li>Email notifications to multiple admins</li>
+                  <li>WhatsApp notification links</li>
+                  <li>Customizable check frequency</li>
+                  <li>Alert history tracking</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+
+          <AlertHistory />
 
           <Card>
             <CardHeader>
