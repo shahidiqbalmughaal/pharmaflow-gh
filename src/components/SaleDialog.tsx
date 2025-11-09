@@ -50,7 +50,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
   const queryClient = useQueryClient();
   const receiptRef = useRef<HTMLDivElement>(null);
   const [salesmanId, setSalesmanId] = useState("");
-  const [customerId, setCustomerId] = useState("");
+  const [customerId, setCustomerId] = useState("walk-in");
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [tax, setTax] = useState(0);
@@ -107,7 +107,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
 
   // Apply customer discount when customer is selected
   useEffect(() => {
-    if (customerId) {
+    if (customerId && customerId !== "walk-in") {
       const discount = customerDiscounts?.find((d) => d.customer_id === customerId);
       if (discount) {
         setDiscountPercentage(Number(discount.discount_percentage));
@@ -177,7 +177,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
       // Calculate loyalty points (1 point per 100 currency spent)
       const loyaltyPointsEarned = Math.floor(totalAmount / 100);
 
-      const customer = customerId ? customers?.find((c) => c.id === customerId) : null;
+      const customer = customerId && customerId !== "walk-in" ? customers?.find((c) => c.id === customerId) : null;
 
       // Insert sale
       const { data: sale, error: saleError } = await supabase
@@ -185,7 +185,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
         .insert({
           salesman_id: salesmanId,
           salesman_name: salesman.name,
-          customer_id: customerId || null,
+          customer_id: customer?.id || null,
           customer_name: customer?.name || null,
           loyalty_points_earned: loyaltyPointsEarned,
           subtotal,
@@ -201,7 +201,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
       if (saleError) throw saleError;
 
       // Update customer stats if customer is selected
-      if (customerId && customer) {
+      if (customer) {
         const { error: updateError } = await supabase
           .from("customers")
           .update({
@@ -209,7 +209,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
             total_purchases: (customer.total_purchases || 0) + 1,
             total_spent: (Number(customer.total_spent) || 0) + totalAmount,
           })
-          .eq("id", customerId);
+          .eq("id", customer.id);
 
         if (updateError) throw updateError;
       }
@@ -288,7 +288,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
 
   const resetForm = () => {
     setSalesmanId("");
-    setCustomerId("");
+    setCustomerId("walk-in");
     setSaleItems([]);
     setDiscountPercentage(0);
     setTax(0);
@@ -582,7 +582,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
                 <SelectValue placeholder="Select customer or leave blank" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Walk-in Customer</SelectItem>
+                <SelectItem value="walk-in">Walk-in Customer</SelectItem>
                 {customers?.map((customer) => (
                   <SelectItem key={customer.id} value={customer.id}>
                     {customer.name} - {customer.phone}
@@ -590,7 +590,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
                 ))}
               </SelectContent>
             </Select>
-            {customerId && (
+            {customerId && customerId !== "walk-in" && (
               <p className="text-xs text-muted-foreground">
                 Loyalty Points: {customers?.find(c => c.id === customerId)?.loyalty_points || 0}
               </p>
