@@ -18,7 +18,7 @@ import { LoadingSpinner } from "./LoadingSpinner";
 interface DashboardDetailModalProps {
   open: boolean;
   onClose: () => void;
-  type: "sales" | "profit" | "medicines" | "cosmetics" | "lowStock" | "expiry" | "allLowStock" | null;
+  type: "sales" | "cash" | "medicines" | "cosmetics" | "lowStock" | "expiry" | "allLowStock" | null;
 }
 
 export function DashboardDetailModal({ open, onClose, type }: DashboardDetailModalProps) {
@@ -50,7 +50,7 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
       if (error) throw error;
       return data;
     },
-    enabled: open && (type === "sales" || type === "profit"),
+    enabled: open && (type === "sales" || type === "cash"),
   });
 
   // Fetch medicines sold today
@@ -138,7 +138,7 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
   const getTitle = () => {
     switch (type) {
       case "sales": return "Today's Sales Transactions";
-      case "profit": return "Today's Profit Breakdown";
+      case "cash": return "Today's Cash Collection";
       case "medicines": return "Medicines Sold Today";
       case "cosmetics": return "Cosmetics Sold Today";
       case "lowStock": return "Low Stock Alert";
@@ -202,28 +202,28 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
                 ))}
               </TableBody>
             </Table>
-          ) : type === "profit" && todaySales ? (
+          ) : type === "cash" && todaySales ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Batch</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Unit Price</TableHead>
-                  <TableHead>Profit</TableHead>
+                  <TableHead>Time</TableHead>
+                  <TableHead>Salesman</TableHead>
+                  <TableHead>Cash Collected</TableHead>
+                  <TableHead>Items</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filterData(todaySales.flatMap((sale: any) => 
-                  (sale.sale_items || []).map((item: any) => ({ ...item, sale_date: sale.sale_date }))
-                )).map((item: any, idx: number) => (
-                  <TableRow key={idx}>
-                    <TableCell>{item.item_name}</TableCell>
-                    <TableCell>{item.batch_no}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{formatCurrency(Number(item.unit_price))}</TableCell>
-                    <TableCell className="text-success font-bold">
-                      {formatCurrency(Number(item.profit))}
+                {filterData(todaySales).map((sale: any) => (
+                  <TableRow key={sale.id}>
+                    <TableCell>
+                      {format(new Date(sale.sale_date), "HH:mm")}
+                    </TableCell>
+                    <TableCell>{sale.salesman_name}</TableCell>
+                    <TableCell className="font-semibold text-success">
+                      {formatCurrency(Number(sale.total_amount))}
+                    </TableCell>
+                    <TableCell>
+                      {sale.sale_items?.length || 0} items
                     </TableCell>
                   </TableRow>
                 ))}

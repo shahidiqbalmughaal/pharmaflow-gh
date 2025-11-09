@@ -8,7 +8,6 @@ import { TrendingUp } from "lucide-react";
 interface Sale {
   sale_date: string;
   total_amount: number;
-  total_profit: number;
 }
 
 interface SalesChartProps {
@@ -19,13 +18,13 @@ interface SalesChartProps {
 export function SalesChart({ sales, days = 7 }: SalesChartProps) {
   const chartData = useMemo(() => {
     const today = new Date();
-    const dataMap = new Map<string, { sales: number; profit: number; count: number }>();
+    const dataMap = new Map<string, { sales: number; count: number }>();
 
     // Initialize all days with zero values
     for (let i = days - 1; i >= 0; i--) {
       const date = subDays(today, i);
       const dateKey = format(date, "MMM dd");
-      dataMap.set(dateKey, { sales: 0, profit: 0, count: 0 });
+      dataMap.set(dateKey, { sales: 0, count: 0 });
     }
 
     // Aggregate sales data
@@ -34,7 +33,6 @@ export function SalesChart({ sales, days = 7 }: SalesChartProps) {
       const existing = dataMap.get(dateKey);
       if (existing) {
         existing.sales += Number(sale.total_amount);
-        existing.profit += Number(sale.total_profit);
         existing.count += 1;
         dataMap.set(dateKey, existing);
       }
@@ -43,18 +41,12 @@ export function SalesChart({ sales, days = 7 }: SalesChartProps) {
     return Array.from(dataMap.entries()).map(([date, data]) => ({
       date,
       sales: data.sales,
-      profit: data.profit,
       count: data.count,
     }));
   }, [sales, days]);
 
   const totalSales = useMemo(
     () => chartData.reduce((sum, item) => sum + item.sales, 0),
-    [chartData]
-  );
-
-  const totalProfit = useMemo(
-    () => chartData.reduce((sum, item) => sum + item.profit, 0),
     [chartData]
   );
 
@@ -65,9 +57,6 @@ export function SalesChart({ sales, days = 7 }: SalesChartProps) {
           <p className="font-semibold mb-2">{payload[0].payload.date}</p>
           <p className="text-sm text-primary">
             Sales: {formatCurrency(payload[0].value)}
-          </p>
-          <p className="text-sm text-success">
-            Profit: {formatCurrency(payload[1].value)}
           </p>
           <p className="text-sm text-muted-foreground">
             Transactions: {payload[0].payload.count}
@@ -90,10 +79,6 @@ export function SalesChart({ sales, days = 7 }: SalesChartProps) {
             <span className="text-muted-foreground">Total Sales: </span>
             <span className="font-semibold text-primary">{formatCurrency(totalSales)}</span>
           </div>
-          <div>
-            <span className="text-muted-foreground">Total Profit: </span>
-            <span className="font-semibold text-success">{formatCurrency(totalProfit)}</span>
-          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -113,7 +98,6 @@ export function SalesChart({ sales, days = 7 }: SalesChartProps) {
             <Tooltip content={<CustomTooltip />} />
             <Legend />
             <Bar dataKey="sales" fill="hsl(var(--primary))" name="Sales" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="profit" fill="hsl(var(--success))" name="Profit" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

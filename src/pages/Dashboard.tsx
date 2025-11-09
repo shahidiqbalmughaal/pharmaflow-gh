@@ -69,7 +69,7 @@ const Dashboard = () => {
   
   // Modal state
   const [activeCard, setActiveCard] = useState<string | null>(null);
-  const [modalType, setModalType] = useState<"sales" | "profit" | "medicines" | "cosmetics" | "lowStock" | "expiry" | "allLowStock" | null>(null);
+  const [modalType, setModalType] = useState<"sales" | "cash" | "medicines" | "cosmetics" | "lowStock" | "expiry" | "allLowStock" | null>(null);
 
   // Fetch salesmen for filter
   const { data: salesmen } = useQuery({
@@ -109,7 +109,7 @@ const Dashboard = () => {
       const sevenDaysAgo = subDays(new Date(), 7);
       const { data, error } = await supabase
         .from("sales")
-        .select("sale_date, total_amount, total_profit")
+        .select("sale_date, total_amount")
         .gte("sale_date", sevenDaysAgo.toISOString())
         .order("sale_date", { ascending: true });
 
@@ -153,15 +153,14 @@ const Dashboard = () => {
       
       const { data, error } = await supabase
         .from("sales")
-        .select("total_amount, total_profit")
+        .select("total_amount")
         .gte("sale_date", today.toISOString());
       
       if (error) throw error;
       
       const totalSales = data.reduce((sum, sale) => sum + Number(sale.total_amount), 0);
-      const totalProfit = data.reduce((sum, sale) => sum + Number(sale.total_profit), 0);
       
-      return { totalSales, totalProfit, count: data.length };
+      return { totalSales, count: data.length };
     },
   });
 
@@ -320,28 +319,28 @@ const Dashboard = () => {
         <Tooltip>
           <TooltipTrigger asChild>
             <Card 
-              className={`cursor-pointer transition-all hover:shadow-lg ${activeCard === 'profit' ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+              className={`cursor-pointer transition-all hover:shadow-lg ${activeCard === 'cash' ? 'ring-2 ring-primary bg-primary/5' : ''}`}
               onClick={() => {
-                setActiveCard('profit');
-                setModalType('profit');
+                setActiveCard('cash');
+                setModalType('cash');
               }}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Today's Profit</CardTitle>
-                <TrendingUp className={`h-4 w-4 ${activeCard === 'profit' ? 'text-success' : 'text-muted-foreground'}`} />
+                <CardTitle className="text-sm font-medium">Cash in Hand</CardTitle>
+                <DollarSign className={`h-4 w-4 ${activeCard === 'cash' ? 'text-success' : 'text-muted-foreground'}`} />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-success">
-                  {formatCurrency(todaySales?.totalProfit || 0)}
+                  {formatCurrency(todaySales?.totalSales || 0)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Net profit
+                  Today's cash collected
                 </p>
               </CardContent>
             </Card>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Click to view profit breakdown</p>
+            <p>Total cash collected from today's sales</p>
           </TooltipContent>
         </Tooltip>
 
@@ -648,7 +647,6 @@ const Dashboard = () => {
                       <TableHead className="text-right">Discount</TableHead>
                       <TableHead className="text-right">Tax</TableHead>
                       <TableHead className="text-right">Total</TableHead>
-                      <TableHead className="text-right">Profit</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -669,9 +667,6 @@ const Dashboard = () => {
                         </TableCell>
                         <TableCell className="text-right font-semibold">
                           {formatCurrency(Number(sale.total_amount))}
-                        </TableCell>
-                        <TableCell className="text-right text-success font-semibold">
-                          {formatCurrency(Number(sale.total_profit))}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -694,7 +689,7 @@ const Dashboard = () => {
 
               {/* Summary */}
               <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Total Transactions: </span>
                     <span className="font-semibold text-foreground">{filteredSales.length}</span>
@@ -703,12 +698,6 @@ const Dashboard = () => {
                     <span className="text-muted-foreground">Total Sales: </span>
                     <span className="font-semibold text-primary">
                       {formatCurrency(filteredSales.reduce((sum, sale) => sum + Number(sale.total_amount), 0))}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Total Profit: </span>
-                    <span className="font-semibold text-success">
-                      {formatCurrency(filteredSales.reduce((sum, sale) => sum + Number(sale.total_profit), 0))}
                     </span>
                   </div>
                 </div>
