@@ -44,6 +44,7 @@ import { format, subDays } from "date-fns";
 import { formatCurrency } from "@/lib/currency";
 import { SaleDialog } from "@/components/SaleDialog";
 import { SalesChart } from "@/components/SalesChart";
+import { AlertsOverview } from "@/components/AlertsOverview";
 import { Pagination } from "@/components/Pagination";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { EmptyState } from "@/components/EmptyState";
@@ -460,6 +461,9 @@ const Dashboard = () => {
       {chartSales && chartSales.length > 0 && (
         <SalesChart sales={chartSales} days={7} />
       )}
+
+      {/* Alerts Overview - Admin only */}
+      {canViewFullDashboard && <AlertsOverview />}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card 
