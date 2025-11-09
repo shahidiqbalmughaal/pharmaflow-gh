@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { formatCurrency } from "@/lib/currency";
 import {
   Table,
   TableBody,
@@ -131,8 +132,8 @@ const Cosmetics = () => {
                       {cosmetic.quantity}
                     </span>
                   </TableCell>
-                  <TableCell>${Number(cosmetic.purchase_price).toFixed(2)}</TableCell>
-                  <TableCell>${Number(cosmetic.selling_price).toFixed(2)}</TableCell>
+                  <TableCell>{formatCurrency(Number(cosmetic.purchase_price))}</TableCell>
+                  <TableCell>{formatCurrency(Number(cosmetic.selling_price))}</TableCell>
                   <TableCell>
                     <span className={
                       new Date(cosmetic.expiry_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)

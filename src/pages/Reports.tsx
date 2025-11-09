@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { format } from "date-fns";
+import { formatCurrency } from "@/lib/currency";
 
 const Reports = () => {
   // Today's sales report
@@ -49,11 +50,11 @@ const Reports = () => {
           <div className="grid grid-cols-3 gap-4">
             <div className="p-4 bg-accent rounded-lg">
               <p className="text-sm text-muted-foreground">Total Sales</p>
-              <p className="text-2xl font-bold text-primary">${totalSales.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-primary">{formatCurrency(totalSales)}</p>
             </div>
             <div className="p-4 bg-accent rounded-lg">
               <p className="text-sm text-muted-foreground">Total Profit</p>
-              <p className="text-2xl font-bold text-success">${totalProfit.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-success">{formatCurrency(totalProfit)}</p>
             </div>
             <div className="p-4 bg-accent rounded-lg">
               <p className="text-sm text-muted-foreground">Transactions</p>
@@ -78,8 +79,8 @@ const Reports = () => {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-primary">${Number(sale.total_amount).toFixed(2)}</p>
-                        <p className="text-sm text-success">Profit: ${Number(sale.total_profit).toFixed(2)}</p>
+                        <p className="font-bold text-primary">{formatCurrency(Number(sale.total_amount))}</p>
+                        <p className="text-sm text-success">Profit: {formatCurrency(Number(sale.total_profit))}</p>
                       </div>
                     </div>
                   </div>

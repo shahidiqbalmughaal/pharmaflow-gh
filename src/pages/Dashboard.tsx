@@ -10,6 +10,7 @@ import {
   Clock
 } from "lucide-react";
 import { format } from "date-fns";
+import { formatCurrency } from "@/lib/currency";
 
 const Dashboard = () => {
   // Fetch today's sales
@@ -132,7 +133,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              ${todaySales?.totalSales.toFixed(2) || "0.00"}
+              {formatCurrency(todaySales?.totalSales || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               {todaySales?.count || 0} transactions
@@ -147,7 +148,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-success">
-              ${todaySales?.totalProfit.toFixed(2) || "0.00"}
+              {formatCurrency(todaySales?.totalProfit || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               Net profit

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
+import { formatCurrency } from "@/lib/currency";
 
 interface SaleDialogProps {
   open: boolean;
@@ -273,7 +274,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
                   placeholder="Qty"
                 />
                 <div className="flex items-center">
-                  <span className="text-sm">${item.totalPrice.toFixed(2)}</span>
+                  <span className="text-sm">{formatCurrency(item.totalPrice)}</span>
                 </div>
                 <Button
                   type="button"
@@ -311,19 +312,19 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
           <div className="border-t pt-4 space-y-2">
             <div className="flex justify-between">
               <span className="font-medium">Subtotal:</span>
-              <span>${subtotal.toFixed(2)}</span>
+              <span>{formatCurrency(subtotal)}</span>
             </div>
             <div className="flex justify-between">
               <span className="font-medium">Discount:</span>
-              <span>-${discount.toFixed(2)}</span>
+              <span>-{formatCurrency(discount)}</span>
             </div>
             <div className="flex justify-between">
               <span className="font-medium">Tax:</span>
-              <span>+${tax.toFixed(2)}</span>
+              <span>+{formatCurrency(tax)}</span>
             </div>
             <div className="flex justify-between text-lg font-bold">
               <span>Total:</span>
-              <span className="text-primary">${total.toFixed(2)}</span>
+              <span className="text-primary">{formatCurrency(total)}</span>
             </div>
           </div>
 

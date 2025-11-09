@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { formatCurrency } from "@/lib/currency";
 import {
   Table,
   TableBody,
@@ -67,12 +68,12 @@ const Sales = () => {
                     {format(new Date(sale.sale_date), "MMM dd, yyyy HH:mm")}
                   </TableCell>
                   <TableCell>{sale.salesman_name}</TableCell>
-                  <TableCell>${Number(sale.subtotal).toFixed(2)}</TableCell>
-                  <TableCell>${Number(sale.discount).toFixed(2)}</TableCell>
-                  <TableCell>${Number(sale.tax).toFixed(2)}</TableCell>
-                  <TableCell className="font-bold">${Number(sale.total_amount).toFixed(2)}</TableCell>
+                  <TableCell>{formatCurrency(Number(sale.subtotal))}</TableCell>
+                  <TableCell>{formatCurrency(Number(sale.discount))}</TableCell>
+                  <TableCell>{formatCurrency(Number(sale.tax))}</TableCell>
+                  <TableCell className="font-bold">{formatCurrency(Number(sale.total_amount))}</TableCell>
                   <TableCell className="text-success font-bold">
-                    ${Number(sale.total_profit).toFixed(2)}
+                    {formatCurrency(Number(sale.total_profit))}
                   </TableCell>
                 </TableRow>
               ))
