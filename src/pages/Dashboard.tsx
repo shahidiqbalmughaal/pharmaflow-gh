@@ -45,6 +45,7 @@ import { formatCurrency } from "@/lib/currency";
 import { SaleDialog } from "@/components/SaleDialog";
 import { SalesChart } from "@/components/SalesChart";
 import { AlertsOverview } from "@/components/AlertsOverview";
+import { AlertStatusCard } from "@/components/AlertStatusCard";
 import { Pagination } from "@/components/Pagination";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { EmptyState } from "@/components/EmptyState";
@@ -463,7 +464,12 @@ const Dashboard = () => {
       )}
 
       {/* Alerts Overview - Admin only */}
-      {canViewFullDashboard && <AlertsOverview />}
+      {canViewFullDashboard && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <AlertsOverview />
+          <AlertStatusCard />
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card 
