@@ -89,7 +89,7 @@ const Signup = () => {
           </div>
           <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
           <CardDescription>
-            Enter your information to create a pharmacy system account
+            Join Al-Rehman Pharmacy & Cosmetics
           </CardDescription>
         </CardHeader>
         <CardContent>

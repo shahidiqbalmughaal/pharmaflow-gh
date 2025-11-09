@@ -62,7 +62,7 @@ const Login = () => {
           </div>
           <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
           <CardDescription>
-            Enter your credentials to access the pharmacy system
+            Sign in to Al-Rehman Pharmacy & Cosmetics
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -51,7 +51,7 @@ export function AppSidebar() {
       <SidebarContent>
         <div className="p-4 border-b border-sidebar-border">
           {!isCollapsed && (
-            <h2 className="text-lg font-bold text-sidebar-foreground">PharmaPOS</h2>
+            <h2 className="text-lg font-bold text-sidebar-foreground">Al-Rehman Pharmacy</h2>
           )}
         </div>
         <SidebarGroup>
