@@ -1,0 +1,185 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { MedicineDialog } from "@/components/MedicineDialog";
+import { toast } from "sonner";
+import { format } from "date-fns";
+
+const Medicines = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingMedicine, setEditingMedicine] = useState<any>(null);
+  const queryClient = useQueryClient();
+
+  const { data: medicines, isLoading } = useQuery({
+    queryKey: ["medicines"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("medicines")
+        .select("*")
+        .order("medicine_name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("medicines")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["medicines"] });
+      toast.success("Medicine deleted successfully");
+    },
+    onError: () => {
+      toast.error("Failed to delete medicine");
+    },
+  });
+
+  const filteredMedicines = medicines?.filter((medicine) =>
+    medicine.medicine_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    medicine.batch_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    medicine.company_name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleEdit = (medicine: any) => {
+    setEditingMedicine(medicine);
+    setDialogOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Are you sure you want to delete this medicine?")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+    setEditingMedicine(null);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-foreground">Medicines Inventory</h2>
+        <Button onClick={() => setDialogOpen(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add Medicine
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search medicines..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
+      <div className="bg-card rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Medicine Name</TableHead>
+              <TableHead>Batch No</TableHead>
+              <TableHead>Company</TableHead>
+              <TableHead>Rack No</TableHead>
+              <TableHead>Quantity</TableHead>
+              <TableHead>Purchase Price</TableHead>
+              <TableHead>Selling Price</TableHead>
+              <TableHead>Expiry Date</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center">
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : filteredMedicines && filteredMedicines.length > 0 ? (
+              filteredMedicines.map((medicine) => (
+                <TableRow key={medicine.id}>
+                  <TableCell className="font-medium">{medicine.medicine_name}</TableCell>
+                  <TableCell>{medicine.batch_no}</TableCell>
+                  <TableCell>{medicine.company_name}</TableCell>
+                  <TableCell>{medicine.rack_no}</TableCell>
+                  <TableCell>
+                    <span className={medicine.quantity < 10 ? "text-warning font-bold" : ""}>
+                      {medicine.quantity}
+                    </span>
+                  </TableCell>
+                  <TableCell>${Number(medicine.purchase_price).toFixed(2)}</TableCell>
+                  <TableCell>${Number(medicine.selling_price).toFixed(2)}</TableCell>
+                  <TableCell>
+                    <span className={
+                      new Date(medicine.expiry_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                        ? "text-destructive font-bold"
+                        : ""
+                    }>
+                      {format(new Date(medicine.expiry_date), "MMM dd, yyyy")}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(medicine)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(medicine.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                  No medicines found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <MedicineDialog
+        open={dialogOpen}
+        onClose={handleDialogClose}
+        medicine={editingMedicine}
+      />
+    </div>
+  );
+};
+
+export default Medicines;
