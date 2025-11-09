@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DashboardDetailModal } from "@/components/DashboardDetailModal";
 import {
   Select,
   SelectContent,
@@ -63,6 +64,10 @@ const Dashboard = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  
+  // Modal state
+  const [activeCard, setActiveCard] = useState<string | null>(null);
+  const [modalType, setModalType] = useState<"sales" | "profit" | "medicines" | "cosmetics" | "lowStock" | "expiry" | "allLowStock" | null>(null);
 
   // Fetch salesmen for filter
   const { data: salesmen } = useQuery({
@@ -284,10 +289,16 @@ const Dashboard = () => {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Card className="cursor-help transition-shadow hover:shadow-md">
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-lg ${activeCard === 'sales' ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+              onClick={() => {
+                setActiveCard('sales');
+                setModalType('sales');
+              }}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Today's Sales</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <DollarSign className={`h-4 w-4 ${activeCard === 'sales' ? 'text-primary' : 'text-muted-foreground'}`} aria-hidden="true" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-primary" aria-label={`Today's sales: ${formatCurrency(todaySales?.totalSales || 0)}`}>
@@ -300,84 +311,149 @@ const Dashboard = () => {
             </Card>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Total sales revenue for today</p>
+            <p>Click to view detailed transactions</p>
           </TooltipContent>
         </Tooltip>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Profit</CardTitle>
-            <TrendingUp className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-success">
-              {formatCurrency(todaySales?.totalProfit || 0)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Net profit
-            </p>
-          </CardContent>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-lg ${activeCard === 'profit' ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+              onClick={() => {
+                setActiveCard('profit');
+                setModalType('profit');
+              }}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Today's Profit</CardTitle>
+                <TrendingUp className={`h-4 w-4 ${activeCard === 'profit' ? 'text-success' : 'text-muted-foreground'}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-success">
+                  {formatCurrency(todaySales?.totalProfit || 0)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Net profit
+                </p>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Click to view profit breakdown</p>
+          </TooltipContent>
+        </Tooltip>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Medicines Sold</CardTitle>
-            <Pill className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {medicinesSold || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Today
-            </p>
-          </CardContent>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-lg ${activeCard === 'medicines' ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+              onClick={() => {
+                setActiveCard('medicines');
+                setModalType('medicines');
+              }}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Medicines Sold</CardTitle>
+                <Pill className={`h-4 w-4 ${activeCard === 'medicines' ? 'text-primary' : 'text-muted-foreground'}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {medicinesSold || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Today
+                </p>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Click to view medicines sold today</p>
+          </TooltipContent>
+        </Tooltip>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cosmetics Sold</CardTitle>
-            <Sparkles className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {cosmeticsSold || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Today
-            </p>
-          </CardContent>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-lg ${activeCard === 'cosmetics' ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+              onClick={() => {
+                setActiveCard('cosmetics');
+                setModalType('cosmetics');
+              }}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Cosmetics Sold</CardTitle>
+                <Sparkles className={`h-4 w-4 ${activeCard === 'cosmetics' ? 'text-primary' : 'text-muted-foreground'}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {cosmeticsSold || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Today
+                </p>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Click to view cosmetics sold today</p>
+          </TooltipContent>
+        </Tooltip>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock Alert</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-warning" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-warning">
-              {lowStockMedicines?.length || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Items below 10 units
-            </p>
-          </CardContent>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-lg ${activeCard === 'lowStock' ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+              onClick={() => {
+                setActiveCard('lowStock');
+                setModalType('lowStock');
+              }}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Low Stock Alert</CardTitle>
+                <AlertTriangle className={`h-4 w-4 ${activeCard === 'lowStock' ? 'text-warning' : 'text-muted-foreground'}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-warning">
+                  {lowStockMedicines?.length || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Items below 10 units
+                </p>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Click to view all low stock items</p>
+          </TooltipContent>
+        </Tooltip>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Expiry Alert</CardTitle>
-            <Clock className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">
-              {expiryAlerts?.length || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Expiring within 6 months
-            </p>
-          </CardContent>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-lg ${activeCard === 'expiry' ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+              onClick={() => {
+                setActiveCard('expiry');
+                setModalType('expiry');
+              }}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Expiry Alert</CardTitle>
+                <Clock className={`h-4 w-4 ${activeCard === 'expiry' ? 'text-destructive' : 'text-muted-foreground'}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">
+                  {expiryAlerts?.length || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Expiring within 6 months
+                </p>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Click to view expiry alerts</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Sales Chart */}
@@ -386,7 +462,13 @@ const Dashboard = () => {
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card 
+          className={`cursor-pointer transition-all hover:shadow-lg ${activeCard === 'allLowStock' ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+          onClick={() => {
+            setActiveCard('allLowStock');
+            setModalType('allLowStock');
+          }}
+        >
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-warning" aria-hidden="true" />
@@ -408,6 +490,9 @@ const Dashboard = () => {
               ) : (
                 <p className="text-sm text-muted-foreground">No low stock items</p>
               )}
+              <p className="text-xs text-muted-foreground text-center pt-2 border-t">
+                Click to view complete list
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -626,6 +711,15 @@ const Dashboard = () => {
       <SaleDialog 
         open={isSaleDialogOpen} 
         onClose={() => setIsSaleDialogOpen(false)} 
+      />
+      
+      <DashboardDetailModal 
+        open={modalType !== null}
+        onClose={() => {
+          setModalType(null);
+          setActiveCard(null);
+        }}
+        type={modalType}
       />
     </div>
   </TooltipProvider>
