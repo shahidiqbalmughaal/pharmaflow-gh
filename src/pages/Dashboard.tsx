@@ -1,18 +1,24 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { 
   DollarSign, 
   Pill, 
   Sparkles, 
   TrendingUp, 
   AlertTriangle,
-  Clock
+  Clock,
+  ShoppingCart
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/currency";
+import { SaleDialog } from "@/components/SaleDialog";
 
 const Dashboard = () => {
+  const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
+
   // Fetch today's sales
   const { data: todaySales } = useQuery({
     queryKey: ["todaySales"],
@@ -125,6 +131,18 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <Button 
+          onClick={() => setIsSaleDialogOpen(true)}
+          size="lg"
+          className="gap-2"
+        >
+          <ShoppingCart className="h-5 w-5" />
+          Process Sale
+        </Button>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -272,6 +290,11 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      <SaleDialog 
+        open={isSaleDialogOpen} 
+        onClose={() => setIsSaleDialogOpen(false)} 
+      />
     </div>
   );
 };

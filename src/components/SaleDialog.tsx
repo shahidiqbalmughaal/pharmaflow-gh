@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useReactToPrint } from "react-to-print";
 import { supabase } from "@/integrations/supabase/client";
 import { validateStockAvailability } from "@/lib/validations";
 import {
@@ -19,8 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Printer } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
+import { QRScanner } from "./QRScanner";
+import { SaleReceipt } from "./SaleReceipt";
 
 interface SaleDialogProps {
   open: boolean;
@@ -41,10 +44,13 @@ interface SaleItem {
 
 export function SaleDialog({ open, onClose }: SaleDialogProps) {
   const queryClient = useQueryClient();
+  const receiptRef = useRef<HTMLDivElement>(null);
   const [salesmanId, setSalesmanId] = useState("");
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(0);
+  const [completedSale, setCompletedSale] = useState<any>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   const { data: salesmen } = useQuery({
     queryKey: ["salesmen"],
@@ -165,14 +171,29 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
           if (error) throw error;
         }
       }
+
+      return { sale, salesman };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["medicines"] });
       queryClient.invalidateQueries({ queryKey: ["cosmetics"] });
+      queryClient.invalidateQueries({ queryKey: ["todaySales"] });
+      queryClient.invalidateQueries({ queryKey: ["medicinesSoldToday"] });
+      queryClient.invalidateQueries({ queryKey: ["cosmeticsSoldToday"] });
+      
+      setCompletedSale({
+        saleId: data.sale.id,
+        salesmanName: data.salesman.name,
+        saleDate: new Date(data.sale.sale_date),
+        items: saleItems,
+        subtotal,
+        discount,
+        tax,
+        total: data.sale.total_amount,
+      });
+      setShowReceipt(true);
       toast.success("Sale completed successfully");
-      onClose();
-      resetForm();
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to complete sale");
@@ -184,6 +205,50 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
     setSaleItems([]);
     setDiscount(0);
     setTax(0);
+    setCompletedSale(null);
+    setShowReceipt(false);
+  };
+
+  const handlePrint = useReactToPrint({
+    contentRef: receiptRef,
+    onAfterPrint: () => {
+      onClose();
+      resetForm();
+    },
+  });
+
+  const handleQRScan = (decodedText: string) => {
+    try {
+      // Assuming QR code contains item ID in format: "ITEM_ID" or "medicine:ITEM_ID" or "cosmetic:ITEM_ID"
+      const parts = decodedText.split(":");
+      const itemType = parts.length > 1 ? (parts[0] as "medicine" | "cosmetic") : "medicine";
+      const itemId = parts.length > 1 ? parts[1] : decodedText;
+
+      // Find the item
+      const allItems = itemType === "medicine" ? medicines : cosmetics;
+      const item = allItems?.find((i) => i.id === itemId);
+
+      if (item) {
+        // Add item to sale
+        const newItem: SaleItem = {
+          itemType,
+          itemId: item.id,
+          itemName: item[itemType === "medicine" ? "medicine_name" : "product_name"],
+          batchNo: item.batch_no,
+          quantity: 1,
+          unitPrice: Number(item.selling_price),
+          totalPrice: Number(item.selling_price),
+          profit: Number(item.selling_price) - Number(item.purchase_price),
+          purchasePrice: Number(item.purchase_price),
+        };
+        setSaleItems([...saleItems, newItem]);
+        toast.success(`Added: ${newItem.itemName}`);
+      } else {
+        toast.error("Item not found");
+      }
+    } catch (error) {
+      toast.error("Invalid QR code format");
+    }
   };
 
   const addItem = () => {
@@ -279,6 +344,36 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
   const subtotal = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
   const total = subtotal - discount + tax;
 
+  if (showReceipt && completedSale) {
+    return (
+      <Dialog open={open} onOpenChange={() => {
+        onClose();
+        resetForm();
+      }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Sale Completed</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <SaleReceipt ref={receiptRef} {...completedSale} />
+            <div className="flex gap-2">
+              <Button onClick={handlePrint} className="flex-1 gap-2">
+                <Printer className="h-4 w-4" />
+                Print Receipt
+              </Button>
+              <Button variant="outline" onClick={() => {
+                onClose();
+                resetForm();
+              }} className="flex-1">
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -305,10 +400,13 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <Label>Items</Label>
-              <Button type="button" size="sm" onClick={addItem}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Item
-              </Button>
+              <div className="flex gap-2">
+                <QRScanner onScan={handleQRScan} />
+                <Button type="button" size="sm" onClick={addItem}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Item
+                </Button>
+              </div>
             </div>
             {saleItems.map((item, index) => (
               <div key={index} className="grid grid-cols-6 gap-2 p-2 border rounded">
