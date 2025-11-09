@@ -253,6 +253,78 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_alerts: {
+        Row: {
+          amount: number | null
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at: string
+          description: string | null
+          due_date: string
+          id: string
+          is_paid: boolean | null
+          is_recurring: boolean | null
+          recurrence_interval: number | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          description?: string | null
+          due_date: string
+          id?: string
+          is_paid?: boolean | null
+          is_recurring?: boolean | null
+          recurrence_interval?: number | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          description?: string | null
+          due_date?: string
+          id?: string
+          is_paid?: boolean | null
+          is_recurring?: boolean | null
+          recurrence_interval?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at: string
+          created_by: string | null
+          expense_date: string
+          id: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          created_by?: string | null
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          created_by?: string | null
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       medicines: {
         Row: {
           batch_no: string
@@ -676,6 +748,20 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "manager" | "salesman"
+      expense_category:
+        | "supplier_payment"
+        | "staff_salary"
+        | "food_expense"
+        | "miscellaneous"
+        | "rent"
+        | "water_bill"
+        | "electricity_bill"
+        | "maintenance"
+        | "medical_equipment"
+        | "license_fees"
+        | "insurance"
+        | "marketing"
+        | "transportation"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -804,6 +890,21 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "salesman"],
+      expense_category: [
+        "supplier_payment",
+        "staff_salary",
+        "food_expense",
+        "miscellaneous",
+        "rent",
+        "water_bill",
+        "electricity_bill",
+        "maintenance",
+        "medical_equipment",
+        "license_fees",
+        "insurance",
+        "marketing",
+        "transportation",
+      ],
     },
   },
 } as const

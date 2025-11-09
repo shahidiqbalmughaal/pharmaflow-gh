@@ -18,7 +18,7 @@ import { LoadingSpinner } from "./LoadingSpinner";
 interface DashboardDetailModalProps {
   open: boolean;
   onClose: () => void;
-  type: "sales" | "cash" | "medicines" | "cosmetics" | "lowStock" | "expiry" | "allLowStock" | null;
+  type: "sales" | "cash" | "expenses" | "netProfit" | "medicines" | "cosmetics" | "lowStock" | "expiry" | "allLowStock" | null;
 }
 
 export function DashboardDetailModal({ open, onClose, type }: DashboardDetailModalProps) {
@@ -139,6 +139,8 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
     switch (type) {
       case "sales": return "Today's Sales Transactions";
       case "cash": return "Today's Cash Collection";
+      case "expenses": return "Today's Expenses";
+      case "netProfit": return "Today's Net Profit Calculation";
       case "medicines": return "Medicines Sold Today";
       case "cosmetics": return "Cosmetics Sold Today";
       case "lowStock": return "Low Stock Alert";

@@ -8,7 +8,8 @@ import {
   Building2,
   UserCheck,
   Settings,
-  Shield
+  Shield,
+  Receipt
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -30,6 +31,7 @@ const items = [
   { title: "Medicines", url: "/medicines", icon: Pill },
   { title: "Cosmetics", url: "/cosmetics", icon: Sparkles },
   { title: "Sales", url: "/sales", icon: ShoppingCart },
+  { title: "Expenses", url: "/expenses", icon: Receipt },
   { title: "Customers", url: "/customers", icon: UserCheck },
   { title: "Reports", url: "/reports", icon: FileText },
   { title: "Salesmen", url: "/salesmen", icon: Users },

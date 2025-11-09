@@ -32,7 +32,8 @@ import {
   DollarSign, 
   Pill, 
   Sparkles, 
-  TrendingUp, 
+  TrendingUp,
+  TrendingDown,
   AlertTriangle,
   Clock,
   ShoppingCart,
@@ -69,7 +70,7 @@ const Dashboard = () => {
   
   // Modal state
   const [activeCard, setActiveCard] = useState<string | null>(null);
-  const [modalType, setModalType] = useState<"sales" | "cash" | "medicines" | "cosmetics" | "lowStock" | "expiry" | "allLowStock" | null>(null);
+  const [modalType, setModalType] = useState<"sales" | "cash" | "expenses" | "netProfit" | "medicines" | "cosmetics" | "lowStock" | "expiry" | "allLowStock" | null>(null);
 
   // Fetch salesmen for filter
   const { data: salesmen } = useQuery({
@@ -161,6 +162,26 @@ const Dashboard = () => {
       const totalSales = data.reduce((sum, sale) => sum + Number(sale.total_amount), 0);
       
       return { totalSales, count: data.length };
+    },
+  });
+
+  // Fetch today's expenses
+  const { data: todayExpenses } = useQuery({
+    queryKey: ["todayExpenses"],
+    queryFn: async () => {
+      const today = new Date();
+      const todayStr = format(today, "yyyy-MM-dd");
+      
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("amount")
+        .eq("expense_date", todayStr);
+      
+      if (error) throw error;
+      
+      const totalExpenses = data.reduce((sum, expense) => sum + Number(expense.amount), 0);
+      
+      return { totalExpenses, count: data.length };
     },
   });
 
@@ -287,7 +308,7 @@ const Dashboard = () => {
           )}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Tooltip>
           <TooltipTrigger asChild>
             <Card 
@@ -341,6 +362,62 @@ const Dashboard = () => {
           </TooltipTrigger>
           <TooltipContent>
             <p>Total cash collected from today's sales</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-lg ${activeCard === 'expenses' ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+              onClick={() => {
+                setActiveCard('expenses');
+                setModalType('expenses');
+              }}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Today's Expenses</CardTitle>
+                <TrendingDown className={`h-4 w-4 ${activeCard === 'expenses' ? 'text-destructive' : 'text-muted-foreground'}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">
+                  {formatCurrency(todayExpenses?.totalExpenses || 0)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {todayExpenses?.count || 0} transactions
+                </p>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Total expenses incurred today</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-lg ${activeCard === 'netProfit' ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+              onClick={() => {
+                setActiveCard('netProfit');
+                setModalType('netProfit');
+              }}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
+                <TrendingUp className={`h-4 w-4 ${activeCard === 'netProfit' ? 'text-success' : 'text-muted-foreground'}`} />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${(todaySales?.totalSales || 0) - (todayExpenses?.totalExpenses || 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  {formatCurrency((todaySales?.totalSales || 0) - (todayExpenses?.totalExpenses || 0))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Sales - Expenses
+                </p>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Net profit after expenses</p>
           </TooltipContent>
         </Tooltip>
 
