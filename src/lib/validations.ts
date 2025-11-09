@@ -183,6 +183,44 @@ export const salesmanSchema = z.object({
   }
 );
 
+// Supplier validation schema
+export const supplierSchema = z.object({
+  name: z.string()
+    .trim()
+    .min(1, "Supplier name is required")
+    .max(200, "Supplier name must be less than 200 characters"),
+  company: z.string()
+    .trim()
+    .max(200, "Company name must be less than 200 characters")
+    .optional(),
+  phone: z.string()
+    .trim()
+    .min(1, "Phone number is required")
+    .regex(/^[\d\s\-\+\(\)]+$/, "Invalid phone number format")
+    .min(10, "Phone must be at least 10 digits")
+    .max(20, "Phone must be less than 20 characters"),
+  whatsapp: z.string()
+    .trim()
+    .regex(/^[\d\s\-\+\(\)]*$/, "Invalid WhatsApp number format")
+    .max(20, "WhatsApp number must be less than 20 characters")
+    .optional()
+    .or(z.literal("")),
+  email: z.string()
+    .trim()
+    .email("Invalid email address")
+    .max(255, "Email must be less than 255 characters")
+    .optional()
+    .or(z.literal("")),
+  address: z.string()
+    .trim()
+    .max(500, "Address must be less than 500 characters")
+    .optional(),
+  notes: z.string()
+    .trim()
+    .max(1000, "Notes must be less than 1000 characters")
+    .optional(),
+});
+
 // Sale item validation
 export const saleItemSchema = z.object({
   itemType: z.enum(["medicine", "cosmetic"], {

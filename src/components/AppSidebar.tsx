@@ -5,6 +5,7 @@ import {
   ShoppingCart, 
   FileText, 
   Users, 
+  Building2,
   Settings,
   Shield
 } from "lucide-react";
@@ -30,6 +31,7 @@ const items = [
   { title: "Sales", url: "/sales", icon: ShoppingCart },
   { title: "Reports", url: "/reports", icon: FileText },
   { title: "Salesmen", url: "/salesmen", icon: Users },
+  { title: "Suppliers", url: "/suppliers", icon: Building2 },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 

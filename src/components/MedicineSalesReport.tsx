@@ -12,12 +12,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { EmptyState } from "@/components/EmptyState";
-import { Download, Search, Calendar as CalendarIcon, AlertTriangle, Package, MessageCircle } from "lucide-react";
+import { Download, Search, Calendar as CalendarIcon, AlertTriangle, Package, MessageCircle, Send } from "lucide-react";
 import { format, isWithinInterval, addMonths, differenceInDays } from "date-fns";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { exportToCSV, formatForWhatsApp, shareViaWhatsApp } from "@/lib/exportUtils";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface MedicineSaleItem {
   id: string;
@@ -49,6 +57,22 @@ export function MedicineSalesReport() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFromCalendar, setShowFromCalendar] = useState(false);
   const [showToCalendar, setShowToCalendar] = useState(false);
+  const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
+  const [selectedSupplierForWhatsApp, setSelectedSupplierForWhatsApp] = useState<string>("");
+
+  // Fetch supplier contacts for WhatsApp
+  const { data: supplierContacts } = useQuery({
+    queryKey: ["supplierContacts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("suppliers")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Fetch medicine sales with details
   const { data: medicineSales, isLoading } = useQuery({
@@ -198,25 +222,44 @@ export function MedicineSalesReport() {
       return;
     }
 
-    // Group medicines by supplier
-    const supplierGroups = filteredSales.reduce((acc, item) => {
-      const supplier = item.medicine?.supplier || "Unknown Supplier";
-      if (!acc[supplier]) {
-        acc[supplier] = [];
+    setShowWhatsAppDialog(true);
+  };
+
+  const sendWhatsAppMessage = () => {
+    if (!selectedSupplierForWhatsApp) {
+      toast.error("Please select a supplier");
+      return;
+    }
+
+    const supplierContact = supplierContacts?.find(s => s.id === selectedSupplierForWhatsApp);
+    if (!supplierContact || !supplierContact.whatsapp) {
+      toast.error("Selected supplier does not have a WhatsApp number");
+      return;
+    }
+
+    // Group medicines by supplier name from medicine data
+    const supplierGroups = filteredSales?.reduce((acc, item) => {
+      const supplierName = item.medicine?.supplier || "Unknown Supplier";
+      if (!acc[supplierName]) {
+        acc[supplierName] = [];
       }
-      acc[supplier].push(item);
+      acc[supplierName].push(item);
       return acc;
     }, {} as Record<string, typeof filteredSales>);
 
     // Format message
     let message = `*📋 Medicine Sales Report*\n`;
     message += `📅 Period: ${format(dateRange.from, "MMM dd, yyyy")} - ${format(dateRange.to, "MMM dd, yyyy")}\n`;
+    message += `🏢 To: ${supplierContact.name}\n`;
     message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
 
-    Object.entries(supplierGroups).forEach(([supplier, items]) => {
-      message += `*🏢 ${supplier}*\n\n`;
+    // Filter items for this supplier
+    const supplierItems = supplierGroups?.[supplierContact.name] || [];
+    
+    if (supplierItems.length > 0) {
+      message += `*Medicines from ${supplierContact.name}:*\n\n`;
       
-      items.forEach((item, idx) => {
+      supplierItems.forEach((item, idx) => {
         message += `${idx + 1}. *${item.item_name}*\n`;
         message += `   📦 Batch: ${item.batch_no}\n`;
         message += `   💊 Quantity: ${item.total_tablets || item.quantity} tablets`;
@@ -227,7 +270,7 @@ export function MedicineSalesReport() {
           message += `\n`;
         }
         
-        message += `   💰 Price: ${formatCurrency(Number(item.total_price))}\n`;
+        message += `   💰 Total: ${formatCurrency(Number(item.total_price))}\n`;
         message += `   📍 Rack: ${item.medicine?.rack_no || "N/A"}\n`;
         
         if (item.medicine?.expiry_date) {
@@ -247,25 +290,26 @@ export function MedicineSalesReport() {
         message += `\n`;
       });
 
-      // Supplier subtotal
-      const supplierTotal = items.reduce((sum, item) => sum + Number(item.total_price), 0);
-      const supplierQty = items.reduce((sum, item) => sum + (item.total_tablets || item.quantity), 0);
-      message += `*Subtotal for ${supplier}:*\n`;
-      message += `Total Items: ${items.length}\n`;
+      const supplierTotal = supplierItems.reduce((sum, item) => sum + Number(item.total_price), 0);
+      const supplierQty = supplierItems.reduce((sum, item) => sum + (item.total_tablets || item.quantity), 0);
+      
+      message += `*Summary:*\n`;
+      message += `Total Items: ${supplierItems.length}\n`;
       message += `Total Quantity: ${supplierQty} tablets\n`;
       message += `Total Amount: ${formatCurrency(supplierTotal)}\n`;
-      message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-    });
+    } else {
+      message += `No medicines sold from ${supplierContact.name} during this period.\n`;
+    }
 
-    // Grand total
-    message += `*📊 GRAND TOTAL*\n`;
-    message += `Total Medicines: ${filteredSales.length}\n`;
-    message += `Total Quantity: ${totals.quantity} tablets\n`;
-    message += `Total Amount: ${formatCurrency(totals.amount)}\n\n`;
+    message += `\n━━━━━━━━━━━━━━━━━━━━\n`;
     message += `_Generated from PharmaFlow POS_`;
 
     // Share via WhatsApp
-    shareViaWhatsApp(message);
+    const cleanNumber = supplierContact.whatsapp.replace(/[^0-9]/g, "");
+    shareViaWhatsApp(message, cleanNumber);
+    
+    setShowWhatsAppDialog(false);
+    setSelectedSupplierForWhatsApp("");
     toast.success("Opening WhatsApp...");
   };
 
@@ -493,6 +537,69 @@ export function MedicineSalesReport() {
           </ScrollArea>
         )}
       </CardContent>
+
+      {/* WhatsApp Dialog */}
+      <Dialog open={showWhatsAppDialog} onOpenChange={setShowWhatsAppDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share via WhatsApp</DialogTitle>
+            <DialogDescription>
+              Select a supplier to send the medicine sales report
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Select Supplier</Label>
+              <Select value={selectedSupplierForWhatsApp} onValueChange={setSelectedSupplierForWhatsApp}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a supplier..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {supplierContacts
+                    ?.filter(s => s.whatsapp)
+                    .map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{supplier.name}</span>
+                          <span className="text-xs text-muted-foreground ml-2">{supplier.whatsapp}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  {(!supplierContacts || supplierContacts.filter(s => s.whatsapp).length === 0) && (
+                    <div className="p-2 text-sm text-muted-foreground text-center">
+                      No suppliers with WhatsApp numbers found
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {selectedSupplierForWhatsApp && (
+              <div className="text-sm text-muted-foreground">
+                The report will include medicines from the selected supplier only.
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowWhatsAppDialog(false);
+              setSelectedSupplierForWhatsApp("");
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={sendWhatsAppMessage}
+              disabled={!selectedSupplierForWhatsApp}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Send via WhatsApp
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

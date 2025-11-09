@@ -279,6 +279,45 @@ export type Database = {
         }
         Relationships: []
       }
+      suppliers: {
+        Row: {
+          address: string | null
+          company: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string
+          updated_at: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          address?: string | null
+          company?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone: string
+          updated_at?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          address?: string | null
+          company?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string
+          updated_at?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
