@@ -140,6 +140,109 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_order_items: {
+        Row: {
+          batch_no: string | null
+          created_at: string | null
+          current_stock: number
+          id: string
+          item_id: string
+          item_name: string
+          item_type: string
+          order_quantity: number
+          purchase_order_id: string
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          batch_no?: string | null
+          created_at?: string | null
+          current_stock?: number
+          id?: string
+          item_id: string
+          item_name: string
+          item_type: string
+          order_quantity: number
+          purchase_order_id: string
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          batch_no?: string | null
+          created_at?: string | null
+          current_stock?: number
+          id?: string
+          item_id?: string
+          item_name?: string
+          item_type?: string
+          order_quantity?: number
+          purchase_order_id?: string
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          notes: string | null
+          order_number: string
+          sent_at: string | null
+          status: string
+          supplier_id: string
+          supplier_name: string
+          total_amount: number
+          total_items: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          order_number: string
+          sent_at?: string | null
+          status?: string
+          supplier_id: string
+          supplier_name: string
+          total_amount?: number
+          total_items?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          order_number?: string
+          sent_at?: string | null
+          status?: string
+          supplier_id?: string
+          supplier_name?: string
+          total_amount?: number
+          total_items?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sale_items: {
         Row: {
           batch_no: string
@@ -352,6 +455,7 @@ export type Database = {
         Args: { medicine_id: string; qty: number }
         Returns: undefined
       }
+      generate_order_number: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
