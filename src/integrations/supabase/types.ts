@@ -170,6 +170,89 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_discounts: {
+        Row: {
+          created_at: string
+          customer_id: string
+          discount_percentage: number
+          id: string
+          is_active: boolean
+          reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          discount_percentage?: number
+          id?: string
+          is_active?: boolean
+          reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          discount_percentage?: number
+          id?: string
+          is_active?: boolean
+          reason?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_discounts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          loyalty_points: number
+          name: string
+          notes: string | null
+          phone: string
+          total_purchases: number
+          total_spent: number
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          loyalty_points?: number
+          name: string
+          notes?: string | null
+          phone: string
+          total_purchases?: number
+          total_spent?: number
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          loyalty_points?: number
+          name?: string
+          notes?: string | null
+          phone?: string
+          total_purchases?: number
+          total_spent?: number
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       medicines: {
         Row: {
           batch_no: string
@@ -413,9 +496,13 @@ export type Database = {
       sales: {
         Row: {
           created_at: string | null
+          customer_id: string | null
+          customer_name: string | null
           discount: number | null
           discount_percentage: number | null
           id: string
+          loyalty_points_earned: number | null
+          loyalty_points_redeemed: number | null
           sale_date: string | null
           salesman_id: string | null
           salesman_name: string
@@ -426,9 +513,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
           discount?: number | null
           discount_percentage?: number | null
           id?: string
+          loyalty_points_earned?: number | null
+          loyalty_points_redeemed?: number | null
           sale_date?: string | null
           salesman_id?: string | null
           salesman_name: string
@@ -439,9 +530,13 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
           discount?: number | null
           discount_percentage?: number | null
           id?: string
+          loyalty_points_earned?: number | null
+          loyalty_points_redeemed?: number | null
           sale_date?: string | null
           salesman_id?: string | null
           salesman_name?: string
@@ -451,6 +546,13 @@ export type Database = {
           total_profit?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sales_salesman_id_fkey"
             columns: ["salesman_id"]

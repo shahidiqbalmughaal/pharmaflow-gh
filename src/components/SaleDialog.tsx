@@ -50,6 +50,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
   const queryClient = useQueryClient();
   const receiptRef = useRef<HTMLDivElement>(null);
   const [salesmanId, setSalesmanId] = useState("");
+  const [customerId, setCustomerId] = useState("");
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [tax, setTax] = useState(0);
@@ -60,6 +61,27 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
     queryKey: ["salesmen"],
     queryFn: async () => {
       const { data, error } = await supabase.from("salesmen").select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: customers } = useQuery({
+    queryKey: ["customers"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("customers").select("*").order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: customerDiscounts } = useQuery({
+    queryKey: ["customer-discounts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customer_discounts")
+        .select("*")
+        .eq("is_active", true);
       if (error) throw error;
       return data;
     },
@@ -82,6 +104,21 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
       return data;
     },
   });
+
+  // Apply customer discount when customer is selected
+  useEffect(() => {
+    if (customerId) {
+      const discount = customerDiscounts?.find((d) => d.customer_id === customerId);
+      if (discount) {
+        setDiscountPercentage(Number(discount.discount_percentage));
+        toast.info(`Customer discount of ${discount.discount_percentage}% applied`);
+      } else {
+        setDiscountPercentage(0);
+      }
+    } else {
+      setDiscountPercentage(0);
+    }
+  }, [customerId, customerDiscounts]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -137,12 +174,20 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
       const totalProfit = saleItems.reduce((sum, item) => sum + item.profit, 0);
       const totalAmount = subtotal - discountAmount + tax;
 
+      // Calculate loyalty points (1 point per 100 currency spent)
+      const loyaltyPointsEarned = Math.floor(totalAmount / 100);
+
+      const customer = customerId ? customers?.find((c) => c.id === customerId) : null;
+
       // Insert sale
       const { data: sale, error: saleError } = await supabase
         .from("sales")
         .insert({
           salesman_id: salesmanId,
           salesman_name: salesman.name,
+          customer_id: customerId || null,
+          customer_name: customer?.name || null,
+          loyalty_points_earned: loyaltyPointsEarned,
           subtotal,
           discount: discountAmount,
           discount_percentage: discountPercentage,
@@ -154,6 +199,20 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
         .single();
 
       if (saleError) throw saleError;
+
+      // Update customer stats if customer is selected
+      if (customerId && customer) {
+        const { error: updateError } = await supabase
+          .from("customers")
+          .update({
+            loyalty_points: (customer.loyalty_points || 0) + loyaltyPointsEarned,
+            total_purchases: (customer.total_purchases || 0) + 1,
+            total_spent: (Number(customer.total_spent) || 0) + totalAmount,
+          })
+          .eq("id", customerId);
+
+        if (updateError) throw updateError;
+      }
 
       // Insert sale items
       const saleItemsData = saleItems.map((item) => ({
@@ -200,6 +259,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["medicines"] });
       queryClient.invalidateQueries({ queryKey: ["cosmetics"] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
       queryClient.invalidateQueries({ queryKey: ["todaySales"] });
       queryClient.invalidateQueries({ queryKey: ["medicinesSoldToday"] });
       queryClient.invalidateQueries({ queryKey: ["cosmeticsSoldToday"] });
@@ -208,6 +268,8 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
       setCompletedSale({
         saleId: data.sale.id,
         salesmanName: data.salesman.name,
+        customerName: data.sale.customer_name,
+        loyaltyPointsEarned: data.sale.loyalty_points_earned,
         saleDate: new Date(data.sale.sale_date),
         items: saleItems,
         subtotal,
@@ -226,6 +288,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
 
   const resetForm = () => {
     setSalesmanId("");
+    setCustomerId("");
     setSaleItems([]);
     setDiscountPercentage(0);
     setTax(0);
@@ -510,6 +573,28 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Customer (Optional)</Label>
+            <Select value={customerId} onValueChange={setCustomerId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select customer or leave blank" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Walk-in Customer</SelectItem>
+                {customers?.map((customer) => (
+                  <SelectItem key={customer.id} value={customer.id}>
+                    {customer.name} - {customer.phone}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {customerId && (
+              <p className="text-xs text-muted-foreground">
+                Loyalty Points: {customers?.find(c => c.id === customerId)?.loyalty_points || 0}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

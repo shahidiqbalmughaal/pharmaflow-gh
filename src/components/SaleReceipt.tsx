@@ -16,6 +16,8 @@ interface SaleItem {
 interface SaleReceiptProps {
   saleId: string;
   salesmanName: string;
+  customerName?: string;
+  loyaltyPointsEarned?: number;
   saleDate: Date;
   items: SaleItem[];
   subtotal: number;
@@ -26,7 +28,7 @@ interface SaleReceiptProps {
 }
 
 export const SaleReceipt = forwardRef<HTMLDivElement, SaleReceiptProps>(
-  ({ saleId, salesmanName, saleDate, items, subtotal, discountPercentage, discountAmount, tax, total }, ref) => {
+  ({ saleId, salesmanName, customerName, loyaltyPointsEarned, saleDate, items, subtotal, discountPercentage, discountAmount, tax, total }, ref) => {
     return (
       <div ref={ref} className="p-8 bg-white text-black max-w-md mx-auto">
         <div className="text-center mb-6 border-b-2 border-black pb-4">
@@ -47,6 +49,12 @@ export const SaleReceipt = forwardRef<HTMLDivElement, SaleReceiptProps>(
             <span className="font-semibold">Served by:</span>
             <span>{salesmanName}</span>
           </div>
+          {customerName && (
+            <div className="flex justify-between">
+              <span className="font-semibold">Customer:</span>
+              <span>{customerName}</span>
+            </div>
+          )}
         </div>
 
         <div className="border-t-2 border-dashed border-black pt-4 mb-4">
@@ -104,6 +112,12 @@ export const SaleReceipt = forwardRef<HTMLDivElement, SaleReceiptProps>(
             <span>TOTAL:</span>
             <span>{formatCurrency(total)}</span>
           </div>
+          {loyaltyPointsEarned && loyaltyPointsEarned > 0 && (
+            <div className="flex justify-between text-sm bg-green-50 p-2 rounded mt-2">
+              <span className="font-semibold">Loyalty Points Earned:</span>
+              <span className="font-bold text-green-700">+{loyaltyPointsEarned}</span>
+            </div>
+          )}
         </div>
 
         <div className="text-center mt-6 pt-4 border-t-2 border-dashed border-black text-xs">
