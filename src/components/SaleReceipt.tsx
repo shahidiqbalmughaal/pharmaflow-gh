@@ -8,6 +8,9 @@ interface SaleItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  sellingType?: "per_tablet" | "per_packet";
+  tabletsPerPacket?: number;
+  totalTablets?: number;
 }
 
 interface SaleReceiptProps {
@@ -16,13 +19,14 @@ interface SaleReceiptProps {
   saleDate: Date;
   items: SaleItem[];
   subtotal: number;
-  discount: number;
+  discountPercentage?: number;
+  discountAmount?: number;
   tax: number;
   total: number;
 }
 
 export const SaleReceipt = forwardRef<HTMLDivElement, SaleReceiptProps>(
-  ({ saleId, salesmanName, saleDate, items, subtotal, discount, tax, total }, ref) => {
+  ({ saleId, salesmanName, saleDate, items, subtotal, discountPercentage, discountAmount, tax, total }, ref) => {
     return (
       <div ref={ref} className="p-8 bg-white text-black max-w-md mx-auto">
         <div className="text-center mb-6 border-b-2 border-black pb-4">
@@ -61,8 +65,16 @@ export const SaleReceipt = forwardRef<HTMLDivElement, SaleReceiptProps>(
                   <td className="py-2">
                     <div>{item.itemName}</div>
                     <div className="text-xs text-gray-600">Batch: {item.batchNo}</div>
+                    {item.sellingType === "per_packet" && item.tabletsPerPacket && (
+                      <div className="text-xs text-gray-600">
+                        {item.tabletsPerPacket} tabs/pack × {item.quantity} = {item.totalTablets} tablets
+                      </div>
+                    )}
                   </td>
-                  <td className="text-center">{item.quantity}</td>
+                  <td className="text-center">
+                    {item.quantity}
+                    {item.sellingType === "per_packet" && <span className="text-xs block">pkts</span>}
+                  </td>
                   <td className="text-right">{formatCurrency(item.unitPrice)}</td>
                   <td className="text-right font-semibold">{formatCurrency(item.totalPrice)}</td>
                 </tr>
@@ -76,10 +88,10 @@ export const SaleReceipt = forwardRef<HTMLDivElement, SaleReceiptProps>(
             <span>Subtotal:</span>
             <span>{formatCurrency(subtotal)}</span>
           </div>
-          {discount > 0 && (
+          {discountPercentage && discountPercentage > 0 && (
             <div className="flex justify-between">
-              <span>Discount:</span>
-              <span>-{formatCurrency(discount)}</span>
+              <span>Discount ({discountPercentage}%):</span>
+              <span>-{formatCurrency(discountAmount || 0)}</span>
             </div>
           )}
           {tax > 0 && (

@@ -18,10 +18,18 @@ export const medicineSchema = z.object({
     .trim()
     .min(1, "Rack number is required")
     .max(50, "Rack number must be less than 50 characters"),
+  selling_type: z.enum(["per_tablet", "per_packet"], {
+    required_error: "Selling type is required",
+  }),
   quantity: z.number()
     .int("Quantity must be a whole number")
     .min(1, "Quantity must be at least 1")
     .max(1000000, "Quantity must be less than 1,000,000"),
+  tablets_per_packet: z.number()
+    .int("Tablets per packet must be a whole number")
+    .min(1, "Tablets per packet must be at least 1")
+    .optional()
+    .nullable(),
   purchase_price: z.number()
     .positive("Purchase price must be positive")
     .min(0.01, "Purchase price must be at least 0.01")
@@ -30,6 +38,10 @@ export const medicineSchema = z.object({
     .positive("Selling price must be positive")
     .min(0.01, "Selling price must be at least 0.01")
     .max(1000000, "Selling price must be less than 1,000,000"),
+  price_per_packet: z.number()
+    .positive("Price per packet must be positive")
+    .optional()
+    .nullable(),
   manufacturing_date: z.string()
     .min(1, "Manufacturing date is required"),
   expiry_date: z.string()
@@ -53,6 +65,28 @@ export const medicineSchema = z.object({
   {
     message: "Selling price should be greater than or equal to purchase price",
     path: ["selling_price"],
+  }
+).refine(
+  (data) => {
+    if (data.selling_type === "per_packet") {
+      return data.tablets_per_packet && data.tablets_per_packet > 0;
+    }
+    return true;
+  },
+  {
+    message: "Tablets per packet is required when selling by packet",
+    path: ["tablets_per_packet"],
+  }
+).refine(
+  (data) => {
+    if (data.selling_type === "per_packet") {
+      return data.price_per_packet && data.price_per_packet > 0;
+    }
+    return true;
+  },
+  {
+    message: "Price per packet is required when selling by packet",
+    path: ["price_per_packet"],
   }
 );
 
@@ -170,6 +204,10 @@ export const saleItemSchema = z.object({
   profit: z.number(),
   purchasePrice: z.number()
     .min(0, "Purchase price cannot be negative"),
+  tabletsPerPacket: z.number().optional(),
+  totalTablets: z.number().optional(),
+  totalPackets: z.number().optional(),
+  sellingType: z.enum(["per_tablet", "per_packet"]).optional(),
 });
 
 // Sale validation schema
@@ -179,22 +217,13 @@ export const saleSchema = z.object({
   saleItems: z.array(saleItemSchema)
     .min(1, "At least one item is required")
     .max(100, "Maximum 100 items per sale"),
-  discount: z.number()
+  discountPercentage: z.number()
     .min(0, "Discount cannot be negative")
-    .max(1000000, "Discount is too large"),
+    .max(100, "Discount cannot exceed 100%"),
   tax: z.number()
     .min(0, "Tax cannot be negative")
     .max(1000000, "Tax is too large"),
-}).refine(
-  (data) => {
-    const subtotal = data.saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    return data.discount <= subtotal;
-  },
-  {
-    message: "Discount cannot exceed subtotal",
-    path: ["discount"],
-  }
-);
+});
 
 // Helper function to validate quantity against available stock
 export const validateStockAvailability = (

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 
 interface MedicineDialogProps {
@@ -26,18 +33,39 @@ type MedicineFormData = z.infer<typeof medicineSchema>;
 
 export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps) {
   const queryClient = useQueryClient();
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<MedicineFormData>({
+  const [sellingType, setSellingType] = useState<"per_tablet" | "per_packet">("per_tablet");
+  const [tabletsPerPacket, setTabletsPerPacket] = useState(1);
+  const [quantity, setQuantity] = useState(0);
+  const [pricePerPacket, setPricePerPacket] = useState(0);
+  
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<MedicineFormData>({
     resolver: zodResolver(medicineSchema),
-    defaultValues: medicine || {},
+    defaultValues: medicine || { selling_type: "per_tablet" },
   });
 
   useEffect(() => {
     if (medicine) {
       reset(medicine);
+      setSellingType(medicine.selling_type || "per_tablet");
+      setTabletsPerPacket(medicine.tablets_per_packet || 1);
+      setQuantity(medicine.quantity || 0);
+      setPricePerPacket(medicine.price_per_packet || 0);
     } else {
-      reset({});
+      reset({ selling_type: "per_tablet" });
+      setSellingType("per_tablet");
+      setTabletsPerPacket(1);
+      setQuantity(0);
+      setPricePerPacket(0);
     }
   }, [medicine, reset]);
+
+  // Watch for changes in selling type
+  const watchSellingType = watch("selling_type");
+  useEffect(() => {
+    if (watchSellingType) {
+      setSellingType(watchSellingType as "per_tablet" | "per_packet");
+    }
+  }, [watchSellingType]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -105,14 +133,92 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity *</Label>
+              <Label htmlFor="selling_type">Selling Type *</Label>
+              <Select
+                value={sellingType}
+                onValueChange={(value) => {
+                  setSellingType(value as "per_tablet" | "per_packet");
+                  setValue("selling_type", value as "per_tablet" | "per_packet");
+                }}
+              >
+                <SelectTrigger id="selling_type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="per_tablet">Per Tablet</SelectItem>
+                  <SelectItem value="per_packet">Per Packet</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.selling_type && (
+                <p className="text-sm text-destructive">{errors.selling_type.message}</p>
+              )}
+            </div>
+          </div>
+
+          {sellingType === "per_packet" && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tablets_per_packet">Tablets per Packet *</Label>
+                <Input
+                  id="tablets_per_packet"
+                  type="number"
+                  value={tabletsPerPacket}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setTabletsPerPacket(val);
+                    setValue("tablets_per_packet", val);
+                  }}
+                />
+                {errors.tablets_per_packet && (
+                  <p className="text-sm text-destructive">{errors.tablets_per_packet.message}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Number of tablets in one packet
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="price_per_packet">Price per Packet *</Label>
+                <Input
+                  id="price_per_packet"
+                  type="number"
+                  step="0.01"
+                  value={pricePerPacket}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setPricePerPacket(val);
+                    setValue("price_per_packet", val);
+                  }}
+                />
+                {errors.price_per_packet && (
+                  <p className="text-sm text-destructive">{errors.price_per_packet.message}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="quantity">
+                {sellingType === "per_packet" ? "Total Tablets *" : "Quantity *"}
+              </Label>
               <Input
                 id="quantity"
                 type="number"
-                {...register("quantity", { valueAsNumber: true })}
+                value={quantity}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setQuantity(val);
+                  setValue("quantity", val);
+                }}
               />
               {errors.quantity && (
                 <p className="text-sm text-destructive">{errors.quantity.message}</p>
+              )}
+              {sellingType === "per_packet" && tabletsPerPacket > 0 && quantity > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  = {Math.floor(quantity / tabletsPerPacket)} packets 
+                  {quantity % tabletsPerPacket > 0 && ` + ${quantity % tabletsPerPacket} tablets`}
+                </p>
               )}
             </div>
             <div className="space-y-2">

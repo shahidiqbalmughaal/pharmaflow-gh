@@ -40,6 +40,10 @@ interface SaleItem {
   totalPrice: number;
   profit: number;
   purchasePrice: number;
+  sellingType?: "per_tablet" | "per_packet";
+  tabletsPerPacket?: number;
+  totalTablets?: number;
+  totalPackets?: number;
 }
 
 export function SaleDialog({ open, onClose }: SaleDialogProps) {
@@ -47,7 +51,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [salesmanId, setSalesmanId] = useState("");
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
-  const [discount, setDiscount] = useState(0);
+  const [discountPercentage, setDiscountPercentage] = useState(0);
   const [tax, setTax] = useState(0);
   const [completedSale, setCompletedSale] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
@@ -109,15 +113,18 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
 
       const subtotal = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
       
-      // Validate discount
-      if (discount < 0) throw new Error("Discount cannot be negative");
-      if (discount > subtotal) throw new Error("Discount cannot exceed subtotal");
+      // Validate discount percentage
+      if (discountPercentage < 0) throw new Error("Discount cannot be negative");
+      if (discountPercentage > 100) throw new Error("Discount cannot exceed 100%");
+      
+      // Calculate discount amount
+      const discountAmount = (subtotal * discountPercentage) / 100;
       
       // Validate tax
       if (tax < 0) throw new Error("Tax cannot be negative");
 
       const totalProfit = saleItems.reduce((sum, item) => sum + item.profit, 0);
-      const totalAmount = subtotal - discount + tax;
+      const totalAmount = subtotal - discountAmount + tax;
 
       // Insert sale
       const { data: sale, error: saleError } = await supabase
@@ -126,7 +133,8 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
           salesman_id: salesmanId,
           salesman_name: salesman.name,
           subtotal,
-          discount,
+          discount: discountAmount,
+          discount_percentage: discountPercentage,
           tax,
           total_amount: totalAmount,
           total_profit: totalProfit,
@@ -147,6 +155,9 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
         unit_price: item.unitPrice,
         total_price: item.totalPrice,
         profit: item.profit,
+        tablets_per_packet: item.tabletsPerPacket || 1,
+        total_tablets: item.totalTablets || item.quantity,
+        total_packets: item.totalPackets || 0,
       }));
 
       const { error: itemsError } = await supabase
@@ -182,13 +193,15 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
       queryClient.invalidateQueries({ queryKey: ["medicinesSoldToday"] });
       queryClient.invalidateQueries({ queryKey: ["cosmeticsSoldToday"] });
       
+      const discountAmount = (subtotal * discountPercentage) / 100;
       setCompletedSale({
         saleId: data.sale.id,
         salesmanName: data.salesman.name,
         saleDate: new Date(data.sale.sale_date),
         items: saleItems,
         subtotal,
-        discount,
+        discountPercentage,
+        discountAmount,
         tax,
         total: data.sale.total_amount,
       });
@@ -203,7 +216,7 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
   const resetForm = () => {
     setSalesmanId("");
     setSaleItems([]);
-    setDiscount(0);
+    setDiscountPercentage(0);
     setTax(0);
     setCompletedSale(null);
     setShowReceipt(false);
@@ -230,16 +243,30 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
 
       if (item) {
         // Add item to sale
+        let sellingType: "per_tablet" | "per_packet" = "per_tablet";
+        let tabletsPerPacket = 1;
+        
+        if (itemType === "medicine") {
+          sellingType = (item as any).selling_type || "per_tablet";
+          tabletsPerPacket = (item as any).tablets_per_packet || 1;
+        }
+        
+        const quantity = 1;
+        
         const newItem: SaleItem = {
           itemType,
           itemId: item.id,
           itemName: item[itemType === "medicine" ? "medicine_name" : "product_name"],
           batchNo: item.batch_no,
-          quantity: 1,
+          quantity,
           unitPrice: Number(item.selling_price),
           totalPrice: Number(item.selling_price),
           profit: Number(item.selling_price) - Number(item.purchase_price),
           purchasePrice: Number(item.purchase_price),
+          sellingType,
+          tabletsPerPacket,
+          totalTablets: sellingType === "per_packet" ? quantity * tabletsPerPacket : quantity,
+          totalPackets: sellingType === "per_packet" ? quantity : 0,
         };
         setSaleItems([...saleItems, newItem]);
         toast.success(`Added: ${newItem.itemName}`);
@@ -264,6 +291,10 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
         totalPrice: 0,
         profit: 0,
         purchasePrice: 0,
+        sellingType: "per_tablet",
+        tabletsPerPacket: 1,
+        totalTablets: 0,
+        totalPackets: 0,
       },
     ]);
   };
@@ -291,7 +322,24 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
         item.itemId = value;
         item.itemName = selectedItem[item.itemType === "medicine" ? "medicine_name" : "product_name"];
         item.batchNo = selectedItem.batch_no;
-        item.unitPrice = Number(selectedItem.selling_price);
+        
+        // Handle selling type for medicines
+        if (item.itemType === "medicine") {
+          const medicineItem = selectedItem as any;
+          item.sellingType = medicineItem.selling_type || "per_tablet";
+          item.tabletsPerPacket = medicineItem.tablets_per_packet || 1;
+          
+          if (item.sellingType === "per_packet") {
+            item.unitPrice = Number(medicineItem.price_per_packet || medicineItem.selling_price);
+          } else {
+            item.unitPrice = Number(medicineItem.selling_price);
+          }
+        } else {
+          item.sellingType = "per_tablet";
+          item.tabletsPerPacket = 1;
+          item.unitPrice = Number(selectedItem.selling_price);
+        }
+        
         item.purchasePrice = Number(selectedItem.purchase_price);
         
         // Validate quantity doesn't exceed available stock
@@ -300,8 +348,18 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
           toast.error(`Quantity adjusted to available stock: ${availableQuantity} units`);
         }
         
-        item.totalPrice = item.unitPrice * item.quantity;
-        item.profit = (item.unitPrice - item.purchasePrice) * item.quantity;
+        // Calculate totals based on selling type
+        if (item.sellingType === "per_packet" && item.tabletsPerPacket) {
+          item.totalPackets = item.quantity;
+          item.totalTablets = item.quantity * item.tabletsPerPacket;
+          item.totalPrice = item.unitPrice * item.quantity;
+          item.profit = (item.unitPrice - item.purchasePrice) * item.quantity;
+        } else {
+          item.totalTablets = item.quantity;
+          item.totalPackets = 0;
+          item.totalPrice = item.unitPrice * item.quantity;
+          item.profit = (item.unitPrice - item.purchasePrice) * item.quantity;
+        }
       }
     } else if (field === "quantity") {
       const qty = Number(value);
@@ -311,25 +369,40 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
         return;
       }
 
-      // Validate against available stock
+      // For per-packet items, validate against total tablets available
       if (item.itemId) {
         const allItems = item.itemType === "medicine" ? medicines : cosmetics;
-        const validation = validateStockAvailability(
-          item.itemType,
-          item.itemId,
-          qty,
-          allItems || []
-        );
-
-        if (!validation.isValid) {
-          toast.error(validation.message);
-          return;
+        const selectedItem = allItems?.find((i) => i.id === item.itemId);
+        
+        if (selectedItem) {
+          const requiredTablets = item.sellingType === "per_packet" && item.tabletsPerPacket 
+            ? qty * item.tabletsPerPacket 
+            : qty;
+          
+          if (requiredTablets > selectedItem.quantity) {
+            const maxPackets = item.sellingType === "per_packet" && item.tabletsPerPacket
+              ? Math.floor(selectedItem.quantity / item.tabletsPerPacket)
+              : selectedItem.quantity;
+            toast.error(`Only ${maxPackets} ${item.sellingType === "per_packet" ? "packets" : "tablets"} available (${selectedItem.quantity} tablets in stock)`);
+            return;
+          }
         }
       }
 
       item.quantity = qty;
-      item.totalPrice = item.unitPrice * item.quantity;
-      item.profit = (item.unitPrice - item.purchasePrice) * item.quantity;
+      
+      // Update totals based on selling type
+      if (item.sellingType === "per_packet" && item.tabletsPerPacket) {
+        item.totalPackets = qty;
+        item.totalTablets = qty * item.tabletsPerPacket;
+        item.totalPrice = item.unitPrice * qty;
+        item.profit = (item.unitPrice - item.purchasePrice) * qty;
+      } else {
+        item.totalTablets = qty;
+        item.totalPackets = 0;
+        item.totalPrice = item.unitPrice * qty;
+        item.profit = (item.unitPrice - item.purchasePrice) * qty;
+      }
     } else {
       (item as any)[field] = value;
     }
@@ -342,7 +415,8 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
   };
 
   const subtotal = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
-  const total = subtotal - discount + tax;
+  const discountAmount = (subtotal * discountPercentage) / 100;
+  const total = subtotal - discountAmount + tax;
 
   if (showReceipt && completedSale) {
     return (
@@ -409,65 +483,84 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
               </div>
             </div>
             {saleItems.map((item, index) => (
-              <div key={index} className="grid grid-cols-6 gap-2 p-2 border rounded">
-                <Select
-                  value={item.itemType}
-                  onValueChange={(value) => updateItem(index, "itemType", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="medicine">Medicine</SelectItem>
-                    <SelectItem value="cosmetic">Cosmetic</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={item.itemId}
-                  onValueChange={(value) => updateItem(index, "itemId", value)}
-                >
-                  <SelectTrigger className="col-span-2">
-                    <SelectValue placeholder="Select item" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(item.itemType === "medicine" ? medicines : cosmetics)?.map((i) => (
-                      <SelectItem key={i.id} value={i.id}>
-                        {i[item.itemType === "medicine" ? "medicine_name" : "product_name"]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number"
-                  min="1"
-                  value={item.quantity}
-                  onChange={(e) => updateItem(index, "quantity", e.target.value)}
-                  placeholder="Qty"
-                />
-                <div className="flex items-center">
-                  <span className="text-sm">{formatCurrency(item.totalPrice)}</span>
+              <div key={index} className="space-y-2">
+                <div className="grid grid-cols-6 gap-2 p-2 border rounded">
+                  <Select
+                    value={item.itemType}
+                    onValueChange={(value) => updateItem(index, "itemType", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="medicine">Medicine</SelectItem>
+                      <SelectItem value="cosmetic">Cosmetic</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={item.itemId}
+                    onValueChange={(value) => updateItem(index, "itemId", value)}
+                  >
+                    <SelectTrigger className="col-span-2">
+                      <SelectValue placeholder="Select item" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(item.itemType === "medicine" ? medicines : cosmetics)?.map((i) => (
+                        <SelectItem key={i.id} value={i.id}>
+                          {i[item.itemType === "medicine" ? "medicine_name" : "product_name"]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={item.quantity}
+                    onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                    placeholder={item.sellingType === "per_packet" ? "Packets" : "Qty"}
+                  />
+                  <div className="flex items-center">
+                    <span className="text-sm">{formatCurrency(item.totalPrice)}</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeItem(index)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeItem(index)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                {item.sellingType === "per_packet" && item.tabletsPerPacket && item.itemId && (
+                  <p className="text-xs text-muted-foreground px-2">
+                    Each packet = {item.tabletsPerPacket} tablets | Total = {item.totalTablets} tablets ({item.quantity} packets × {formatCurrency(item.unitPrice)})
+                  </p>
+                )}
               </div>
             ))}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Discount</Label>
+              <Label>Discount (%)</Label>
               <Input
                 type="number"
                 step="0.01"
-                value={discount}
-                onChange={(e) => setDiscount(Number(e.target.value))}
+                min="0"
+                max="100"
+                value={discountPercentage}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (val >= 0 && val <= 100) {
+                    setDiscountPercentage(val);
+                  }
+                }}
               />
+              {discountPercentage > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Discount amount: {formatCurrency(discountAmount)}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Tax</Label>
@@ -485,16 +578,20 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
               <span className="font-medium">Subtotal:</span>
               <span>{formatCurrency(subtotal)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="font-medium">Discount:</span>
-              <span>-{formatCurrency(discount)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-medium">Tax:</span>
-              <span>+{formatCurrency(tax)}</span>
-            </div>
+            {discountPercentage > 0 && (
+              <div className="flex justify-between">
+                <span className="font-medium">Discount ({discountPercentage}%):</span>
+                <span className="text-success">-{formatCurrency(discountAmount)}</span>
+              </div>
+            )}
+            {tax > 0 && (
+              <div className="flex justify-between">
+                <span className="font-medium">Tax:</span>
+                <span>+{formatCurrency(tax)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-lg font-bold">
-              <span>Total:</span>
+              <span>Final Total:</span>
               <span className="text-primary">{formatCurrency(total)}</span>
             </div>
           </div>

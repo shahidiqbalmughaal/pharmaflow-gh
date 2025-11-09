@@ -48,7 +48,7 @@ const Sales = () => {
               <TableHead>Date</TableHead>
               <TableHead>Salesman</TableHead>
               <TableHead>Subtotal</TableHead>
-              <TableHead>Discount</TableHead>
+              <TableHead>Discount (%)</TableHead>
               <TableHead>Tax</TableHead>
               <TableHead>Total</TableHead>
               <TableHead>Profit</TableHead>
@@ -69,7 +69,14 @@ const Sales = () => {
                   </TableCell>
                   <TableCell>{sale.salesman_name}</TableCell>
                   <TableCell>{formatCurrency(Number(sale.subtotal))}</TableCell>
-                  <TableCell>{formatCurrency(Number(sale.discount))}</TableCell>
+                  <TableCell>
+                    {sale.discount_percentage ? `${sale.discount_percentage}%` : '-'}
+                    {sale.discount_percentage && sale.discount > 0 && (
+                      <span className="text-xs text-muted-foreground block">
+                        ({formatCurrency(Number(sale.discount))})
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell>{formatCurrency(Number(sale.tax))}</TableCell>
                   <TableCell className="font-bold">{formatCurrency(Number(sale.total_amount))}</TableCell>
                   <TableCell className="text-success font-bold">

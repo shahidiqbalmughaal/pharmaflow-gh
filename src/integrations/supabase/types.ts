@@ -71,11 +71,14 @@ export type Database = {
           id: string
           manufacturing_date: string
           medicine_name: string
+          price_per_packet: number | null
           purchase_price: number
           quantity: number
           rack_no: string
           selling_price: number
+          selling_type: string
           supplier: string
+          tablets_per_packet: number | null
           updated_at: string | null
         }
         Insert: {
@@ -86,11 +89,14 @@ export type Database = {
           id?: string
           manufacturing_date: string
           medicine_name: string
+          price_per_packet?: number | null
           purchase_price: number
           quantity?: number
           rack_no: string
           selling_price: number
+          selling_type?: string
           supplier: string
+          tablets_per_packet?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -101,11 +107,14 @@ export type Database = {
           id?: string
           manufacturing_date?: string
           medicine_name?: string
+          price_per_packet?: number | null
           purchase_price?: number
           quantity?: number
           rack_no?: string
           selling_price?: number
+          selling_type?: string
           supplier?: string
+          tablets_per_packet?: number | null
           updated_at?: string | null
         }
         Relationships: []
@@ -142,7 +151,10 @@ export type Database = {
           profit: number
           quantity: number
           sale_id: string
+          tablets_per_packet: number | null
+          total_packets: number | null
           total_price: number
+          total_tablets: number | null
           unit_price: number
         }
         Insert: {
@@ -155,7 +167,10 @@ export type Database = {
           profit: number
           quantity: number
           sale_id: string
+          tablets_per_packet?: number | null
+          total_packets?: number | null
           total_price: number
+          total_tablets?: number | null
           unit_price: number
         }
         Update: {
@@ -168,7 +183,10 @@ export type Database = {
           profit?: number
           quantity?: number
           sale_id?: string
+          tablets_per_packet?: number | null
+          total_packets?: number | null
           total_price?: number
+          total_tablets?: number | null
           unit_price?: number
         }
         Relationships: [
@@ -185,6 +203,7 @@ export type Database = {
         Row: {
           created_at: string | null
           discount: number | null
+          discount_percentage: number | null
           id: string
           sale_date: string | null
           salesman_id: string | null
@@ -197,6 +216,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           discount?: number | null
+          discount_percentage?: number | null
           id?: string
           sale_date?: string | null
           salesman_id?: string | null
@@ -209,6 +229,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           discount?: number | null
+          discount_percentage?: number | null
           id?: string
           sale_date?: string | null
           salesman_id?: string | null

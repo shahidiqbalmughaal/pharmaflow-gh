@@ -106,6 +106,7 @@ const Medicines = () => {
               <TableHead>Batch No</TableHead>
               <TableHead>Company</TableHead>
               <TableHead>Rack No</TableHead>
+              <TableHead>Selling Type</TableHead>
               <TableHead>Quantity</TableHead>
               <TableHead>Purchase Price</TableHead>
               <TableHead>Selling Price</TableHead>
@@ -116,56 +117,95 @@ const Medicines = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center">
+                <TableCell colSpan={10} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredMedicines && filteredMedicines.length > 0 ? (
-              filteredMedicines.map((medicine) => (
-                <TableRow key={medicine.id}>
-                  <TableCell className="font-medium">{medicine.medicine_name}</TableCell>
-                  <TableCell>{medicine.batch_no}</TableCell>
-                  <TableCell>{medicine.company_name}</TableCell>
-                  <TableCell>{medicine.rack_no}</TableCell>
-                  <TableCell>
-                    <span className={medicine.quantity < 10 ? "text-warning font-bold" : ""}>
-                      {medicine.quantity}
-                    </span>
-                  </TableCell>
-                  <TableCell>{formatCurrency(Number(medicine.purchase_price))}</TableCell>
-                  <TableCell>{formatCurrency(Number(medicine.selling_price))}</TableCell>
-                  <TableCell>
-                    <span className={
-                      new Date(medicine.expiry_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                        ? "text-destructive font-bold"
-                        : ""
-                    }>
-                      {format(new Date(medicine.expiry_date), "MMM dd, yyyy")}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(medicine)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(medicine.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              filteredMedicines.map((medicine) => {
+                const medicineData = medicine as any;
+                const sellingType = medicineData.selling_type || "per_tablet";
+                const tabletsPerPacket = medicineData.tablets_per_packet || 1;
+                const pricePerPacket = medicineData.price_per_packet;
+                
+                return (
+                  <TableRow key={medicine.id}>
+                    <TableCell className="font-medium">{medicine.medicine_name}</TableCell>
+                    <TableCell>{medicine.batch_no}</TableCell>
+                    <TableCell>{medicine.company_name}</TableCell>
+                    <TableCell>{medicine.rack_no}</TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {sellingType === "per_packet" ? (
+                          <>
+                            <span className="font-medium">Per Packet</span>
+                            <span className="text-xs text-muted-foreground block">
+                              {tabletsPerPacket} tablets/pack
+                            </span>
+                          </>
+                        ) : (
+                          <span>Per Tablet</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className={medicine.quantity < 10 ? "text-warning font-bold" : ""}>
+                        {medicine.quantity}
+                      </span>
+                      {sellingType === "per_packet" && tabletsPerPacket > 0 && (
+                        <span className="text-xs text-muted-foreground block">
+                          ≈ {Math.floor(medicine.quantity / tabletsPerPacket)} packets
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>{formatCurrency(Number(medicine.purchase_price))}</TableCell>
+                    <TableCell>
+                      <div>
+                        {sellingType === "per_packet" && pricePerPacket ? (
+                          <>
+                            <div>{formatCurrency(Number(pricePerPacket))}/pack</div>
+                            <div className="text-xs text-muted-foreground">
+                              {formatCurrency(Number(medicine.selling_price))}/tab
+                            </div>
+                          </>
+                        ) : (
+                          formatCurrency(Number(medicine.selling_price))
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className={
+                        new Date(medicine.expiry_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                          ? "text-destructive font-bold"
+                          : ""
+                      }>
+                        {format(new Date(medicine.expiry_date), "MMM dd, yyyy")}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(medicine)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(medicine.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                <TableCell colSpan={10} className="text-center text-muted-foreground">
                   No medicines found
                 </TableCell>
               </TableRow>
