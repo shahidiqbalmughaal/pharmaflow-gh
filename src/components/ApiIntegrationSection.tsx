@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -33,24 +31,8 @@ export function ApiIntegrationSection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [medicinesData, setMedicinesData] = useState<MedicineData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [apiConfigured, setApiConfigured] = useState<boolean | null>(null);
   const { toast } = useToast();
-
-  // Check if API is configured
-  const { data: apiSettings } = useQuery({
-    queryKey: ["apiSettings"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("api_settings")
-        .select("*")
-        .single();
-      
-      if (error && error.code !== "PGRST116") {
-        throw error;
-      }
-      
-      return data;
-    },
-  });
 
   const callApiProxy = async (endpoint: string, params?: Record<string, any>) => {
     setIsLoading(true);
@@ -65,8 +47,15 @@ export function ApiIntegrationSection() {
         body: { endpoint, params },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Check if it's a configuration error
+        if (error.message?.includes('API settings not configured')) {
+          setApiConfigured(false);
+        }
+        throw error;
+      }
       
+      setApiConfigured(true);
       return data;
     } catch (error: any) {
       toast({
@@ -152,7 +141,7 @@ export function ApiIntegrationSection() {
     );
   });
 
-  if (!apiSettings) {
+  if (apiConfigured === false) {
     return (
       <Card>
         <CardHeader>
@@ -160,7 +149,7 @@ export function ApiIntegrationSection() {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            API integration is not configured. Please configure API settings first.
+            API integration is not configured. Please configure the EXTERNAL_API_KEY and EXTERNAL_API_BASE_URL secrets in Lovable Cloud settings.
           </p>
         </CardContent>
       </Card>
