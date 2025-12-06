@@ -45,6 +45,7 @@ import { format, subDays } from "date-fns";
 import { formatCurrency } from "@/lib/currency";
 import { SaleDialog } from "@/components/SaleDialog";
 import { SalesChart } from "@/components/SalesChart";
+import { ExpenseBreakdownChart } from "@/components/ExpenseBreakdownChart";
 import { AlertsOverview } from "@/components/AlertsOverview";
 import { AlertStatusCard } from "@/components/AlertStatusCard";
 import { Pagination } from "@/components/Pagination";
@@ -145,7 +146,7 @@ const Dashboard = () => {
     setCurrentPage(1);
   };
 
-  // Fetch today's sales
+  // Fetch today's sales with auto-refresh
   const { data: todaySales } = useQuery({
     queryKey: ["todaySales"],
     queryFn: async () => {
@@ -163,10 +164,11 @@ const Dashboard = () => {
       
       return { totalSales, count: data.length };
     },
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
 
-  // Fetch today's expenses
-  const { data: todayExpenses } = useQuery({
+  // Fetch today's expenses with breakdown for chart
+  const { data: todayExpensesData } = useQuery({
     queryKey: ["todayExpenses"],
     queryFn: async () => {
       // Use local date to match how expenses are stored (YYYY-MM-DD format)
@@ -178,16 +180,23 @@ const Dashboard = () => {
       
       const { data, error } = await supabase
         .from("expenses")
-        .select("amount")
+        .select("amount, category")
         .eq("expense_date", todayStr);
       
       if (error) throw error;
       
       const totalExpenses = data.reduce((sum, expense) => sum + Number(expense.amount), 0);
       
-      return { totalExpenses, count: data.length };
+      return { totalExpenses, count: data.length, expenses: data };
     },
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
+
+  // For backward compatibility
+  const todayExpenses = todayExpensesData ? {
+    totalExpenses: todayExpensesData.totalExpenses,
+    count: todayExpensesData.count
+  } : undefined;
 
   // Fetch medicines sold today
   const { data: medicinesSold } = useQuery({
@@ -201,7 +210,7 @@ const Dashboard = () => {
         .select("id")
         .gte("sale_date", today.toISOString());
       
-      if (!sales) return 0;
+      if (!sales || sales.length === 0) return 0;
       
       const saleIds = sales.map(s => s.id);
       const { data, error } = await supabase
@@ -214,6 +223,7 @@ const Dashboard = () => {
       
       return data.reduce((sum, item) => sum + item.quantity, 0);
     },
+    refetchInterval: 30000,
   });
 
   // Fetch cosmetics sold today
@@ -228,7 +238,7 @@ const Dashboard = () => {
         .select("id")
         .gte("sale_date", today.toISOString());
       
-      if (!sales) return 0;
+      if (!sales || sales.length === 0) return 0;
       
       const saleIds = sales.map(s => s.id);
       const { data, error } = await supabase
@@ -241,6 +251,7 @@ const Dashboard = () => {
       
       return data.reduce((sum, item) => sum + item.quantity, 0);
     },
+    refetchInterval: 30000,
   });
 
   // Fetch low stock alerts
@@ -257,6 +268,7 @@ const Dashboard = () => {
       if (error) throw error;
       return data;
     },
+    refetchInterval: 30000,
   });
 
   // Fetch expiry alerts
@@ -276,6 +288,7 @@ const Dashboard = () => {
       if (error) throw error;
       return data;
     },
+    refetchInterval: 30000,
   });
 
   // Role-based view control
@@ -539,9 +552,13 @@ const Dashboard = () => {
       </div>
 
       {/* Sales Chart */}
-      {chartSales && chartSales.length > 0 && (
-        <SalesChart sales={chartSales} days={7} />
-      )}
+      {/* Charts Section */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {chartSales && chartSales.length > 0 && (
+          <SalesChart sales={chartSales} days={7} />
+        )}
+        <ExpenseBreakdownChart expenses={todayExpensesData?.expenses || []} />
+      </div>
 
       {/* Alerts Overview - Admin only */}
       {canViewFullDashboard && (
