@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,8 +7,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, Pill, Info } from 'lucide-react';
+import { Loader2, Pill, Info, Check, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+
+const passwordRequirements = [
+  { id: 'length', label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
+  { id: 'uppercase', label: 'One uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
+  { id: 'lowercase', label: 'One lowercase letter', test: (p: string) => /[a-z]/.test(p) },
+  { id: 'number', label: 'One number', test: (p: string) => /[0-9]/.test(p) },
+  { id: 'special', label: 'One special character (!@#$%^&*)', test: (p: string) => /[!@#$%^&*(),.?":{}|<>]/.test(p) },
+];
 
 const Signup = () => {
   const [fullName, setFullName] = useState('');
@@ -18,6 +26,15 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const passwordStrength = useMemo(() => {
+    return passwordRequirements.map(req => ({
+      ...req,
+      met: req.test(password)
+    }));
+  }, [password]);
+
+  const allRequirementsMet = passwordStrength.every(req => req.met);
 
   useEffect(() => {
     if (user) {
@@ -33,13 +50,13 @@ const Signup = () => {
       return;
     }
 
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
+    if (!allRequirementsMet) {
+      toast.error('Password does not meet all requirements');
       return;
     }
 
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match');
       return;
     }
 
@@ -131,13 +148,28 @@ const Signup = () => {
               <Input
                 id="password"
                 type="password"
-                placeholder="Create a password (min 6 characters)"
+                placeholder="Create a strong password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
                 required
-                minLength={6}
               />
+              {password && (
+                <div className="mt-2 space-y-1 text-sm">
+                  {passwordStrength.map((req) => (
+                    <div key={req.id} className="flex items-center gap-2">
+                      {req.met ? (
+                        <Check className="h-3 w-3 text-green-500" />
+                      ) : (
+                        <X className="h-3 w-3 text-destructive" />
+                      )}
+                      <span className={req.met ? 'text-green-600' : 'text-muted-foreground'}>
+                        {req.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
@@ -150,8 +182,15 @@ const Signup = () => {
                 disabled={loading}
                 required
               />
+              {confirmPassword && password !== confirmPassword && (
+                <p className="text-sm text-destructive">Passwords do not match</p>
+              )}
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={loading || !allRequirementsMet || password !== confirmPassword}
+            >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Account
             </Button>
