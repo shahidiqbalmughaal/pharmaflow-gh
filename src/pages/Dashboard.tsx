@@ -169,8 +169,12 @@ const Dashboard = () => {
   const { data: todayExpenses } = useQuery({
     queryKey: ["todayExpenses"],
     queryFn: async () => {
-      const today = new Date();
-      const todayStr = format(today, "yyyy-MM-dd");
+      // Use local date to match how expenses are stored (YYYY-MM-DD format)
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${year}-${month}-${day}`;
       
       const { data, error } = await supabase
         .from("expenses")
