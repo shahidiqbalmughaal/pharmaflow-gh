@@ -5,17 +5,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, Pill } from 'lucide-react';
+import { Loader2, Pill, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Signup = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<string>('salesman');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -49,6 +48,8 @@ const Signup = () => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
+      // Security: Always assign 'salesman' role by default
+      // Role elevation must be done by admin through User Management
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -56,7 +57,8 @@ const Signup = () => {
           emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName,
-            role: role,
+            // Role is intentionally NOT passed from client
+            // The database trigger will assign 'salesman' role by default
           },
         },
       });
@@ -64,7 +66,7 @@ const Signup = () => {
       if (error) throw error;
 
       if (data.user) {
-        toast.success('Account created successfully!');
+        toast.success('Account created successfully! You have been assigned the Salesman role.');
         navigate('/', { replace: true });
       }
     } catch (error: any) {
@@ -93,6 +95,12 @@ const Signup = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <Alert className="mb-4">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              New accounts are assigned the Salesman role by default. Contact an administrator for role changes.
+            </AlertDescription>
+          </Alert>
           <form onSubmit={handleSignup} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
@@ -117,19 +125,6 @@ const Signup = () => {
                 disabled={loading}
                 required
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
-              <Select value={role} onValueChange={setRole} disabled={loading}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="salesman">Salesman</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
