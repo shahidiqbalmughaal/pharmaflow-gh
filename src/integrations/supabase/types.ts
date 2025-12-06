@@ -98,30 +98,6 @@ export type Database = {
         }
         Relationships: []
       }
-      api_settings: {
-        Row: {
-          api_base_url: string
-          api_key: string
-          created_at: string
-          id: string
-          updated_at: string
-        }
-        Insert: {
-          api_base_url: string
-          api_key: string
-          created_at?: string
-          id?: string
-          updated_at?: string
-        }
-        Update: {
-          api_base_url?: string
-          api_key?: string
-          created_at?: string
-          id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       cosmetics: {
         Row: {
           batch_no: string
