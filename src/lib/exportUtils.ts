@@ -3,7 +3,6 @@
  */
 export function exportToCSV(data: any[], filename: string) {
   if (!data || data.length === 0) {
-    console.warn("No data to export");
     return;
   }
 
