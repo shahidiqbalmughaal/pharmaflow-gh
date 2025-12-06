@@ -12,9 +12,9 @@ export function AlertsOverview() {
       const { data, error } = await supabase
         .from("alert_settings")
         .select("*")
-        .single();
+        .maybeSingle();
       
-      if (error && error.code !== "PGRST116") {
+      if (error) {
         throw error;
       }
       
