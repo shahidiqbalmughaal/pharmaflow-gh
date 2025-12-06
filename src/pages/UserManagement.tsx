@@ -51,19 +51,15 @@ const UserManagement = () => {
 
       if (rolesError) throw rolesError;
 
-      // Get auth metadata to retrieve emails
-      // We'll need to get this from the auth.users metadata via a different approach
-      // For now, we'll fetch from the auth system
-      const userIds = profiles.map(p => p.id);
-      const emailsMap: Record<string, string> = {};
-      
-      // Fetch user emails by querying auth.users through a database function or edge function
-      // For now, we'll use the RPC approach or direct query
-      for (const profile of profiles) {
-        const { data: authData } = await supabase.auth.admin.getUserById(profile.id);
-        if (authData?.user?.email) {
-          emailsMap[profile.id] = authData.user.email;
+      // Fetch user emails securely via edge function
+      let emailsMap: Record<string, string> = {};
+      try {
+        const { data: emailData, error: emailError } = await supabase.functions.invoke('get-user-emails');
+        if (!emailError && emailData?.emails) {
+          emailsMap = emailData.emails;
         }
+      } catch (error) {
+        console.error('Failed to fetch user emails:', error);
       }
 
       // Combine the data
