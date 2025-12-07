@@ -50,6 +50,7 @@ import { AlertsOverview } from "@/components/AlertsOverview";
 import { AlertStatusCard } from "@/components/AlertStatusCard";
 import { Pagination } from "@/components/Pagination";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { MedicineRecommendationDialog } from "@/components/MedicineRecommendationDialog";
 import { EmptyState } from "@/components/EmptyState";
 
 const Dashboard = () => {
@@ -306,22 +307,25 @@ const Dashboard = () => {
             </p>
           </div>
           {canProcessSales && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  onClick={() => setIsSaleDialogOpen(true)}
-                  size="lg"
-                  className="gap-2 w-full sm:w-auto"
-                  aria-label="Process a new sale"
-                >
-                  <ShoppingCart className="h-5 w-5" aria-hidden="true" />
-                  Process Sale
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Create a new sales transaction</p>
-              </TooltipContent>
-            </Tooltip>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <MedicineRecommendationDialog />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    onClick={() => setIsSaleDialogOpen(true)}
+                    size="lg"
+                    className="gap-2 w-full sm:w-auto"
+                    aria-label="Process a new sale"
+                  >
+                    <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+                    Process Sale
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Create a new sales transaction</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           )}
         </div>
 

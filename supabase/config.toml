@@ -1,1 +1,13 @@
 project_id = "rjvvpltirnkmsvgybvxh"
+
+[functions.api-proxy]
+verify_jwt = true
+
+[functions.get-user-emails]
+verify_jwt = true
+
+[functions.inventory-alerts]
+verify_jwt = false
+
+[functions.medicine-recommendations]
+verify_jwt = true
