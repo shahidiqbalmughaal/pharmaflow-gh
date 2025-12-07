@@ -20,10 +20,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Printer } from "lucide-react";
+import { Plus, Trash2, Printer, Sparkles, Loader2, X } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { QRScanner } from "./QRScanner";
 import { SaleReceipt } from "./SaleReceipt";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 
 interface SaleDialogProps {
   open: boolean;
@@ -56,6 +58,12 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
   const [tax, setTax] = useState(0);
   const [completedSale, setCompletedSale] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  
+  // AI Recommendations state
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const [aiSymptoms, setAiSymptoms] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiRecommendations, setAiRecommendations] = useState<any[]>([]);
 
   const { data: salesmen } = useQuery({
     queryKey: ["salesmen"],
@@ -294,6 +302,72 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
     setTax(0);
     setCompletedSale(null);
     setShowReceipt(false);
+    setShowAIPanel(false);
+    setAiSymptoms("");
+    setAiRecommendations([]);
+  };
+
+  const handleGetAIRecommendations = async () => {
+    if (!aiSymptoms.trim()) {
+      toast.error("Please describe the symptoms");
+      return;
+    }
+
+    setAiLoading(true);
+    setAiRecommendations([]);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('medicine-recommendations', {
+        body: { symptoms: aiSymptoms.trim() }
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setAiRecommendations(data.recommendations || []);
+      
+      if (data.consult_doctor) {
+        toast.info("Doctor consultation recommended for these symptoms");
+      }
+    } catch (error: any) {
+      console.error('Error getting AI recommendations:', error);
+      toast.error(error.message || 'Failed to get recommendations');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const addRecommendedMedicine = (rec: any) => {
+    if (!rec.id) return;
+    
+    const medicine = medicines?.find(m => m.id === rec.id);
+    if (!medicine) {
+      toast.error("Medicine not found in inventory");
+      return;
+    }
+
+    const sellingType = (medicine as any).selling_type || "per_tablet";
+    const tabletsPerPacket = (medicine as any).tablets_per_packet || 1;
+    const quantity = 1;
+
+    const newItem: SaleItem = {
+      itemType: "medicine",
+      itemId: medicine.id,
+      itemName: medicine.medicine_name,
+      batchNo: medicine.batch_no,
+      quantity,
+      unitPrice: Number(medicine.selling_price),
+      totalPrice: Number(medicine.selling_price),
+      profit: Number(medicine.selling_price) - Number(medicine.purchase_price),
+      purchasePrice: Number(medicine.purchase_price),
+      sellingType,
+      tabletsPerPacket,
+      totalTablets: sellingType === "per_packet" ? quantity * tabletsPerPacket : quantity,
+      totalPackets: sellingType === "per_packet" ? quantity : 0,
+    };
+
+    setSaleItems([...saleItems, newItem]);
+    toast.success(`Added: ${medicine.medicine_name}`);
   };
 
   const handlePrint = useReactToPrint({
@@ -594,6 +668,90 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
               <p className="text-xs text-muted-foreground">
                 Loyalty Points: {customers?.find(c => c.id === customerId)?.loyalty_points || 0}
               </p>
+            )}
+          </div>
+
+          {/* AI Recommendations Panel */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Button
+                type="button"
+                variant={showAIPanel ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setShowAIPanel(!showAIPanel)}
+                className="gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                AI Medicine Finder
+              </Button>
+              {showAIPanel && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => {
+                    setShowAIPanel(false);
+                    setAiSymptoms("");
+                    setAiRecommendations([]);
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            
+            {showAIPanel && (
+              <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
+                <div className="flex gap-2">
+                  <Textarea
+                    placeholder="Describe symptoms (e.g., headache, fever, cough...)"
+                    value={aiSymptoms}
+                    onChange={(e) => setAiSymptoms(e.target.value)}
+                    rows={2}
+                    className="flex-1 text-sm"
+                    disabled={aiLoading}
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleGetAIRecommendations}
+                    disabled={aiLoading || !aiSymptoms.trim()}
+                    className="self-end"
+                  >
+                    {aiLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                
+                {aiRecommendations.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Suggested medicines (click to add):
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {aiRecommendations.map((rec, idx) => (
+                        <Badge
+                          key={idx}
+                          variant="outline"
+                          className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors py-1.5 px-3"
+                          onClick={() => addRecommendedMedicine(rec)}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          {rec.medicine_name}
+                          {rec.selling_price && (
+                            <span className="ml-1 text-xs opacity-70">
+                              ({formatCurrency(rec.selling_price)})
+                            </span>
+                          )}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
