@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { formatCurrency } from "@/lib/currency";
+import { toast } from "sonner";
 import { SaleDialog } from "@/components/SaleDialog";
 import { SalesChart } from "@/components/SalesChart";
 import { ExpenseBreakdownChart } from "@/components/ExpenseBreakdownChart";
@@ -52,6 +53,7 @@ import { Pagination } from "@/components/Pagination";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { MedicineRecommendationDialog } from "@/components/MedicineRecommendationDialog";
 import { EmptyState } from "@/components/EmptyState";
+import { QuickMedicineSearch } from "@/components/QuickMedicineSearch";
 
 const Dashboard = () => {
   const { userRole } = useAuth();
@@ -299,41 +301,54 @@ const Dashboard = () => {
   return (
     <TooltipProvider>
       <div className="space-y-6" role="main" aria-label="Dashboard">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-          <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Welcome to Al-Rehman Pharmacy & Cosmetics
-            </p>
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold">Dashboard</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Welcome to Al-Rehman Pharmacy & Cosmetics
+              </p>
+            </div>
+            {canProcessSales && (
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <MedicineRecommendationDialog />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Find medicines based on symptoms using AI</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      onClick={() => setIsSaleDialogOpen(true)}
+                      size="lg"
+                      className="gap-2 w-full sm:w-auto"
+                      aria-label="Process a new sale"
+                    >
+                      <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+                      Process Sale
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Create a new sales transaction</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            )}
           </div>
+          
+          {/* Quick Medicine Search */}
           {canProcessSales && (
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <MedicineRecommendationDialog />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Find medicines based on symptoms using AI</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    onClick={() => setIsSaleDialogOpen(true)}
-                    size="lg"
-                    className="gap-2 w-full sm:w-auto"
-                    aria-label="Process a new sale"
-                  >
-                    <ShoppingCart className="h-5 w-5" aria-hidden="true" />
-                    Process Sale
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Create a new sales transaction</p>
-                </TooltipContent>
-              </Tooltip>
+            <div className="flex items-center gap-2">
+              <QuickMedicineSearch 
+                onSelectMedicine={(medicine) => {
+                  toast.info(`${medicine.medicine_name} - Stock: ${medicine.quantity}, Rack: ${medicine.rack_no}`);
+                }}
+              />
             </div>
           )}
         </div>
