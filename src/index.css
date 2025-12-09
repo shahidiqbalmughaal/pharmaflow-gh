@@ -8,30 +8,36 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 300 20% 98%;
-    --foreground: 280 30% 15%;
+    /* Light lavender/pink background gradient feel */
+    --background: 280 40% 97%;
+    --foreground: 280 50% 20%;
 
     --card: 0 0% 100%;
-    --card-foreground: 280 30% 15%;
+    --card-foreground: 280 50% 20%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 280 30% 15%;
+    --popover-foreground: 280 50% 20%;
 
-    --primary: 300 85% 50%;
+    /* Vibrant magenta/fuchsia primary */
+    --primary: 300 100% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 300 30% 95%;
-    --secondary-foreground: 280 30% 15%;
+    /* Light pink secondary */
+    --secondary: 310 40% 95%;
+    --secondary-foreground: 280 50% 20%;
 
-    --muted: 300 20% 96%;
-    --muted-foreground: 280 15% 45%;
+    /* Soft lavender muted */
+    --muted: 280 30% 94%;
+    --muted-foreground: 280 25% 45%;
 
-    --accent: 300 50% 92%;
-    --accent-foreground: 300 85% 40%;
+    /* Light magenta accent */
+    --accent: 310 60% 92%;
+    --accent-foreground: 300 100% 35%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
+    /* Green success */
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
 
@@ -41,49 +47,55 @@ All colors MUST be HSL.
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
-    --border: 300 20% 88%;
-    --input: 300 20% 88%;
-    --ring: 300 85% 50%;
+    /* Light purple borders */
+    --border: 280 30% 88%;
+    --input: 280 30% 88%;
+    --ring: 300 100% 45%;
 
     --radius: 0.75rem;
 
-    --chart-1: 300 85% 50%;
+    /* Chart colors */
+    --chart-1: 300 100% 45%;
     --chart-2: 142 71% 45%;
     --chart-3: 38 92% 50%;
-    --chart-4: 280 67% 60%;
-    --chart-5: 199 89% 48%;
+    --chart-4: 280 60% 55%;
+    --chart-5: 320 80% 55%;
 
-    --sidebar-background: 300 85% 50%;
+    /* Vibrant magenta sidebar */
+    --sidebar-background: 300 100% 45%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 300 75% 60%;
+    --sidebar-primary: 310 90% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 300 80% 45%;
+    --sidebar-accent: 295 100% 40%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 300 80% 45%;
-    --sidebar-ring: 300 85% 60%;
+    --sidebar-border: 295 100% 40%;
+    --sidebar-ring: 310 90% 55%;
   }
 
   .dark {
-    --background: 280 30% 8%;
-    --foreground: 300 20% 98%;
+    /* Dark purple background */
+    --background: 280 40% 8%;
+    --foreground: 280 30% 95%;
 
-    --card: 280 30% 11%;
-    --card-foreground: 300 20% 98%;
+    --card: 280 35% 12%;
+    --card-foreground: 280 30% 95%;
 
-    --popover: 280 30% 11%;
-    --popover-foreground: 300 20% 98%;
+    --popover: 280 35% 12%;
+    --popover-foreground: 280 30% 95%;
 
-    --primary: 300 80% 55%;
+    /* Bright magenta primary for dark mode */
+    --primary: 300 90% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 280 25% 17%;
-    --secondary-foreground: 300 20% 98%;
+    /* Dark purple secondary */
+    --secondary: 280 30% 18%;
+    --secondary-foreground: 280 30% 95%;
 
-    --muted: 280 25% 17%;
-    --muted-foreground: 300 15% 65%;
+    --muted: 280 30% 18%;
+    --muted-foreground: 280 20% 65%;
 
-    --accent: 300 50% 20%;
-    --accent-foreground: 300 80% 70%;
+    --accent: 300 50% 22%;
+    --accent-foreground: 300 90% 70%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -97,24 +109,26 @@ All colors MUST be HSL.
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
-    --border: 280 25% 20%;
-    --input: 280 25% 20%;
-    --ring: 300 80% 55%;
+    --border: 280 30% 22%;
+    --input: 280 30% 22%;
+    --ring: 300 90% 55%;
 
-    --chart-1: 300 80% 55%;
+    /* Chart colors dark mode */
+    --chart-1: 300 90% 55%;
     --chart-2: 142 71% 50%;
     --chart-3: 38 92% 55%;
-    --chart-4: 280 67% 65%;
-    --chart-5: 199 89% 55%;
+    --chart-4: 280 60% 60%;
+    --chart-5: 320 80% 60%;
     
-    --sidebar-background: 280 30% 8%;
-    --sidebar-foreground: 300 20% 98%;
-    --sidebar-primary: 300 80% 55%;
+    /* Dark sidebar */
+    --sidebar-background: 280 40% 8%;
+    --sidebar-foreground: 280 30% 95%;
+    --sidebar-primary: 300 90% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 280 25% 15%;
-    --sidebar-accent-foreground: 300 20% 98%;
-    --sidebar-border: 280 25% 15%;
-    --sidebar-ring: 300 80% 55%;
+    --sidebar-accent: 280 30% 15%;
+    --sidebar-accent-foreground: 280 30% 95%;
+    --sidebar-border: 280 30% 15%;
+    --sidebar-ring: 300 90% 55%;
   }
 }
 
