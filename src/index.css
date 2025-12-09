@@ -8,127 +8,130 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Light lavender/pink background gradient feel */
-    --background: 280 40% 97%;
-    --foreground: 280 50% 20%;
+    /* Light gray background like the dashboard */
+    --background: 220 20% 97%;
+    --foreground: 220 45% 20%;
 
+    /* White cards */
     --card: 0 0% 100%;
-    --card-foreground: 280 50% 20%;
+    --card-foreground: 220 45% 20%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 280 50% 20%;
+    --popover-foreground: 220 45% 20%;
 
-    /* Vibrant magenta/fuchsia primary */
-    --primary: 300 100% 45%;
+    /* Bright blue primary */
+    --primary: 210 90% 55%;
     --primary-foreground: 0 0% 100%;
 
-    /* Light pink secondary */
-    --secondary: 310 40% 95%;
-    --secondary-foreground: 280 50% 20%;
+    /* Light blue/gray secondary */
+    --secondary: 220 20% 94%;
+    --secondary-foreground: 220 45% 20%;
 
-    /* Soft lavender muted */
-    --muted: 280 30% 94%;
-    --muted-foreground: 280 25% 45%;
+    /* Muted gray */
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 15% 45%;
 
-    /* Light magenta accent */
-    --accent: 310 60% 92%;
-    --accent-foreground: 300 100% 35%;
+    /* Light blue accent */
+    --accent: 210 80% 94%;
+    --accent-foreground: 210 90% 45%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Green success */
-    --success: 142 71% 45%;
+    /* Green for success */
+    --success: 142 70% 45%;
     --success-foreground: 0 0% 100%;
 
+    /* Orange warning */
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --info: 199 89% 48%;
+    --info: 210 90% 55%;
     --info-foreground: 0 0% 100%;
 
-    /* Light purple borders */
-    --border: 280 30% 88%;
-    --input: 280 30% 88%;
-    --ring: 300 100% 45%;
+    /* Light borders */
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 210 90% 55%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    /* Chart colors */
-    --chart-1: 300 100% 45%;
-    --chart-2: 142 71% 45%;
-    --chart-3: 38 92% 50%;
-    --chart-4: 280 60% 55%;
-    --chart-5: 320 80% 55%;
+    /* Chart colors matching the dashboard */
+    --chart-1: 210 90% 55%;
+    --chart-2: 142 70% 45%;
+    --chart-3: 0 70% 55%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 280 60% 55%;
 
-    /* Vibrant magenta sidebar */
-    --sidebar-background: 300 100% 45%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 310 90% 55%;
+    /* Dark navy sidebar */
+    --sidebar-background: 220 45% 18%;
+    --sidebar-foreground: 220 20% 95%;
+    --sidebar-primary: 210 90% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 295 100% 40%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 295 100% 40%;
-    --sidebar-ring: 310 90% 55%;
+    --sidebar-accent: 220 40% 25%;
+    --sidebar-accent-foreground: 220 20% 95%;
+    --sidebar-border: 220 40% 25%;
+    --sidebar-ring: 210 90% 55%;
   }
 
   .dark {
-    /* Dark purple background */
-    --background: 280 40% 8%;
-    --foreground: 280 30% 95%;
+    /* Dark navy background */
+    --background: 220 45% 10%;
+    --foreground: 220 20% 95%;
 
-    --card: 280 35% 12%;
-    --card-foreground: 280 30% 95%;
+    /* Dark cards */
+    --card: 220 45% 14%;
+    --card-foreground: 220 20% 95%;
 
-    --popover: 280 35% 12%;
-    --popover-foreground: 280 30% 95%;
+    --popover: 220 45% 14%;
+    --popover-foreground: 220 20% 95%;
 
-    /* Bright magenta primary for dark mode */
-    --primary: 300 90% 55%;
+    /* Bright blue primary */
+    --primary: 210 85% 58%;
     --primary-foreground: 0 0% 100%;
 
-    /* Dark purple secondary */
-    --secondary: 280 30% 18%;
-    --secondary-foreground: 280 30% 95%;
+    /* Dark secondary */
+    --secondary: 220 40% 20%;
+    --secondary-foreground: 220 20% 95%;
 
-    --muted: 280 30% 18%;
-    --muted-foreground: 280 20% 65%;
+    --muted: 220 40% 20%;
+    --muted-foreground: 220 15% 60%;
 
-    --accent: 300 50% 22%;
-    --accent-foreground: 300 90% 70%;
+    --accent: 210 60% 22%;
+    --accent-foreground: 210 85% 70%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 71% 45%;
+    --success: 142 70% 45%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --info: 199 89% 48%;
+    --info: 210 85% 58%;
     --info-foreground: 0 0% 100%;
 
-    --border: 280 30% 22%;
-    --input: 280 30% 22%;
-    --ring: 300 90% 55%;
+    --border: 220 40% 22%;
+    --input: 220 40% 22%;
+    --ring: 210 85% 58%;
 
     /* Chart colors dark mode */
-    --chart-1: 300 90% 55%;
-    --chart-2: 142 71% 50%;
-    --chart-3: 38 92% 55%;
-    --chart-4: 280 60% 60%;
-    --chart-5: 320 80% 60%;
+    --chart-1: 210 85% 58%;
+    --chart-2: 142 70% 50%;
+    --chart-3: 0 65% 55%;
+    --chart-4: 38 92% 55%;
+    --chart-5: 280 60% 60%;
     
     /* Dark sidebar */
-    --sidebar-background: 280 40% 8%;
-    --sidebar-foreground: 280 30% 95%;
-    --sidebar-primary: 300 90% 55%;
+    --sidebar-background: 220 45% 8%;
+    --sidebar-foreground: 220 20% 95%;
+    --sidebar-primary: 210 85% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 280 30% 15%;
-    --sidebar-accent-foreground: 280 30% 95%;
-    --sidebar-border: 280 30% 15%;
-    --sidebar-ring: 300 90% 55%;
+    --sidebar-accent: 220 40% 15%;
+    --sidebar-accent-foreground: 220 20% 95%;
+    --sidebar-border: 220 40% 15%;
+    --sidebar-ring: 210 85% 58%;
   }
 }
 
