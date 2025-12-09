@@ -39,7 +39,8 @@ import {
   ShoppingCart,
   History,
   FileText,
-  Search
+  Search,
+  Zap
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { formatCurrency } from "@/lib/currency";
@@ -54,10 +55,24 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { MedicineRecommendationDialog } from "@/components/MedicineRecommendationDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { QuickProductSearch } from "@/components/QuickProductSearch";
-
+import { QuickSaleDialog } from "@/components/QuickSaleDialog";
 const Dashboard = () => {
   const { userRole } = useAuth();
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
+  const [isQuickSaleOpen, setIsQuickSaleOpen] = useState(false);
+  const [quickSaleProduct, setQuickSaleProduct] = useState<{
+    type: 'medicine' | 'cosmetic';
+    id: string;
+    name: string;
+    batch_no: string;
+    quantity: number;
+    selling_price: number;
+    purchase_price: number;
+    rack_no: string;
+    selling_type?: string;
+    tablets_per_packet?: number;
+    price_per_packet?: number;
+  } | null>(null);
   const [initialProduct, setInitialProduct] = useState<{
     type: 'medicine' | 'cosmetic';
     id: string;
@@ -350,24 +365,35 @@ const Dashboard = () => {
             )}
           </div>
           
-          {/* Quick Product Search */}
+          {/* Quick Product Search with Quick Sale Mode */}
           {canProcessSales && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 flex-wrap">
               <QuickProductSearch 
                 onSelectProduct={(product) => {
                   const name = product.type === 'medicine' ? product.medicine_name : product.product_name;
-                  setInitialProduct({
+                  const fullProduct = product as any;
+                  
+                  // Open Quick Sale dialog
+                  setQuickSaleProduct({
                     type: product.type,
                     id: product.id,
                     name: name,
                     batch_no: product.batch_no,
                     quantity: product.quantity,
                     selling_price: product.selling_price,
+                    purchase_price: fullProduct.purchase_price || 0,
                     rack_no: product.rack_no,
+                    selling_type: fullProduct.selling_type,
+                    tablets_per_packet: fullProduct.tablets_per_packet,
+                    price_per_packet: fullProduct.price_per_packet,
                   });
-                  setIsSaleDialogOpen(true);
+                  setIsQuickSaleOpen(true);
                 }}
               />
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Zap className="h-3 w-3 text-warning" />
+                <span>Quick Sale enabled</span>
+              </div>
             </div>
           )}
         </div>
@@ -868,6 +894,15 @@ const Dashboard = () => {
           setActiveCard(null);
         }}
         type={modalType}
+      />
+
+      <QuickSaleDialog
+        open={isQuickSaleOpen}
+        onClose={() => {
+          setIsQuickSaleOpen(false);
+          setQuickSaleProduct(null);
+        }}
+        product={quickSaleProduct}
       />
     </div>
   </TooltipProvider>

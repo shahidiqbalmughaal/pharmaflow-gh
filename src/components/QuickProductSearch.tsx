@@ -57,7 +57,7 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
       if (searchType === 'all' || searchType === 'medicine') {
         const { data: medicines, error: medError } = await supabase
           .from('medicines')
-          .select('id, medicine_name, batch_no, company_name, quantity, selling_price, rack_no, expiry_date')
+          .select('id, medicine_name, batch_no, company_name, quantity, selling_price, purchase_price, rack_no, expiry_date, selling_type, tablets_per_packet, price_per_packet')
           .or(`medicine_name.ilike.%${searchTerm}%,batch_no.ilike.%${searchTerm}%`)
           .gt('quantity', 0)
           .order('medicine_name')
@@ -72,7 +72,7 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
       if (searchType === 'all' || searchType === 'cosmetic') {
         const { data: cosmetics, error: cosError } = await supabase
           .from('cosmetics')
-          .select('id, product_name, batch_no, brand, quantity, selling_price, rack_no, expiry_date')
+          .select('id, product_name, batch_no, brand, quantity, selling_price, purchase_price, rack_no, expiry_date')
           .or(`product_name.ilike.%${searchTerm}%,batch_no.ilike.%${searchTerm}%`)
           .gt('quantity', 0)
           .order('product_name')
