@@ -53,7 +53,7 @@ import { Pagination } from "@/components/Pagination";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { MedicineRecommendationDialog } from "@/components/MedicineRecommendationDialog";
 import { EmptyState } from "@/components/EmptyState";
-import { QuickMedicineSearch } from "@/components/QuickMedicineSearch";
+import { QuickProductSearch } from "@/components/QuickProductSearch";
 
 const Dashboard = () => {
   const { userRole } = useAuth();
@@ -341,12 +341,13 @@ const Dashboard = () => {
             )}
           </div>
           
-          {/* Quick Medicine Search */}
+          {/* Quick Product Search */}
           {canProcessSales && (
             <div className="flex items-center gap-2">
-              <QuickMedicineSearch 
-                onSelectMedicine={(medicine) => {
-                  toast.info(`${medicine.medicine_name} - Stock: ${medicine.quantity}, Rack: ${medicine.rack_no}`);
+              <QuickProductSearch 
+                onSelectProduct={(product) => {
+                  const name = product.type === 'medicine' ? product.medicine_name : product.product_name;
+                  toast.info(`${name} - Stock: ${product.quantity}, Rack: ${product.rack_no}`);
                 }}
               />
             </div>
