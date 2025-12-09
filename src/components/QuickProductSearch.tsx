@@ -88,6 +88,20 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
     enabled: searchTerm.length >= 2,
   });
 
+  // Global keyboard shortcut (Ctrl+K or Cmd+K)
+  useEffect(() => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+        event.preventDefault();
+        inputRef.current?.focus();
+        setIsOpen(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -181,7 +195,7 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
           <Input
             ref={inputRef}
             type="text"
-            placeholder={`Search ${searchType === 'all' ? 'products' : searchType === 'medicine' ? 'medicines' : 'cosmetics'} by name or batch...`}
+            placeholder={`Search ${searchType === 'all' ? 'products' : searchType === 'medicine' ? 'medicines' : 'cosmetics'}...`}
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -189,15 +203,19 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
             }}
             onFocus={() => setIsOpen(true)}
             onKeyDown={handleKeyDown}
-            className="pl-10 pr-10 bg-background border-border"
+            className="pl-10 pr-20 bg-background border-border"
           />
-          {searchTerm && (
+          {searchTerm ? (
             <button
               onClick={clearSearch}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
+          ) : (
+            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+              <span className="text-xs">⌘</span>K
+            </kbd>
           )}
         </div>
       </div>
