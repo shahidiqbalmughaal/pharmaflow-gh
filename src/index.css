@@ -8,26 +8,26 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+    --background: 300 20% 98%;
+    --foreground: 280 30% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 280 30% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 280 30% 15%;
 
-    --primary: 221 83% 53%;
+    --primary: 300 85% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 300 30% 95%;
+    --secondary-foreground: 280 30% 15%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 300 20% 96%;
+    --muted-foreground: 280 15% 45%;
 
-    --accent: 210 40% 94%;
-    --accent-foreground: 221 83% 53%;
+    --accent: 300 50% 92%;
+    --accent-foreground: 300 85% 40%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -41,57 +41,49 @@ All colors MUST be HSL.
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 83% 53%;
+    --border: 300 20% 88%;
+    --input: 300 20% 88%;
+    --ring: 300 85% 50%;
 
     --radius: 0.75rem;
 
-    /* Chart colors for better visualization */
-    --chart-1: 221 83% 53%;
+    --chart-1: 300 85% 50%;
     --chart-2: 142 71% 45%;
     --chart-3: 38 92% 50%;
     --chart-4: 280 67% 60%;
     --chart-5: 199 89% 48%;
 
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 221 83% 60%;
+    --sidebar-background: 300 85% 50%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 300 75% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 28% 17%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 28% 17%;
-    --sidebar-ring: 221 83% 53%;
-
-    /* Dashboard card gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(221 83% 53%) 0%, hsl(221 83% 63%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(142 71% 55%) 100%);
-    --gradient-warning: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(38 92% 60%) 100%);
-    --gradient-destructive: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(0 84% 70%) 100%);
-    --gradient-info: linear-gradient(135deg, hsl(199 89% 48%) 0%, hsl(199 89% 58%) 100%);
+    --sidebar-accent: 300 80% 45%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 300 80% 45%;
+    --sidebar-ring: 300 85% 60%;
   }
 
   .dark {
-    --background: 222 47% 8%;
-    --foreground: 210 40% 98%;
+    --background: 280 30% 8%;
+    --foreground: 300 20% 98%;
 
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 280 30% 11%;
+    --card-foreground: 300 20% 98%;
 
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 280 30% 11%;
+    --popover-foreground: 300 20% 98%;
 
-    --primary: 217 91% 60%;
+    --primary: 300 80% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 28% 17%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 280 25% 17%;
+    --secondary-foreground: 300 20% 98%;
 
-    --muted: 215 28% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 280 25% 17%;
+    --muted-foreground: 300 15% 65%;
 
-    --accent: 215 28% 20%;
-    --accent-foreground: 217 91% 70%;
+    --accent: 300 50% 20%;
+    --accent-foreground: 300 80% 70%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -105,32 +97,24 @@ All colors MUST be HSL.
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
-    --border: 215 28% 17%;
-    --input: 215 28% 17%;
-    --ring: 217 91% 60%;
+    --border: 280 25% 20%;
+    --input: 280 25% 20%;
+    --ring: 300 80% 55%;
 
-    /* Chart colors for dark mode */
-    --chart-1: 217 91% 60%;
+    --chart-1: 300 80% 55%;
     --chart-2: 142 71% 50%;
     --chart-3: 38 92% 55%;
     --chart-4: 280 67% 65%;
     --chart-5: 199 89% 55%;
     
-    --sidebar-background: 222 47% 6%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-background: 280 30% 8%;
+    --sidebar-foreground: 300 20% 98%;
+    --sidebar-primary: 300 80% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 28% 12%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 28% 12%;
-    --sidebar-ring: 217 91% 60%;
-
-    /* Dashboard card gradients - dark mode */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 50%) 0%, hsl(217 91% 60%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(142 71% 40%) 0%, hsl(142 71% 50%) 100%);
-    --gradient-warning: linear-gradient(135deg, hsl(38 92% 45%) 0%, hsl(38 92% 55%) 100%);
-    --gradient-destructive: linear-gradient(135deg, hsl(0 72% 45%) 0%, hsl(0 72% 55%) 100%);
-    --gradient-info: linear-gradient(135deg, hsl(199 89% 42%) 0%, hsl(199 89% 52%) 100%);
+    --sidebar-accent: 280 25% 15%;
+    --sidebar-accent-foreground: 300 20% 98%;
+    --sidebar-border: 280 25% 15%;
+    --sidebar-ring: 300 80% 55%;
   }
 }
 
@@ -144,7 +128,6 @@ All colors MUST be HSL.
   }
 }
 
-/* Custom utilities for dashboard cards */
 @layer utilities {
   .card-hover {
     @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5;
