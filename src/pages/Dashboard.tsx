@@ -308,7 +308,16 @@ const Dashboard = () => {
           </div>
           {canProcessSales && (
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <MedicineRecommendationDialog />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <MedicineRecommendationDialog />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Find medicines based on symptoms using AI</p>
+                </TooltipContent>
+              </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button 

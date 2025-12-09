@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Sparkles, AlertTriangle, Stethoscope, MapPin, Package } from 'lucide-react';
+import { Loader2, Sparkles, AlertTriangle, Stethoscope, MapPin, Package, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/currency';
@@ -95,7 +95,11 @@ export function MedicineRecommendationDialog({ onSelectMedicine }: MedicineRecom
       if (!isOpen) resetDialog();
     }}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
+        <Button 
+          size="lg" 
+          className="gap-2 bg-gradient-to-r from-info to-primary hover:from-info/90 hover:to-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all"
+        >
+          <Search className="h-5 w-5" />
           <Sparkles className="h-4 w-4" />
           AI Medicine Finder
         </Button>
