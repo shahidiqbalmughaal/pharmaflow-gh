@@ -27,9 +27,20 @@ import { SaleReceipt } from "./SaleReceipt";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
+interface InitialProduct {
+  type: 'medicine' | 'cosmetic';
+  id: string;
+  name: string;
+  batch_no: string;
+  quantity: number;
+  selling_price: number;
+  rack_no: string;
+}
+
 interface SaleDialogProps {
   open: boolean;
   onClose: () => void;
+  initialProduct?: InitialProduct | null;
 }
 
 interface SaleItem {
@@ -48,7 +59,7 @@ interface SaleItem {
   totalPackets?: number;
 }
 
-export function SaleDialog({ open, onClose }: SaleDialogProps) {
+export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   const queryClient = useQueryClient();
   const receiptRef = useRef<HTMLDivElement>(null);
   const [salesmanId, setSalesmanId] = useState("");
@@ -127,6 +138,54 @@ export function SaleDialog({ open, onClose }: SaleDialogProps) {
       setDiscountPercentage(0);
     }
   }, [customerId, customerDiscounts]);
+
+  // Handle initial product from quick search
+  useEffect(() => {
+    if (open && initialProduct && medicines && cosmetics) {
+      const allItems = initialProduct.type === 'medicine' ? medicines : cosmetics;
+      const selectedItem = allItems?.find((i: any) => i.id === initialProduct.id);
+      
+      if (selectedItem) {
+        const isMedicine = initialProduct.type === 'medicine';
+        const medicineItem = selectedItem as any;
+        const sellingType = isMedicine ? (medicineItem.selling_type || 'per_tablet') : 'per_tablet';
+        const tabletsPerPacket = isMedicine ? (medicineItem.tablets_per_packet || 1) : 1;
+        
+        let unitPrice = selectedItem.selling_price;
+        if (isMedicine && sellingType === 'per_packet') {
+          unitPrice = medicineItem.price_per_packet || (selectedItem.selling_price * tabletsPerPacket);
+        }
+        
+        const newItem: SaleItem = {
+          itemType: initialProduct.type,
+          itemId: initialProduct.id,
+          itemName: initialProduct.name,
+          batchNo: initialProduct.batch_no,
+          quantity: 1,
+          unitPrice: unitPrice,
+          totalPrice: unitPrice,
+          profit: unitPrice - selectedItem.purchase_price,
+          purchasePrice: selectedItem.purchase_price,
+          sellingType: sellingType,
+          tabletsPerPacket: tabletsPerPacket,
+          totalTablets: isMedicine && sellingType === 'per_packet' ? tabletsPerPacket : 0,
+          totalPackets: isMedicine && sellingType === 'per_packet' ? 1 : 0,
+        };
+        
+        // Check if item already exists in saleItems
+        const existingIndex = saleItems.findIndex(
+          (item) => item.itemId === initialProduct.id && item.itemType === initialProduct.type
+        );
+        
+        if (existingIndex === -1) {
+          setSaleItems((prev) => [...prev, newItem]);
+          toast.success(`${initialProduct.name} added to sale`);
+        } else {
+          toast.info(`${initialProduct.name} is already in the sale`);
+        }
+      }
+    }
+  }, [open, initialProduct, medicines, cosmetics]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {

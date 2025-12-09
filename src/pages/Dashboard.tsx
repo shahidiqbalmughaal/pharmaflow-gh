@@ -58,6 +58,15 @@ import { QuickProductSearch } from "@/components/QuickProductSearch";
 const Dashboard = () => {
   const { userRole } = useAuth();
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
+  const [initialProduct, setInitialProduct] = useState<{
+    type: 'medicine' | 'cosmetic';
+    id: string;
+    name: string;
+    batch_no: string;
+    quantity: number;
+    selling_price: number;
+    rack_no: string;
+  } | null>(null);
   
   // Sales history filters
   const today = new Date();
@@ -347,7 +356,16 @@ const Dashboard = () => {
               <QuickProductSearch 
                 onSelectProduct={(product) => {
                   const name = product.type === 'medicine' ? product.medicine_name : product.product_name;
-                  toast.info(`${name} - Stock: ${product.quantity}, Rack: ${product.rack_no}`);
+                  setInitialProduct({
+                    type: product.type,
+                    id: product.id,
+                    name: name,
+                    batch_no: product.batch_no,
+                    quantity: product.quantity,
+                    selling_price: product.selling_price,
+                    rack_no: product.rack_no,
+                  });
+                  setIsSaleDialogOpen(true);
                 }}
               />
             </div>
@@ -836,7 +854,11 @@ const Dashboard = () => {
 
       <SaleDialog 
         open={isSaleDialogOpen} 
-        onClose={() => setIsSaleDialogOpen(false)} 
+        onClose={() => {
+          setIsSaleDialogOpen(false);
+          setInitialProduct(null);
+        }}
+        initialProduct={initialProduct}
       />
       
       <DashboardDetailModal 
