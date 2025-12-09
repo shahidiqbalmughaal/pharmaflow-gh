@@ -203,84 +203,109 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
       </div>
 
       {isOpen && searchTerm.length >= 2 && (
-        <Card className="absolute top-full left-0 right-0 mt-1 z-50 max-h-96 overflow-y-auto shadow-lg border-border">
-          <CardContent className="p-2">
+        <Card className="absolute top-full left-0 right-0 mt-1 z-[100] max-h-96 overflow-y-auto shadow-xl border-2 border-border bg-card">
+          <CardContent className="p-2 bg-card">
             {isLoading ? (
-              <div className="flex items-center justify-center py-4 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <div className="flex items-center justify-center py-6 text-muted-foreground bg-card">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
                 Searching...
               </div>
             ) : products && products.length > 0 ? (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {products.map((product, index) => (
                   <div
                     key={`${product.type}-${product.id}`}
                     onClick={() => handleSelect(product)}
                     className={cn(
-                      "p-3 rounded-lg cursor-pointer transition-colors",
+                      "p-4 rounded-lg cursor-pointer transition-all border-2 bg-card",
                       index === selectedIndex
-                        ? "bg-primary/10 border border-primary/30"
-                        : "hover:bg-muted/50"
+                        ? "bg-primary/10 border-primary shadow-md"
+                        : "border-transparent hover:bg-muted hover:border-muted-foreground/20"
                     )}
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    {/* Header Row: Name, Type Badge, Price */}
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {product.type === 'medicine' ? (
-                            <Pill className="h-4 w-4 text-primary flex-shrink-0" />
+                            <Pill className="h-5 w-5 text-primary flex-shrink-0" />
                           ) : (
-                            <Sparkles className="h-4 w-4 text-pink-500 flex-shrink-0" />
+                            <Sparkles className="h-5 w-5 text-pink-500 flex-shrink-0" />
                           )}
-                          <span className="font-medium truncate">{getProductName(product)}</span>
+                          <span className="font-semibold text-base text-foreground">{getProductName(product)}</span>
                           <Badge 
-                            variant="outline" 
                             className={cn(
-                              "text-[10px] px-1.5 py-0 flex-shrink-0",
+                              "text-xs px-2 py-0.5 font-medium",
                               product.type === 'medicine' 
-                                ? "border-primary/30 text-primary" 
-                                : "border-pink-500/30 text-pink-500"
+                                ? "bg-primary/20 text-primary border-primary/40" 
+                                : "bg-pink-500/20 text-pink-600 border-pink-500/40"
                             )}
                           >
                             {product.type === 'medicine' ? 'Medicine' : 'Cosmetic'}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                          {getProductBrand(product)} • Batch: {product.batch_no}
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {getProductBrand(product)} • Batch: <span className="font-mono">{product.batch_no}</span>
                         </p>
                       </div>
-                      <span className="font-semibold text-primary text-sm">
-                        {formatCurrency(product.selling_price)}
-                      </span>
+                      <div className="text-right flex-shrink-0">
+                        <span className="font-bold text-lg text-primary">
+                          {formatCurrency(product.selling_price)}
+                        </span>
+                      </div>
                     </div>
                     
-                    <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <Package className="h-3 w-3" />
-                        {product.quantity} in stock
+                    {/* Stock & Details Row */}
+                    <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-border">
+                      {/* Stock - Most Prominent */}
+                      <div className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-md font-semibold",
+                        isLowStock(product.quantity) 
+                          ? "bg-destructive/15 text-destructive" 
+                          : "bg-success/15 text-success"
+                      )}>
+                        <Package className="h-4 w-4" />
+                        <span className="text-base">{product.quantity}</span>
+                        <span className="text-sm font-normal">in stock</span>
                         {isLowStock(product.quantity) && (
-                          <Badge variant="destructive" className="text-[10px] px-1 py-0 ml-1">
-                            Low
+                          <Badge variant="destructive" className="text-xs ml-1">
+                            Low Stock
                           </Badge>
                         )}
-                      </span>
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        {product.rack_no}
-                      </span>
-                      <span className={cn(
-                        "flex items-center gap-1",
-                        isExpiringSoon(product.expiry_date) ? "text-warning" : "text-muted-foreground"
+                      </div>
+                      
+                      {/* Rack Location */}
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        <span className="text-sm font-medium">Rack {product.rack_no}</span>
+                      </div>
+                      
+                      {/* Expiry */}
+                      <div className={cn(
+                        "flex items-center gap-1.5 px-2 py-1 rounded",
+                        isExpiringSoon(product.expiry_date) 
+                          ? "bg-warning/15 text-warning" 
+                          : "bg-muted text-muted-foreground"
                       )}>
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(product.expiry_date), 'MMM yyyy')}
-                      </span>
+                        <Calendar className="h-4 w-4" />
+                        <span className="text-sm font-medium">
+                          Exp: {format(new Date(product.expiry_date), 'MMM yyyy')}
+                        </span>
+                        {isExpiringSoon(product.expiry_date) && (
+                          <Badge className="bg-warning/20 text-warning text-xs ml-1">
+                            Soon
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="py-4 text-center text-muted-foreground text-sm">
-                No {searchType === 'all' ? 'products' : searchType === 'medicine' ? 'medicines' : 'cosmetics'} found for "{searchTerm}"
+              <div className="py-6 text-center text-muted-foreground bg-card">
+                <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="font-medium">No {searchType === 'all' ? 'products' : searchType === 'medicine' ? 'medicines' : 'cosmetics'} found</p>
+                <p className="text-sm">for "{searchTerm}"</p>
               </div>
             )}
           </CardContent>
