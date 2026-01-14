@@ -539,6 +539,13 @@ export type Database = {
             referencedRelation: "sales"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales_salesman_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       sales: {
@@ -709,6 +716,142 @@ export type Database = {
       }
     }
     Views: {
+      sale_items_salesman_view: {
+        Row: {
+          batch_no: string | null
+          created_at: string | null
+          id: string | null
+          item_id: string | null
+          item_name: string | null
+          item_type: string | null
+          quantity: number | null
+          sale_id: string | null
+          tablets_per_packet: number | null
+          total_packets: number | null
+          total_price: number | null
+          total_tablets: number | null
+          unit_price: number | null
+        }
+        Insert: {
+          batch_no?: string | null
+          created_at?: string | null
+          id?: string | null
+          item_id?: string | null
+          item_name?: string | null
+          item_type?: string | null
+          quantity?: number | null
+          sale_id?: string | null
+          tablets_per_packet?: number | null
+          total_packets?: number | null
+          total_price?: number | null
+          total_tablets?: number | null
+          unit_price?: number | null
+        }
+        Update: {
+          batch_no?: string | null
+          created_at?: string | null
+          id?: string | null
+          item_id?: string | null
+          item_name?: string | null
+          item_type?: string | null
+          quantity?: number | null
+          sale_id?: string | null
+          tablets_per_packet?: number | null
+          total_packets?: number | null
+          total_price?: number | null
+          total_tablets?: number | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales_salesman_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_salesman_view: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          customer_name: string | null
+          discount: number | null
+          discount_percentage: number | null
+          id: string | null
+          loyalty_points_earned: number | null
+          loyalty_points_redeemed: number | null
+          sale_date: string | null
+          salesman_id: string | null
+          salesman_name: string | null
+          subtotal: number | null
+          tax: number | null
+          total_amount: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          discount?: number | null
+          discount_percentage?: number | null
+          id?: string | null
+          loyalty_points_earned?: number | null
+          loyalty_points_redeemed?: number | null
+          sale_date?: string | null
+          salesman_id?: string | null
+          salesman_name?: string | null
+          subtotal?: number | null
+          tax?: number | null
+          total_amount?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          discount?: number | null
+          discount_percentage?: number | null
+          id?: string | null
+          loyalty_points_earned?: number | null
+          loyalty_points_redeemed?: number | null
+          sale_date?: string | null
+          salesman_id?: string | null
+          salesman_name?: string | null
+          subtotal?: number | null
+          tax?: number | null
+          total_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_salesman_id_fkey"
+            columns: ["salesman_id"]
+            isOneToOne: false
+            referencedRelation: "salesmen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_salesman_id_fkey"
+            columns: ["salesman_id"]
+            isOneToOne: false
+            referencedRelation: "salesmen_list"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       salesmen_list: {
         Row: {
           assigned_counter: string | null
