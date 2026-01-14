@@ -54,10 +54,11 @@ export function QuickSaleDialog({ open, onClose, product }: QuickSaleDialogProps
   const [completedSale, setCompletedSale] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
 
+  // Use salesmen_list view for dropdown (excludes sensitive CNIC/contact data)
   const { data: salesmen } = useQuery({
-    queryKey: ["salesmen"],
+    queryKey: ["salesmen-list"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("salesmen").select("*");
+      const { data, error } = await supabase.from("salesmen_list").select("*");
       if (error) throw error;
       return data;
     },

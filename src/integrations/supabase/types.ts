@@ -608,6 +608,13 @@ export type Database = {
             referencedRelation: "salesmen"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sales_salesman_id_fkey"
+            columns: ["salesman_id"]
+            isOneToOne: false
+            referencedRelation: "salesmen_list"
+            referencedColumns: ["id"]
+          },
         ]
       }
       salesmen: {
@@ -702,7 +709,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      salesmen_list: {
+        Row: {
+          assigned_counter: string | null
+          id: string | null
+          name: string | null
+        }
+        Insert: {
+          assigned_counter?: string | null
+          id?: string | null
+          name?: string | null
+        }
+        Update: {
+          assigned_counter?: string | null
+          id?: string | null
+          name?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       decrement_cosmetic_quantity: {
