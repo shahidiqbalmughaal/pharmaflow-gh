@@ -76,10 +76,11 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState<any[]>([]);
 
+  // Use salesmen_list view for dropdown (excludes sensitive CNIC/contact data)
   const { data: salesmen } = useQuery({
-    queryKey: ["salesmen"],
+    queryKey: ["salesmen-list"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("salesmen").select("*");
+      const { data, error } = await supabase.from("salesmen_list").select("*");
       if (error) throw error;
       return data;
     },

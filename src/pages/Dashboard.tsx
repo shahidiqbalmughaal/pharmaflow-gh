@@ -100,11 +100,11 @@ const Dashboard = () => {
   const [activeCard, setActiveCard] = useState<string | null>(null);
   const [modalType, setModalType] = useState<"sales" | "cash" | "expenses" | "netProfit" | "medicines" | "cosmetics" | "lowStock" | "expiry" | "allLowStock" | null>(null);
 
-  // Fetch salesmen for filter
+  // Fetch salesmen for filter (use salesmen_list view for security - excludes CNIC/contact)
   const { data: salesmen } = useQuery({
-    queryKey: ["salesmen"],
+    queryKey: ["salesmen-list"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("salesmen").select("*");
+      const { data, error } = await supabase.from("salesmen_list").select("*");
       if (error) throw error;
       return data;
     },
