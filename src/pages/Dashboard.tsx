@@ -40,7 +40,8 @@ import {
   History,
   FileText,
   Search,
-  Zap
+  Zap,
+  RotateCcw
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { formatCurrency } from "@/lib/currency";
@@ -56,9 +57,11 @@ import { MedicineRecommendationDialog } from "@/components/MedicineRecommendatio
 import { EmptyState } from "@/components/EmptyState";
 import { QuickProductSearch } from "@/components/QuickProductSearch";
 import { QuickSaleDialog } from "@/components/QuickSaleDialog";
+import { ReturnDialog } from "@/components/ReturnDialog";
 const Dashboard = () => {
   const { userRole } = useAuth();
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false);
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
   const [isQuickSaleOpen, setIsQuickSaleOpen] = useState(false);
   const [quickSaleProduct, setQuickSaleProduct] = useState<{
     type: 'medicine' | 'cosmetic';
@@ -345,6 +348,25 @@ const Dashboard = () => {
                     <p>Find medicines based on symptoms using AI</p>
                   </TooltipContent>
                 </Tooltip>
+                {canViewFullDashboard && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        onClick={() => setIsReturnDialogOpen(true)}
+                        size="lg"
+                        variant="outline"
+                        className="gap-2 w-full sm:w-auto"
+                        aria-label="Process a return or exchange"
+                      >
+                        <RotateCcw className="h-5 w-5" aria-hidden="true" />
+                        Process Return
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Process product returns or exchanges</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button 
@@ -903,6 +925,11 @@ const Dashboard = () => {
           setQuickSaleProduct(null);
         }}
         product={quickSaleProduct}
+      />
+
+      <ReturnDialog
+        open={isReturnDialogOpen}
+        onClose={() => setIsReturnDialogOpen(false)}
       />
     </div>
   </TooltipProvider>

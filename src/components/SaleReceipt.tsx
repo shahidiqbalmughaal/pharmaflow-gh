@@ -120,7 +120,16 @@ export const SaleReceipt = forwardRef<HTMLDivElement, SaleReceiptProps>(
           )}
         </div>
 
-        <div className="text-center mt-6 pt-4 border-t-2 border-dashed border-black text-xs">
+        {/* Return Policy */}
+        <div className="mt-6 pt-4 border-t-2 border-dashed border-black">
+          <div className="bg-gray-100 p-3 rounded text-xs">
+            <p className="font-bold text-center mb-2 underline">RETURN POLICY</p>
+            <p className="mb-1">• Items can be returned/replaced within <strong>7 days</strong> with this receipt.</p>
+            <p className="text-red-600 font-semibold">• Fridge items (insulin, vaccines, etc.) cannot be replaced or returned.</p>
+          </div>
+        </div>
+
+        <div className="text-center mt-4 pt-4 border-t-2 border-dashed border-black text-xs">
           <p className="font-semibold">Thank you for your purchase!</p>
           <p className="mt-2">For queries, please contact us</p>
           <p className="mt-4">Powered by Al-Rehman POS System</p>
