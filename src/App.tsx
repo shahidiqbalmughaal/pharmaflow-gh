@@ -12,6 +12,7 @@ import Cosmetics from "./pages/Cosmetics";
 import Sales from "./pages/Sales";
 import Expenses from "./pages/Expenses";
 import Reports from "./pages/Reports";
+import ReturnsHistory from "./pages/ReturnsHistory";
 import Salesmen from "./pages/Salesmen";
 import Suppliers from "./pages/Suppliers";
 import Customers from "./pages/Customers";
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/sales" element={<ProtectedRoute><Layout><Sales /></Layout></ProtectedRoute>} />
             <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><Layout><Reports /></Layout></ProtectedRoute>} />
+            <Route path="/returns-history" element={<ProtectedRoute><Layout><ReturnsHistory /></Layout></ProtectedRoute>} />
             <Route path="/salesmen" element={<ProtectedRoute><Layout><Salesmen /></Layout></ProtectedRoute>} />
             <Route path="/suppliers" element={<ProtectedRoute><Layout><Suppliers /></Layout></ProtectedRoute>} />
             <Route path="/customers" element={<ProtectedRoute><Layout><Customers /></Layout></ProtectedRoute>} />

@@ -9,7 +9,8 @@ import {
   UserCheck,
   Settings,
   Shield,
-  Receipt
+  Receipt,
+  RotateCcw
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -34,6 +35,7 @@ const items = [
   { title: "Expenses", url: "/expenses", icon: Receipt },
   { title: "Customers", url: "/customers", icon: UserCheck },
   { title: "Reports", url: "/reports", icon: FileText },
+  { title: "Returns History", url: "/returns-history", icon: RotateCcw },
   { title: "Salesmen", url: "/salesmen", icon: Users },
   { title: "Suppliers", url: "/suppliers", icon: Building2 },
   { title: "Settings", url: "/settings", icon: Settings },
