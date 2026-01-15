@@ -482,16 +482,88 @@ export type Database = {
           },
         ]
       }
+      returns: {
+        Row: {
+          created_at: string
+          id: string
+          processed_at: string
+          processed_by: string
+          quantity: number
+          reason: string | null
+          refund_amount: number
+          return_type: string
+          sale_id: string
+          sale_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          processed_at?: string
+          processed_by: string
+          quantity: number
+          reason?: string | null
+          refund_amount?: number
+          return_type: string
+          sale_id: string
+          sale_item_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          processed_at?: string
+          processed_by?: string
+          quantity?: number
+          reason?: string | null
+          refund_amount?: number
+          return_type?: string
+          sale_id?: string
+          sale_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "returns_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "returns_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales_salesman_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "returns_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: false
+            referencedRelation: "sale_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "returns_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: false
+            referencedRelation: "sale_items_salesman_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sale_items: {
         Row: {
           batch_no: string
           created_at: string | null
           id: string
+          is_fridge_item: boolean | null
           item_id: string
           item_name: string
           item_type: string
           profit: number
           quantity: number
+          return_date: string | null
+          return_quantity: number | null
+          return_status: string | null
           sale_id: string
           tablets_per_packet: number | null
           total_packets: number | null
@@ -503,11 +575,15 @@ export type Database = {
           batch_no: string
           created_at?: string | null
           id?: string
+          is_fridge_item?: boolean | null
           item_id: string
           item_name: string
           item_type: string
           profit: number
           quantity: number
+          return_date?: string | null
+          return_quantity?: number | null
+          return_status?: string | null
           sale_id: string
           tablets_per_packet?: number | null
           total_packets?: number | null
@@ -519,11 +595,15 @@ export type Database = {
           batch_no?: string
           created_at?: string | null
           id?: string
+          is_fridge_item?: boolean | null
           item_id?: string
           item_name?: string
           item_type?: string
           profit?: number
           quantity?: number
+          return_date?: string | null
+          return_quantity?: number | null
+          return_status?: string | null
           sale_id?: string
           tablets_per_packet?: number | null
           total_packets?: number | null
@@ -558,6 +638,10 @@ export type Database = {
           id: string
           loyalty_points_earned: number | null
           loyalty_points_redeemed: number | null
+          return_date: string | null
+          return_processed_by: string | null
+          return_reason: string | null
+          return_status: string | null
           sale_date: string | null
           salesman_id: string | null
           salesman_name: string
@@ -575,6 +659,10 @@ export type Database = {
           id?: string
           loyalty_points_earned?: number | null
           loyalty_points_redeemed?: number | null
+          return_date?: string | null
+          return_processed_by?: string | null
+          return_reason?: string | null
+          return_status?: string | null
           sale_date?: string | null
           salesman_id?: string | null
           salesman_name: string
@@ -592,6 +680,10 @@ export type Database = {
           id?: string
           loyalty_points_earned?: number | null
           loyalty_points_redeemed?: number | null
+          return_date?: string | null
+          return_processed_by?: string | null
+          return_reason?: string | null
+          return_status?: string | null
           sale_date?: string | null
           salesman_id?: string | null
           salesman_name?: string
