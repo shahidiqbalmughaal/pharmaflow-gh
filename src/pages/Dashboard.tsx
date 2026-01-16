@@ -348,25 +348,23 @@ const Dashboard = () => {
                     <p>Find medicines based on symptoms using AI</p>
                   </TooltipContent>
                 </Tooltip>
-                {canViewFullDashboard && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        onClick={() => setIsReturnDialogOpen(true)}
-                        size="lg"
-                        variant="outline"
-                        className="gap-2 w-full sm:w-auto"
-                        aria-label="Process a return or exchange"
-                      >
-                        <RotateCcw className="h-5 w-5" aria-hidden="true" />
-                        Process Return
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Process product returns or exchanges</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      onClick={() => setIsReturnDialogOpen(true)}
+                      size="lg"
+                      variant="outline"
+                      className="gap-2 w-full sm:w-auto"
+                      aria-label="Process a return or exchange"
+                    >
+                      <RotateCcw className="h-5 w-5" aria-hidden="true" />
+                      Process Return
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Process product returns or exchanges</p>
+                  </TooltipContent>
+                </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button 
