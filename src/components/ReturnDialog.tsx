@@ -285,7 +285,7 @@ export const ReturnDialog = ({ open, onClose }: ReturnDialogProps) => {
     }
   };
 
-  const canProcessReturn = userRole === "admin" || userRole === "manager";
+  const canProcessReturn = userRole === "admin" || userRole === "manager" || userRole === "salesman";
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -304,7 +304,7 @@ export const ReturnDialog = ({ open, onClose }: ReturnDialogProps) => {
         {!canProcessReturn ? (
           <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
             <AlertTriangle className="h-12 w-12 mb-4" />
-            <p>Only managers and admins can process returns.</p>
+            <p>You must be logged in to process returns.</p>
           </div>
         ) : (
           <div className="space-y-4">
