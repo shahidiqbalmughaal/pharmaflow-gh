@@ -93,7 +93,7 @@ export function SalesChart({ sales, days = 7 }: SalesChartProps) {
             <YAxis 
               className="text-xs"
               tick={{ fill: "hsl(var(--muted-foreground))" }}
-              tickFormatter={(value) => `${value / 1000}k`}
+              tickFormatter={(value) => `PKR ${value / 1000}k`}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend />
