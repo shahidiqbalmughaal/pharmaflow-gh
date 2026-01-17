@@ -1,3 +1,3 @@
 export function formatCurrency(amount: number): string {
-  return `PKR ${amount.toFixed(2)}`;
+  return `PKR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
