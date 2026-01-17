@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { medicineSchema } from "@/lib/validations";
+import { formatCurrency } from "@/lib/currency";
 import type { z } from "zod";
 import {
   Dialog,
@@ -248,7 +249,7 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
               )}
               {sellingType === "per_tablet" && quantity > 0 && watch("selling_price") > 0 && (
                 <p className="text-xs text-success font-medium">
-                  Total Value: {quantity} × {watch("selling_price")} = {(quantity * (watch("selling_price") || 0)).toFixed(2)}
+                  Total Value: {quantity} × {formatCurrency(watch("selling_price"))} = {formatCurrency(quantity * (watch("selling_price") || 0))}
                 </p>
               )}
             </div>
