@@ -10,11 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Store, Users, TrendingUp, Package, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/currency";
 import { format } from "date-fns";
+import StaffManagement from "@/components/StaffManagement";
 
 export default function AdminDashboard() {
   const { isSuperAdmin, refreshShops } = useShop();
@@ -48,14 +49,12 @@ export default function AdminDashboard() {
   const { data: analytics = [] } = useQuery({
     queryKey: ["admin-analytics"],
     queryFn: async () => {
-      // Get sales per shop
       const { data: salesData, error: salesError } = await supabase
         .from("sales")
         .select("shop_id, total_amount, total_profit");
 
       if (salesError) throw salesError;
 
-      // Aggregate by shop
       const shopStats: Record<string, { sales: number; profit: number; count: number }> = {};
       salesData?.forEach((sale) => {
         if (!sale.shop_id) return;
@@ -117,7 +116,6 @@ export default function AdminDashboard() {
 
       if (error) throw error;
 
-      // Add current user as owner of the new shop
       if (user) {
         await supabase.from("shop_staff").insert({
           user_id: user.id,
@@ -132,6 +130,7 @@ export default function AdminDashboard() {
     onSuccess: () => {
       toast.success("Shop created successfully");
       queryClient.invalidateQueries({ queryKey: ["admin-shops"] });
+      queryClient.invalidateQueries({ queryKey: ["all-staff"] });
       refreshShops();
       setIsCreateOpen(false);
       resetForm();
@@ -227,7 +226,6 @@ export default function AdminDashboard() {
     return staffCounts.find((s) => s.shop_id === shopId)?.count || 0;
   };
 
-  // Total stats
   const totalSales = analytics.reduce((sum, a) => sum + a.sales, 0);
   const totalProfit = analytics.reduce((sum, a) => sum + a.profit, 0);
   const totalTransactions = analytics.reduce((sum, a) => sum + a.count, 0);
@@ -249,84 +247,9 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage all shops and view cross-shop analytics</p>
-        </div>
-        <Dialog open={isCreateOpen || !!editingShop} onOpenChange={(open) => {
-          if (!open) {
-            setIsCreateOpen(false);
-            setEditingShop(null);
-            resetForm();
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Shop
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <form onSubmit={handleSubmit}>
-              <DialogHeader>
-                <DialogTitle>{editingShop ? "Edit Shop" : "Create New Shop"}</DialogTitle>
-                <DialogDescription>
-                  {editingShop ? "Update shop details" : "Add a new shop to your network"}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Shop Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {editingShop ? "Update Shop" : "Create Shop"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+      <div>
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <p className="text-muted-foreground">Manage all shops, staff, and view cross-shop analytics</p>
       </div>
 
       {/* Summary Cards */}
@@ -383,82 +306,177 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Shops Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Shops</CardTitle>
-          <CardDescription>Overview of all shops in the network</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {shopsLoading ? (
-            <div className="text-center py-8">Loading shops...</div>
-          ) : shops.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No shops found. Create your first shop to get started.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Shop Name</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Staff</TableHead>
-                  <TableHead className="text-right">Total Sales</TableHead>
-                  <TableHead className="text-right">Profit</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {shops.map((shop) => {
-                  const stats = getShopAnalytics(shop.id);
-                  const staffCount = getStaffCount(shop.id);
-                  return (
-                    <TableRow key={shop.id}>
-                      <TableCell className="font-medium">{shop.name}</TableCell>
-                      <TableCell>{shop.location || "-"}</TableCell>
-                      <TableCell>
-                        <Badge variant={shop.status === "active" ? "default" : "secondary"}>
-                          {shop.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{staffCount}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(stats.sales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(stats.profit)}</TableCell>
-                      <TableCell>{format(new Date(shop.created_at), "MMM dd, yyyy")}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(shop)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {shop.status === "active" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                if (confirm("Are you sure you want to deactivate this shop?")) {
-                                  deleteMutation.mutate(shop.id);
-                                }
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+      {/* Tabs for Shops and Staff */}
+      <Tabs defaultValue="shops" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="shops" className="flex items-center gap-2">
+            <Store className="h-4 w-4" />
+            Shops
+          </TabsTrigger>
+          <TabsTrigger value="staff" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Staff Management
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="shops" className="space-y-4">
+          <div className="flex justify-end">
+            <Dialog open={isCreateOpen || !!editingShop} onOpenChange={(open) => {
+              if (!open) {
+                setIsCreateOpen(false);
+                setEditingShop(null);
+                resetForm();
+              }
+            }}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setIsCreateOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Shop
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <form onSubmit={handleSubmit}>
+                  <DialogHeader>
+                    <DialogTitle>{editingShop ? "Edit Shop" : "Create New Shop"}</DialogTitle>
+                    <DialogDescription>
+                      {editingShop ? "Update shop details" : "Add a new shop to your network"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Shop Name *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="location">Location</Label>
+                      <Input
+                        id="location"
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                      {editingShop ? "Update Shop" : "Create Shop"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>All Shops</CardTitle>
+              <CardDescription>Overview of all shops in the network</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {shopsLoading ? (
+                <div className="text-center py-8">Loading shops...</div>
+              ) : shops.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No shops found. Create your first shop to get started.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Shop Name</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Staff</TableHead>
+                      <TableHead className="text-right">Total Sales</TableHead>
+                      <TableHead className="text-right">Profit</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {shops.map((shop) => {
+                      const stats = getShopAnalytics(shop.id);
+                      const staffCount = getStaffCount(shop.id);
+                      return (
+                        <TableRow key={shop.id}>
+                          <TableCell className="font-medium">{shop.name}</TableCell>
+                          <TableCell>{shop.location || "-"}</TableCell>
+                          <TableCell>
+                            <Badge variant={shop.status === "active" ? "default" : "secondary"}>
+                              {shop.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{staffCount}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(stats.sales)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(stats.profit)}</TableCell>
+                          <TableCell>{format(new Date(shop.created_at), "MMM dd, yyyy")}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(shop)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              {shop.status === "active" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    if (confirm("Are you sure you want to deactivate this shop?")) {
+                                      deleteMutation.mutate(shop.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="staff">
+          <StaffManagement />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
