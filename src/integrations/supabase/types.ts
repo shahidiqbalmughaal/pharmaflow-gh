@@ -1222,6 +1222,14 @@ export type Database = {
         Returns: string
       }
       get_user_shop_id: { Args: { _user_id: string }; Returns: string }
+      get_user_shops: {
+        Args: { p_user_id: string }
+        Returns: {
+          shop_id: string
+          shop_name: string
+          shop_role: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1234,6 +1242,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      switch_shop: {
+        Args: { p_shop_id: string; p_user_id: string }
+        Returns: boolean
+      }
       user_belongs_to_shop: {
         Args: { _shop_id: string; _user_id: string }
         Returns: boolean
