@@ -29,37 +29,71 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const items = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Medicines", url: "/medicines", icon: Pill },
-  { title: "Cosmetics", url: "/cosmetics", icon: Sparkles },
-  { title: "Sales", url: "/sales", icon: ShoppingCart },
-  { title: "Expenses", url: "/expenses", icon: Receipt },
-  { title: "Customers", url: "/customers", icon: UserCheck },
-  { title: "Reports", url: "/reports", icon: FileText },
-  { title: "Returns History", url: "/returns-history", icon: RotateCcw },
-  { title: "Salesmen", url: "/salesmen", icon: Users },
-  { title: "Suppliers", url: "/suppliers", icon: Building2 },
-  { title: "Settings", url: "/settings", icon: Settings },
-];
+// Define menu items with role-based visibility
+const getMenuItems = (userRole: string | null, shopRole: string | null) => {
+  const isCashier = shopRole === 'cashier';
+  const isOwnerOrManager = shopRole === 'owner' || shopRole === 'manager';
+  const isAdmin = userRole === 'admin';
+  
+  // Base items available to all staff
+  const baseItems = [
+    { title: "Dashboard", url: "/", icon: LayoutDashboard, visible: true },
+    { title: "Medicines", url: "/medicines", icon: Pill, visible: true },
+    { title: "Cosmetics", url: "/cosmetics", icon: Sparkles, visible: true },
+    { title: "Sales", url: "/sales", icon: ShoppingCart, visible: true },
+  ];
 
-const adminItems = [
-  { title: "User Management", url: "/users", icon: Shield },
-];
+  // Items hidden from cashiers
+  const managerItems = [
+    { title: "Expenses", url: "/expenses", icon: Receipt, visible: !isCashier },
+    { title: "Customers", url: "/customers", icon: UserCheck, visible: true },
+    { title: "Reports", url: "/reports", icon: FileText, visible: !isCashier },
+    { title: "Returns History", url: "/returns-history", icon: RotateCcw, visible: true },
+    { title: "Salesmen", url: "/salesmen", icon: Users, visible: !isCashier },
+    { title: "Suppliers", url: "/suppliers", icon: Building2, visible: !isCashier },
+  ];
 
-const superAdminItems = [
-  { title: "Shop Management", url: "/admin", icon: Store },
-];
+  // Settings only for owners/managers/admins
+  const settingsItems = [
+    { title: "Settings", url: "/settings", icon: Settings, visible: !isCashier || isAdmin },
+  ];
+
+  return [...baseItems, ...managerItems, ...settingsItems].filter(item => item.visible);
+};
+
+const getAdminItems = (userRole: string | null, shopRole: string | null) => {
+  const isAdmin = userRole === 'admin';
+  const isOwner = shopRole === 'owner';
+  
+  // User Management visible only to admins
+  if (isAdmin) {
+    return [{ title: "User Management", url: "/users", icon: Shield }];
+  }
+  
+  return [];
+};
+
+const getSuperAdminItems = (isSuperAdmin: boolean) => {
+  if (isSuperAdmin) {
+    return [{ title: "Shop Management", url: "/admin", icon: Store }];
+  }
+  return [];
+};
 
 export function AppSidebar() {
   const { state } = useSidebar();
-  const { userRole } = useAuth();
+  const { userRole, shopStaffInfo } = useAuth();
   const { isSuperAdmin, currentShop } = useShop();
   const location = useLocation();
   const currentPath = location.pathname;
 
   const isActive = (path: string) => currentPath === path;
   const isCollapsed = state === "collapsed";
+
+  const shopRole = shopStaffInfo?.shop_role || null;
+  const menuItems = getMenuItems(userRole, shopRole);
+  const adminItems = getAdminItems(userRole, shopRole);
+  const superAdminItems = getSuperAdminItems(isSuperAdmin);
 
   return (
     <Sidebar className={isCollapsed ? "w-14" : "w-60"} collapsible="icon">
@@ -75,7 +109,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
@@ -94,7 +128,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {userRole === 'admin' && (
+        {adminItems.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel>Administration</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -119,7 +153,7 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        {isSuperAdmin && (
+        {superAdminItems.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel>Super Admin</SidebarGroupLabel>
             <SidebarGroupContent>
