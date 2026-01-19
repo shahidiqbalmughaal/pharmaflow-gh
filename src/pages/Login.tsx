@@ -7,45 +7,78 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, Pill } from 'lucide-react';
+import { Loader2, Pill, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userRole, shopStaffInfo, isStaffActive, updateLastLogin, getRedirectPath, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (user) {
-      navigate('/', { replace: true });
+    if (user && !authLoading && userRole !== null) {
+      // Check if staff is active
+      if (!isStaffActive) {
+        // Sign out inactive users
+        supabase.auth.signOut();
+        setError('Your account has been deactivated. Please contact your administrator.');
+        return;
+      }
+      
+      // Update last login and redirect based on role
+      updateLastLogin();
+      const redirectPath = getRedirectPath();
+      navigate(redirectPath, { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, userRole, shopStaffInfo, isStaffActive, authLoading, navigate, updateLastLogin, getRedirectPath]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     if (!email || !password) {
-      toast.error('Please fill in all fields');
+      setError('Please fill in all fields');
       return;
     }
 
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (signInError) throw signInError;
 
       if (data.user) {
+        // Check if user's staff status is active
+        const { data: staffData } = await supabase
+          .from('shop_staff')
+          .select('is_active')
+          .eq('user_id', data.user.id)
+          .maybeSingle();
+
+        // If staff record exists and is inactive, block login
+        if (staffData && !staffData.is_active) {
+          await supabase.auth.signOut();
+          setError('Your account has been deactivated. Please contact your administrator.');
+          setLoading(false);
+          return;
+        }
+
         toast.success('Logged in successfully!');
-        navigate('/', { replace: true });
+        // Role-based redirect will happen in useEffect
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to login');
+    } catch (err: any) {
+      if (err.message === 'Invalid login credentials') {
+        setError('Invalid email or password. Please try again.');
+      } else {
+        setError(err.message || 'Failed to login');
+      }
     } finally {
       setLoading(false);
     }
@@ -62,10 +95,16 @@ const Login = () => {
           </div>
           <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
           <CardDescription>
-            Sign in to Al-Rehman Pharmacy & Cosmetics
+            Sign in to Pharmacy POS System
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
