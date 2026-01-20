@@ -1065,6 +1065,7 @@ export type Database = {
           item_type: string | null
           quantity: number | null
           sale_id: string | null
+          shop_id: string | null
           tablets_per_packet: number | null
           total_packets: number | null
           total_price: number | null
@@ -1080,6 +1081,7 @@ export type Database = {
           item_type?: string | null
           quantity?: number | null
           sale_id?: string | null
+          shop_id?: string | null
           tablets_per_packet?: number | null
           total_packets?: number | null
           total_price?: number | null
@@ -1095,6 +1097,7 @@ export type Database = {
           item_type?: string | null
           quantity?: number | null
           sale_id?: string | null
+          shop_id?: string | null
           tablets_per_packet?: number | null
           total_packets?: number | null
           total_price?: number | null
@@ -1116,6 +1119,13 @@ export type Database = {
             referencedRelation: "sales_salesman_view"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sale_items_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
         ]
       }
       sales_salesman_view: {
@@ -1131,6 +1141,7 @@ export type Database = {
           sale_date: string | null
           salesman_id: string | null
           salesman_name: string | null
+          shop_id: string | null
           subtotal: number | null
           tax: number | null
           total_amount: number | null
@@ -1147,6 +1158,7 @@ export type Database = {
           sale_date?: string | null
           salesman_id?: string | null
           salesman_name?: string | null
+          shop_id?: string | null
           subtotal?: number | null
           tax?: number | null
           total_amount?: number | null
@@ -1163,6 +1175,7 @@ export type Database = {
           sale_date?: string | null
           salesman_id?: string | null
           salesman_name?: string | null
+          shop_id?: string | null
           subtotal?: number | null
           tax?: number | null
           total_amount?: number | null
@@ -1189,6 +1202,13 @@ export type Database = {
             referencedRelation: "salesmen_list"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sales_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
         ]
       }
       salesmen_list: {
@@ -1196,18 +1216,29 @@ export type Database = {
           assigned_counter: string | null
           id: string | null
           name: string | null
+          shop_id: string | null
         }
         Insert: {
           assigned_counter?: string | null
           id?: string | null
           name?: string | null
+          shop_id?: string | null
         }
         Update: {
           assigned_counter?: string | null
           id?: string | null
           name?: string | null
+          shop_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "salesmen_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
