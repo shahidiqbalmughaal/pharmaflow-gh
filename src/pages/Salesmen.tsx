@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -15,10 +15,29 @@ import { SalesmanDialog } from "@/components/SalesmanDialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
+// Mask CNIC to show only last 4 characters for security
+const maskCnic = (cnic: string): string => {
+  if (!cnic || cnic.length < 4) return cnic;
+  return "*****-*******-" + cnic.slice(-1);
+};
+
 const Salesmen = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSalesman, setEditingSalesman] = useState<any>(null);
+  const [revealedCnics, setRevealedCnics] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
+
+  const toggleCnicVisibility = (id: string) => {
+    setRevealedCnics(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
 
   const { data: salesmen, isLoading } = useQuery({
     queryKey: ["salesmen"],
@@ -101,7 +120,26 @@ const Salesmen = () => {
                 <TableRow key={salesman.id}>
                   <TableCell className="font-medium">{salesman.name}</TableCell>
                   <TableCell>{salesman.contact}</TableCell>
-                  <TableCell>{salesman.cnic}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm">
+                        {revealedCnics.has(salesman.id) ? salesman.cnic : maskCnic(salesman.cnic)}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => toggleCnicVisibility(salesman.id)}
+                        title={revealedCnics.has(salesman.id) ? "Hide CNIC" : "Show CNIC"}
+                      >
+                        {revealedCnics.has(salesman.id) ? (
+                          <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
+                  </TableCell>
                   <TableCell>{format(new Date(salesman.joining_date), "MMM dd, yyyy")}</TableCell>
                   <TableCell>{salesman.assigned_counter}</TableCell>
                   <TableCell>
