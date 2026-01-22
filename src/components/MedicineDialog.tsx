@@ -30,7 +30,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
+import { AlertTriangle } from "lucide-react";
+import { useDuplicateDetection, type DuplicateMedicine } from "@/hooks/useDuplicateDetection";
+import { useStockMerge } from "@/hooks/useStockMerge";
+import { StockMergeConfirmDialog } from "@/components/StockMergeConfirmDialog";
+import { useAuth } from "@/hooks/useAuth";
 
 interface MedicineDialogProps {
   open: boolean;
@@ -42,11 +48,21 @@ type MedicineFormData = z.infer<typeof medicineSchema>;
 
 export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { checkForDuplicate, isChecking } = useDuplicateDetection();
+  const { mergeStockAsync, isMerging } = useStockMerge();
+  
   const [sellingType, setSellingType] = useState<string>("per_tablet");
   const [tabletsPerPacket, setTabletsPerPacket] = useState(1);
   const [quantity, setQuantity] = useState(0);
   const [pricePerPacket, setPricePerPacket] = useState(0);
   const [isNarcotic, setIsNarcotic] = useState(false);
+  
+  // Duplicate detection state
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [duplicateMedicine, setDuplicateMedicine] = useState<DuplicateMedicine | null>(null);
+  const [pendingFormData, setPendingFormData] = useState<MedicineFormData | null>(null);
+  const [isSameNameDifferentBatch, setIsSameNameDifferentBatch] = useState(false);
   
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<MedicineFormData>({
     resolver: zodResolver(medicineSchema),
@@ -102,7 +118,8 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["medicines"] });
-      toast.success(medicine ? "Medicine updated successfully" : "Medicine added successfully");
+      toast.success(medicine ? "Medicine updated successfully" : isSameNameDifferentBatch ? "New batch added successfully to inventory." : "Medicine added successfully");
+      resetDuplicateState();
       onClose();
     },
     onError: () => {
@@ -110,8 +127,66 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
     },
   });
 
-  const onSubmit = (data: MedicineFormData) => {
+  const resetDuplicateState = () => {
+    setShowMergeDialog(false);
+    setDuplicateMedicine(null);
+    setPendingFormData(null);
+    setIsSameNameDifferentBatch(false);
+  };
+
+  const onSubmit = async (data: MedicineFormData) => {
+    // Skip duplicate check when editing existing medicine
+    if (medicine) {
+      saveMutation.mutate(data);
+      return;
+    }
+
+    // Check for duplicates before saving
+    const result = await checkForDuplicate(data.medicine_name, data.batch_no);
+    
+    if (result.isDuplicate && result.existingMedicine) {
+      // Show merge confirmation dialog
+      setDuplicateMedicine(result.existingMedicine);
+      setPendingFormData(data);
+      setShowMergeDialog(true);
+      return;
+    }
+
+    if (result.isSameNameDifferentBatch) {
+      setIsSameNameDifferentBatch(true);
+    }
+
+    // No duplicate - proceed with save
     saveMutation.mutate(data);
+  };
+
+  const handleConfirmMerge = async () => {
+    if (!duplicateMedicine || !pendingFormData) return;
+
+    try {
+      await mergeStockAsync({
+        existingMedicine: duplicateMedicine,
+        newData: {
+          medicine_name: pendingFormData.medicine_name,
+          batch_no: pendingFormData.batch_no,
+          quantity: pendingFormData.quantity,
+          selling_price: pendingFormData.selling_price,
+          purchase_price: pendingFormData.purchase_price,
+          expiry_date: pendingFormData.expiry_date,
+          manufacturing_date: pendingFormData.manufacturing_date,
+        },
+        mergedBy: user?.email || "Unknown",
+      });
+      resetDuplicateState();
+      onClose();
+    } catch (error) {
+      console.error("Merge failed:", error);
+    }
+  };
+
+  const handleCancelMerge = () => {
+    resetDuplicateState();
+    // Keep form open for user to edit
   };
 
   const quantityUnit = getQuantityUnit(sellingType);
@@ -120,27 +195,46 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
   const expiryOptional = isExpiryOptional(sellingType);
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{medicine ? "Edit Medicine" : "Add New Medicine"}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="medicine_name">Medicine Name *</Label>
-              <Input id="medicine_name" {...register("medicine_name")} />
-              {errors.medicine_name && (
-                <p className="text-sm text-destructive">{errors.medicine_name.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="batch_no">Batch No *</Label>
-              <Input id="batch_no" {...register("batch_no")} />
-              {errors.batch_no && (
-                <p className="text-sm text-destructive">{errors.batch_no.message}</p>
-              )}
-            </div>
+    <>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{medicine ? "Edit Medicine" : "Add New Medicine"}</DialogTitle>
+          </DialogHeader>
+          
+          {isSameNameDifferentBatch && !medicine && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                A product with this name exists but with a different batch. This will be saved as a new batch entry.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="medicine_name">Medicine Name *</Label>
+                <Input 
+                  id="medicine_name" 
+                  {...register("medicine_name")}
+                  className={duplicateMedicine ? "border-yellow-500" : ""}
+                />
+                {errors.medicine_name && (
+                  <p className="text-sm text-destructive">{errors.medicine_name.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="batch_no">Batch No *</Label>
+                <Input 
+                  id="batch_no" 
+                  {...register("batch_no")}
+                  className={duplicateMedicine ? "border-yellow-500" : ""}
+                />
+                {errors.batch_no && (
+                  <p className="text-sm text-destructive">{errors.batch_no.message}</p>
+                )}
+              </div>
             <div className="space-y-2">
               <Label htmlFor="company_name">Company Name *</Label>
               <Input id="company_name" {...register("company_name")} />
@@ -330,16 +424,33 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
               )}
             </div>
           </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              {medicine ? "Update" : "Add"} Medicine
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saveMutation.isPending || isChecking}>
+                {isChecking ? "Checking..." : saveMutation.isPending ? "Saving..." : medicine ? "Update" : "Add"} Medicine
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Merge Confirmation Dialog */}
+      <StockMergeConfirmDialog
+        open={showMergeDialog}
+        onClose={() => setShowMergeDialog(false)}
+        onConfirmMerge={handleConfirmMerge}
+        onCancel={handleCancelMerge}
+        existingMedicine={duplicateMedicine}
+        newData={{
+          quantity: pendingFormData?.quantity || 0,
+          selling_price: pendingFormData?.selling_price || 0,
+          purchase_price: pendingFormData?.purchase_price || 0,
+          expiry_date: pendingFormData?.expiry_date,
+        }}
+        isMerging={isMerging}
+      />
+    </>
   );
 }
