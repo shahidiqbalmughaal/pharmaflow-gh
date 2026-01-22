@@ -985,6 +985,60 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_merge_logs: {
+        Row: {
+          added_quantity: number
+          batch_no: string
+          id: string
+          medicine_id: string
+          medicine_name: string
+          merged_at: string
+          merged_by: string
+          new_purchase_price: number | null
+          new_selling_price: number | null
+          new_total_quantity: number
+          notes: string | null
+          previous_purchase_price: number | null
+          previous_quantity: number
+          previous_selling_price: number | null
+          shop_id: string | null
+        }
+        Insert: {
+          added_quantity: number
+          batch_no: string
+          id?: string
+          medicine_id: string
+          medicine_name: string
+          merged_at?: string
+          merged_by: string
+          new_purchase_price?: number | null
+          new_selling_price?: number | null
+          new_total_quantity: number
+          notes?: string | null
+          previous_purchase_price?: number | null
+          previous_quantity: number
+          previous_selling_price?: number | null
+          shop_id?: string | null
+        }
+        Update: {
+          added_quantity?: number
+          batch_no?: string
+          id?: string
+          medicine_id?: string
+          medicine_name?: string
+          merged_at?: string
+          merged_by?: string
+          new_purchase_price?: number | null
+          new_selling_price?: number | null
+          new_total_quantity?: number
+          notes?: string | null
+          previous_purchase_price?: number | null
+          previous_quantity?: number
+          previous_selling_price?: number | null
+          shop_id?: string | null
+        }
+        Relationships: []
+      }
       suppliers: {
         Row: {
           address: string | null

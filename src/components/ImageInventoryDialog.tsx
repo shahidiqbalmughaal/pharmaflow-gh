@@ -31,6 +31,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { Camera, Upload, Loader2, AlertTriangle, CheckCircle2, ImageIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useDuplicateDetection, type DuplicateMedicine } from "@/hooks/useDuplicateDetection";
+import { useStockMerge } from "@/hooks/useStockMerge";
+import { StockMergeConfirmDialog } from "@/components/StockMergeConfirmDialog";
 
 interface ImageInventoryDialogProps {
   open: boolean;
@@ -79,6 +82,9 @@ type ProcessingStep = "upload" | "processing" | "preview" | "error";
 export function ImageInventoryDialog({ open, onClose }: ImageInventoryDialogProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { checkForDuplicate, isChecking } = useDuplicateDetection();
+  const { mergeStockAsync, isMerging } = useStockMerge();
+  
   const [step, setStep] = useState<ProcessingStep>("upload");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
@@ -87,6 +93,12 @@ export function ImageInventoryDialog({ open, onClose }: ImageInventoryDialogProp
   const [isNarcotic, setIsNarcotic] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  
+  // Duplicate detection state
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [duplicateMedicine, setDuplicateMedicine] = useState<DuplicateMedicine | null>(null);
+  const [pendingFormData, setPendingFormData] = useState<ImageInventoryFormData | null>(null);
+  const [isSameNameDifferentBatch, setIsSameNameDifferentBatch] = useState(false);
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<ImageInventoryFormData>({
     resolver: zodResolver(imageInventorySchema),
@@ -98,6 +110,13 @@ export function ImageInventoryDialog({ open, onClose }: ImageInventoryDialogProp
     },
   });
 
+  const resetDuplicateState = () => {
+    setShowMergeDialog(false);
+    setDuplicateMedicine(null);
+    setPendingFormData(null);
+    setIsSameNameDifferentBatch(false);
+  };
+
   const resetDialog = () => {
     setStep("upload");
     setImagePreview(null);
@@ -105,6 +124,7 @@ export function ImageInventoryDialog({ open, onClose }: ImageInventoryDialogProp
     setErrorMessage("");
     setSellingType("per_tablet");
     setIsNarcotic(false);
+    resetDuplicateState();
     reset({
       selling_type: "per_tablet",
       is_narcotic: false,
@@ -236,7 +256,7 @@ export function ImageInventoryDialog({ open, onClose }: ImageInventoryDialogProp
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["medicines"] });
-      toast.success("Inventory item added successfully from image.");
+      toast.success(isSameNameDifferentBatch ? "New batch added successfully to inventory." : "Inventory item added successfully from image.");
       handleClose();
     },
     onError: (error) => {
@@ -244,8 +264,52 @@ export function ImageInventoryDialog({ open, onClose }: ImageInventoryDialogProp
     },
   });
 
-  const onSubmit = (data: ImageInventoryFormData) => {
+  const onSubmit = async (data: ImageInventoryFormData) => {
+    // Check for duplicates before saving
+    const result = await checkForDuplicate(data.medicine_name, data.batch_no);
+    
+    if (result.isDuplicate && result.existingMedicine) {
+      // Show merge confirmation dialog
+      setDuplicateMedicine(result.existingMedicine);
+      setPendingFormData(data);
+      setShowMergeDialog(true);
+      return;
+    }
+
+    if (result.isSameNameDifferentBatch) {
+      setIsSameNameDifferentBatch(true);
+    }
+
+    // No duplicate - proceed with save
     saveMutation.mutate(data);
+  };
+
+  const handleConfirmMerge = async () => {
+    if (!duplicateMedicine || !pendingFormData) return;
+
+    try {
+      await mergeStockAsync({
+        existingMedicine: duplicateMedicine,
+        newData: {
+          medicine_name: pendingFormData.medicine_name,
+          batch_no: pendingFormData.batch_no,
+          quantity: pendingFormData.quantity,
+          selling_price: pendingFormData.selling_price,
+          purchase_price: pendingFormData.purchase_price || pendingFormData.selling_price * 0.8,
+          expiry_date: pendingFormData.expiry_date,
+          manufacturing_date: pendingFormData.manufacturing_date,
+        },
+        mergedBy: user?.email || "Unknown",
+      });
+      handleClose();
+    } catch (error) {
+      console.error("Merge failed:", error);
+    }
+  };
+
+  const handleCancelMerge = () => {
+    resetDuplicateState();
+    // Keep form open for user to edit
   };
 
   const getConfidenceBadge = (confidence: "high" | "medium" | "low" | undefined) => {
@@ -266,6 +330,7 @@ export function ImageInventoryDialog({ open, onClose }: ImageInventoryDialogProp
   const priceUnit = getPriceUnit(sellingType);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -367,7 +432,17 @@ export function ImageInventoryDialog({ open, onClose }: ImageInventoryDialogProp
         {/* Step 4: Preview & Edit */}
         {step === "preview" && (
           <div className="space-y-4">
-            {/* Warnings */}
+            {/* Same Name Different Batch Warning */}
+            {isSameNameDifferentBatch && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  A product with this name exists but with a different batch. This will be saved as a new batch entry.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {/* OCR Warnings */}
             {ocrResult?.warnings && ocrResult.warnings.length > 0 && (
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
@@ -572,8 +647,13 @@ export function ImageInventoryDialog({ open, onClose }: ImageInventoryDialogProp
                   <Button type="button" variant="outline" onClick={handleClose}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={saveMutation.isPending}>
-                    {saveMutation.isPending ? (
+                  <Button type="submit" disabled={saveMutation.isPending || isChecking}>
+                    {isChecking ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Checking...
+                      </>
+                    ) : saveMutation.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Saving...
@@ -604,5 +684,22 @@ export function ImageInventoryDialog({ open, onClose }: ImageInventoryDialogProp
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Merge Confirmation Dialog */}
+    <StockMergeConfirmDialog
+      open={showMergeDialog}
+      onClose={() => setShowMergeDialog(false)}
+      onConfirmMerge={handleConfirmMerge}
+      onCancel={handleCancelMerge}
+      existingMedicine={duplicateMedicine}
+      newData={{
+        quantity: pendingFormData?.quantity || 0,
+        selling_price: pendingFormData?.selling_price || 0,
+        purchase_price: pendingFormData?.purchase_price || pendingFormData?.selling_price || 0,
+        expiry_date: pendingFormData?.expiry_date,
+      }}
+      isMerging={isMerging}
+    />
+    </>
   );
 }
