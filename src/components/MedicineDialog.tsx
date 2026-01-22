@@ -5,6 +5,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { medicineSchema } from "@/lib/validations";
 import { formatCurrency } from "@/lib/currency";
+import { 
+  SELLING_TYPES, 
+  getQuantityUnit, 
+  getPriceUnit, 
+  isExpiryRequired,
+  isExpiryOptional 
+} from "@/lib/medicineTypes";
 import type { z } from "zod";
 import {
   Dialog,
@@ -15,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -34,14 +42,15 @@ type MedicineFormData = z.infer<typeof medicineSchema>;
 
 export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps) {
   const queryClient = useQueryClient();
-  const [sellingType, setSellingType] = useState<"per_tablet" | "per_packet">("per_tablet");
+  const [sellingType, setSellingType] = useState<string>("per_tablet");
   const [tabletsPerPacket, setTabletsPerPacket] = useState(1);
   const [quantity, setQuantity] = useState(0);
   const [pricePerPacket, setPricePerPacket] = useState(0);
+  const [isNarcotic, setIsNarcotic] = useState(false);
   
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<MedicineFormData>({
     resolver: zodResolver(medicineSchema),
-    defaultValues: medicine || { selling_type: "per_tablet" },
+    defaultValues: medicine || { selling_type: "per_tablet", is_narcotic: false },
   });
 
   useEffect(() => {
@@ -51,12 +60,14 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
       setTabletsPerPacket(medicine.tablets_per_packet || 1);
       setQuantity(medicine.quantity || 0);
       setPricePerPacket(medicine.price_per_packet || 0);
+      setIsNarcotic(medicine.is_narcotic || false);
     } else {
-      reset({ selling_type: "per_tablet" });
+      reset({ selling_type: "per_tablet", is_narcotic: false });
       setSellingType("per_tablet");
       setTabletsPerPacket(1);
       setQuantity(0);
       setPricePerPacket(0);
+      setIsNarcotic(false);
     }
   }, [medicine, reset]);
 
@@ -64,22 +75,28 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
   const watchSellingType = watch("selling_type");
   useEffect(() => {
     if (watchSellingType) {
-      setSellingType(watchSellingType as "per_tablet" | "per_packet");
+      setSellingType(watchSellingType);
     }
   }, [watchSellingType]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Clean up expiry_date if empty
+      const cleanData = {
+        ...data,
+        expiry_date: data.expiry_date && data.expiry_date.length > 0 ? data.expiry_date : null,
+      };
+      
       if (medicine) {
         const { error } = await supabase
           .from("medicines")
-          .update(data)
+          .update(cleanData)
           .eq("id", medicine.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("medicines")
-          .insert(data);
+          .insert(cleanData);
         if (error) throw error;
       }
     },
@@ -96,6 +113,11 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
   const onSubmit = (data: MedicineFormData) => {
     saveMutation.mutate(data);
   };
+
+  const quantityUnit = getQuantityUnit(sellingType);
+  const priceUnit = getPriceUnit(sellingType);
+  const expiryRequired = isExpiryRequired(sellingType);
+  const expiryOptional = isExpiryOptional(sellingType);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -138,21 +160,39 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
               <Select
                 value={sellingType}
                 onValueChange={(value) => {
-                  setSellingType(value as "per_tablet" | "per_packet");
-                  setValue("selling_type", value as "per_tablet" | "per_packet");
+                  setSellingType(value);
+                  setValue("selling_type", value);
                 }}
               >
                 <SelectTrigger id="selling_type">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="per_tablet">Per Tablet</SelectItem>
-                  <SelectItem value="per_packet">Per Packet</SelectItem>
+                <SelectContent className="max-h-[300px]">
+                  {SELLING_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {errors.selling_type && (
                 <p className="text-sm text-destructive">{errors.selling_type.message}</p>
               )}
+            </div>
+            <div className="space-y-2 flex items-end">
+              <div className="flex items-center space-x-2 pb-2">
+                <Checkbox
+                  id="is_narcotic"
+                  checked={isNarcotic}
+                  onCheckedChange={(checked) => {
+                    setIsNarcotic(checked as boolean);
+                    setValue("is_narcotic", checked as boolean);
+                  }}
+                />
+                <Label htmlFor="is_narcotic" className="text-sm font-medium cursor-pointer">
+                  This is a Narcotic / Controlled Substance
+                </Label>
+              </div>
             </div>
           </div>
 
@@ -200,7 +240,7 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="quantity">
-                {sellingType === "per_packet" ? "Total Tablets *" : "Quantity (Tablets) *"}
+                {sellingType === "per_packet" ? "Total Tablets *" : `Quantity (${quantityUnit}) *`}
               </Label>
               <Input
                 id="quantity"
@@ -223,7 +263,7 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="purchase_price">Purchase Price (Per Tablet) *</Label>
+              <Label htmlFor="purchase_price">Purchase Price ({priceUnit}) *</Label>
               <Input
                 id="purchase_price"
                 type="number"
@@ -236,7 +276,7 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
             </div>
             <div className="space-y-2">
               <Label htmlFor="selling_price">
-                {sellingType === "per_packet" ? "Selling Price (Per Tablet) *" : "Price Per Tablet (Selling) *"}
+                Selling Price ({priceUnit}) *
               </Label>
               <Input
                 id="selling_price"
@@ -247,7 +287,7 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
               {errors.selling_price && (
                 <p className="text-sm text-destructive">{errors.selling_price.message}</p>
               )}
-              {sellingType === "per_tablet" && quantity > 0 && watch("selling_price") > 0 && (
+              {quantity > 0 && watch("selling_price") > 0 && (
                 <p className="text-xs text-success font-medium">
                   Total Value: {quantity} × {formatCurrency(watch("selling_price"))} = {formatCurrency(quantity * (watch("selling_price") || 0))}
                 </p>
@@ -265,7 +305,9 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="expiry_date">Expiry Date *</Label>
+              <Label htmlFor="expiry_date">
+                Expiry Date {expiryRequired ? "*" : "(Optional)"}
+              </Label>
               <Input
                 id="expiry_date"
                 type="date"
@@ -273,6 +315,11 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
               />
               {errors.expiry_date && (
                 <p className="text-sm text-destructive">{errors.expiry_date.message}</p>
+              )}
+              {expiryOptional && (
+                <p className="text-xs text-muted-foreground">
+                  Expiry date is optional for this item type
+                </p>
               )}
             </div>
             <div className="space-y-2">

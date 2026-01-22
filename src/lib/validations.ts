@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { SELLING_TYPES, isExpiryRequired } from "./medicineTypes";
+
+// Get all valid selling type values
+const sellingTypeValues = SELLING_TYPES.map(t => t.value) as [string, ...string[]];
 
 // Medicine validation schema
 export const medicineSchema = z.object({
@@ -18,9 +22,10 @@ export const medicineSchema = z.object({
     .trim()
     .min(1, "Rack number is required")
     .max(50, "Rack number must be less than 50 characters"),
-  selling_type: z.enum(["per_tablet", "per_packet"], {
-    required_error: "Selling type is required",
-  }),
+  selling_type: z.string().refine(
+    (val) => sellingTypeValues.includes(val),
+    { message: "Invalid selling type" }
+  ),
   quantity: z.number()
     .int("Quantity must be a whole number")
     .min(1, "Quantity must be at least 1")
@@ -45,19 +50,37 @@ export const medicineSchema = z.object({
   manufacturing_date: z.string()
     .min(1, "Manufacturing date is required"),
   expiry_date: z.string()
-    .min(1, "Expiry date is required"),
+    .optional()
+    .nullable(),
   supplier: z.string()
     .trim()
     .min(1, "Supplier name is required")
     .max(200, "Supplier name must be less than 200 characters"),
+  is_narcotic: z.boolean().optional().default(false),
 }).refine(
   (data) => {
-    const mfgDate = new Date(data.manufacturing_date);
-    const expDate = new Date(data.expiry_date);
-    return expDate > mfgDate;
+    // Only validate expiry > manufacturing if expiry is provided
+    if (data.expiry_date && data.expiry_date.length > 0) {
+      const mfgDate = new Date(data.manufacturing_date);
+      const expDate = new Date(data.expiry_date);
+      return expDate > mfgDate;
+    }
+    return true;
   },
   {
     message: "Expiry date must be after manufacturing date",
+    path: ["expiry_date"],
+  }
+).refine(
+  (data) => {
+    // Expiry date is required for drug types
+    if (isExpiryRequired(data.selling_type)) {
+      return data.expiry_date && data.expiry_date.length > 0;
+    }
+    return true;
+  },
+  {
+    message: "Expiry date is required for this item type",
     path: ["expiry_date"],
   }
 ).refine(
@@ -245,7 +268,7 @@ export const saleItemSchema = z.object({
   tabletsPerPacket: z.number().optional(),
   totalTablets: z.number().optional(),
   totalPackets: z.number().optional(),
-  sellingType: z.enum(["per_tablet", "per_packet"]).optional(),
+  sellingType: z.string().optional(),
 }).refine(
   (data) => {
     // Validate that Quantity × Rate matches Total Price (with small tolerance for floating point)
