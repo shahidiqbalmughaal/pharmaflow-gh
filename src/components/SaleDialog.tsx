@@ -26,6 +26,7 @@ import { QRScanner } from "./QRScanner";
 import { SaleReceipt } from "./SaleReceipt";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { usePharmacySettings } from "@/hooks/usePharmacySettings";
 
 interface InitialProduct {
   type: 'medicine' | 'cosmetic';
@@ -69,6 +70,9 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   const [tax, setTax] = useState(0);
   const [completedSale, setCompletedSale] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  
+  // Pharmacy settings for receipt
+  const { settings: pharmacySettings } = usePharmacySettings();
   
   // AI Recommendations state
   const [showAIPanel, setShowAIPanel] = useState(false);
@@ -667,7 +671,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
             <DialogTitle>Sale Completed</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <SaleReceipt ref={receiptRef} {...completedSale} />
+            <SaleReceipt ref={receiptRef} {...completedSale} pharmacyInfo={pharmacySettings} />
             <div className="flex gap-2">
               <Button onClick={handlePrint} className="flex-1 gap-2">
                 <Printer className="h-4 w-4" />

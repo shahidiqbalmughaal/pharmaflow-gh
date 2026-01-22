@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { Zap, Loader2, Printer, Package, MapPin, Check } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { SaleReceipt } from "./SaleReceipt";
+import { usePharmacySettings } from "@/hooks/usePharmacySettings";
 
 interface QuickSaleProduct {
   type: 'medicine' | 'cosmetic';
@@ -53,6 +54,9 @@ export function QuickSaleDialog({ open, onClose, product }: QuickSaleDialogProps
   const [quantity, setQuantity] = useState(1);
   const [completedSale, setCompletedSale] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  
+  // Pharmacy settings for receipt
+  const { settings: pharmacySettings } = usePharmacySettings();
 
   // Use salesmen_list view for dropdown (excludes sensitive CNIC/contact data)
   const { data: salesmen } = useQuery({
@@ -322,6 +326,7 @@ export function QuickSaleDialog({ open, onClose, product }: QuickSaleDialogProps
                     subtotal={totalPrice}
                     tax={0}
                     total={totalPrice}
+                    pharmacyInfo={pharmacySettings}
                   />
                 )}
               </div>

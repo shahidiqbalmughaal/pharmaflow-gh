@@ -13,6 +13,13 @@ interface SaleItem {
   totalTablets?: number;
 }
 
+interface PharmacyInfo {
+  pharmacy_name?: string;
+  pharmacy_tagline?: string;
+  pharmacy_address?: string;
+  pharmacy_contact?: string;
+}
+
 interface SaleReceiptProps {
   saleId: string;
   salesmanName: string;
@@ -25,17 +32,32 @@ interface SaleReceiptProps {
   discountAmount?: number;
   tax: number;
   total: number;
+  pharmacyInfo?: PharmacyInfo;
 }
 
+// Default values for pharmacy info
+const DEFAULT_PHARMACY_INFO: Required<PharmacyInfo> = {
+  pharmacy_name: "Al-Rehman Pharmacy & Cosmetics",
+  pharmacy_tagline: "Complete Healthcare Solutions",
+  pharmacy_address: "Service Road, Muslim Town, Sadiqabad, Rawalpindi",
+  pharmacy_contact: "0334-5219838",
+};
+
 export const SaleReceipt = forwardRef<HTMLDivElement, SaleReceiptProps>(
-  ({ saleId, salesmanName, customerName, loyaltyPointsEarned, saleDate, items, subtotal, discountPercentage, discountAmount, tax, total }, ref) => {
+  ({ saleId, salesmanName, customerName, loyaltyPointsEarned, saleDate, items, subtotal, discountPercentage, discountAmount, tax, total, pharmacyInfo }, ref) => {
+    // Merge with defaults
+    const pharmacy = {
+      ...DEFAULT_PHARMACY_INFO,
+      ...pharmacyInfo,
+    };
+
     return (
       <div ref={ref} className="p-8 bg-white text-black max-w-md mx-auto">
         <div className="text-center mb-6 border-b-2 border-black pb-4">
-          <h1 className="text-2xl font-bold">Al-Rehman Pharmacy & Cosmetics</h1>
-          <p className="text-sm mt-2">Complete Healthcare Solutions</p>
-          <p className="text-xs mt-1 text-gray-700">Service Road, Muslim Town, Sadiqabad, Rawalpindi</p>
-          <p className="text-xs text-gray-700">Contact: 0334-5219838</p>
+          <h1 className="text-2xl font-bold">{pharmacy.pharmacy_name}</h1>
+          <p className="text-sm mt-2">{pharmacy.pharmacy_tagline}</p>
+          <p className="text-xs mt-1 text-gray-700">{pharmacy.pharmacy_address}</p>
+          <p className="text-xs text-gray-700">Contact: {pharmacy.pharmacy_contact}</p>
         </div>
 
         <div className="mb-4 text-sm space-y-1">

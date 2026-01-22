@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiSettingsDialog } from "@/components/ApiSettingsDialog";
 import { AlertSettingsDialog } from "@/components/AlertSettingsDialog";
 import { AlertHistory } from "@/components/AlertHistory";
+import { PharmacySettingsCard } from "@/components/PharmacySettingsCard";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -26,6 +27,7 @@ const Settings = () => {
   });
 
   const isAdmin = userRole === "admin";
+  const isAdminOrManager = userRole === "admin" || userRole === "manager";
 
   return (
     <div className="space-y-6">
@@ -39,6 +41,11 @@ const Settings = () => {
         )}
       </div>
       
+      {/* Pharmacy Settings - Available to Admin and Manager */}
+      {isAdminOrManager && (
+        <PharmacySettingsCard />
+      )}
+
       {isAdmin ? (
         <>
           <Alert>
@@ -105,18 +112,18 @@ const Settings = () => {
             </CardContent>
           </Card>
         </>
-      ) : (
+      ) : !isAdminOrManager ? (
         <Card>
           <CardHeader>
             <CardTitle>Application Settings</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              General settings available. Contact your administrator for API integration access.
+              General settings available. Contact your administrator for advanced configuration access.
             </p>
           </CardContent>
         </Card>
-      )}
+      ) : null}
     </div>
   );
 };

@@ -911,6 +911,47 @@ export type Database = {
           },
         ]
       }
+      shop_settings: {
+        Row: {
+          created_at: string
+          id: string
+          pharmacy_address: string
+          pharmacy_contact: string
+          pharmacy_name: string
+          pharmacy_tagline: string
+          shop_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pharmacy_address?: string
+          pharmacy_contact?: string
+          pharmacy_name?: string
+          pharmacy_tagline?: string
+          shop_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pharmacy_address?: string
+          pharmacy_contact?: string
+          pharmacy_name?: string
+          pharmacy_tagline?: string
+          shop_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_settings_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: true
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shop_staff: {
         Row: {
           created_at: string
