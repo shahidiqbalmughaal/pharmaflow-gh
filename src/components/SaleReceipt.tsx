@@ -34,6 +34,8 @@ export const SaleReceipt = forwardRef<HTMLDivElement, SaleReceiptProps>(
         <div className="text-center mb-6 border-b-2 border-black pb-4">
           <h1 className="text-2xl font-bold">Al-Rehman Pharmacy & Cosmetics</h1>
           <p className="text-sm mt-2">Complete Healthcare Solutions</p>
+          <p className="text-xs mt-1 text-gray-700">Service Road, Muslim Town, Sadiqabad, Rawalpindi</p>
+          <p className="text-xs text-gray-700">Contact: 0334-5219838</p>
         </div>
 
         <div className="mb-4 text-sm space-y-1">
