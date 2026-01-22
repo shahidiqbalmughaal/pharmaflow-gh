@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,6 +32,62 @@ serve(async (req) => {
   }
 
   try {
+    // Initialize Supabase client for authentication
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Validate user authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error("No authorization header provided");
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - No authentication token provided' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error("Authentication failed:", authError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`OCR request from authenticated user: ${user.id}`);
+
+    // Verify user has appropriate role (admin or manager can use OCR for inventory)
+    const { data: userRoles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+
+    if (rolesError) {
+      console.error("Failed to fetch user roles:", rolesError.message);
+      return new Response(
+        JSON.stringify({ error: 'Failed to verify user permissions' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validRoles = ['admin', 'manager'];
+    const hasValidRole = userRoles?.some(r => validRoles.includes(r.role));
+    
+    if (!hasValidRole) {
+      console.error(`User ${user.id} lacks required role. Has roles:`, userRoles?.map(r => r.role));
+      return new Response(
+        JSON.stringify({ error: 'Insufficient permissions - Admin or Manager role required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`User ${user.id} authorized with role:`, userRoles?.map(r => r.role));
+
+    // Now process the image
     const { image_base64, image_url } = await req.json();
     
     if (!image_base64 && !image_url) {
@@ -187,7 +244,7 @@ Respond ONLY with a valid JSON object in this exact format:
 
     extractedData.warnings = warnings;
 
-    console.log("OCR extraction completed successfully");
+    console.log(`OCR extraction completed successfully for user ${user.id}`);
 
     return new Response(
       JSON.stringify({ 
