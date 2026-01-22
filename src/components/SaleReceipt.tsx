@@ -18,6 +18,7 @@ interface PharmacyInfo {
   pharmacy_tagline?: string;
   pharmacy_address?: string;
   pharmacy_contact?: string;
+  pharmacy_logo_url?: string;
 }
 
 interface SaleReceiptProps {
@@ -41,6 +42,7 @@ const DEFAULT_PHARMACY_INFO: Required<PharmacyInfo> = {
   pharmacy_tagline: "Complete Healthcare Solutions",
   pharmacy_address: "Service Road, Muslim Town, Sadiqabad, Rawalpindi",
   pharmacy_contact: "0334-5219838",
+  pharmacy_logo_url: "",
 };
 
 export const SaleReceipt = forwardRef<HTMLDivElement, SaleReceiptProps>(
@@ -54,6 +56,13 @@ export const SaleReceipt = forwardRef<HTMLDivElement, SaleReceiptProps>(
     return (
       <div ref={ref} className="p-8 bg-white text-black max-w-md mx-auto">
         <div className="text-center mb-6 border-b-2 border-black pb-4">
+          {pharmacy.pharmacy_logo_url && (
+            <img 
+              src={pharmacy.pharmacy_logo_url} 
+              alt="Pharmacy Logo" 
+              className="h-16 w-auto mx-auto mb-3"
+            />
+          )}
           <h1 className="text-2xl font-bold">{pharmacy.pharmacy_name}</h1>
           <p className="text-sm mt-2">{pharmacy.pharmacy_tagline}</p>
           <p className="text-xs mt-1 text-gray-700">{pharmacy.pharmacy_address}</p>

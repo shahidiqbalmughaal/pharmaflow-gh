@@ -9,6 +9,7 @@ export interface PharmacySettings {
   pharmacy_tagline: string;
   pharmacy_address: string;
   pharmacy_contact: string;
+  pharmacy_logo_url?: string;
 }
 
 const DEFAULT_SETTINGS: PharmacySettings = {
@@ -16,6 +17,7 @@ const DEFAULT_SETTINGS: PharmacySettings = {
   pharmacy_tagline: "Complete Healthcare Solutions",
   pharmacy_address: "Service Road, Muslim Town, Sadiqabad, Rawalpindi",
   pharmacy_contact: "0334-5219838",
+  pharmacy_logo_url: "",
 };
 
 export const usePharmacySettings = () => {

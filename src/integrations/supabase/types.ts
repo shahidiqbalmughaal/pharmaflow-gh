@@ -917,6 +917,7 @@ export type Database = {
           id: string
           pharmacy_address: string
           pharmacy_contact: string
+          pharmacy_logo_url: string | null
           pharmacy_name: string
           pharmacy_tagline: string
           shop_id: string | null
@@ -927,6 +928,7 @@ export type Database = {
           id?: string
           pharmacy_address?: string
           pharmacy_contact?: string
+          pharmacy_logo_url?: string | null
           pharmacy_name?: string
           pharmacy_tagline?: string
           shop_id?: string | null
@@ -937,6 +939,7 @@ export type Database = {
           id?: string
           pharmacy_address?: string
           pharmacy_contact?: string
+          pharmacy_logo_url?: string | null
           pharmacy_name?: string
           pharmacy_tagline?: string
           shop_id?: string | null
