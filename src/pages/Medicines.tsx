@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
+import { getSellingTypeLabel, getQuantityUnit } from "@/lib/medicineTypes";
 import {
   Table,
   TableBody,
@@ -13,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { MedicineDialog } from "@/components/MedicineDialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -127,10 +129,22 @@ const Medicines = () => {
                 const sellingType = medicineData.selling_type || "per_tablet";
                 const tabletsPerPacket = medicineData.tablets_per_packet || 1;
                 const pricePerPacket = medicineData.price_per_packet;
+                const isNarcotic = medicineData.is_narcotic || false;
+                const quantityUnit = getQuantityUnit(sellingType);
                 
                 return (
                   <TableRow key={medicine.id}>
-                    <TableCell className="font-medium">{medicine.medicine_name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {medicine.medicine_name}
+                        {isNarcotic && (
+                          <Badge variant="destructive" className="text-xs">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Narcotic
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{medicine.batch_no}</TableCell>
                     <TableCell>{medicine.company_name}</TableCell>
                     <TableCell>{medicine.rack_no}</TableCell>
@@ -144,13 +158,13 @@ const Medicines = () => {
                             </span>
                           </>
                         ) : (
-                          <span>Per Tablet</span>
+                          <span>{getSellingTypeLabel(sellingType)}</span>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
                       <span className={medicine.quantity < 10 ? "text-warning font-bold" : ""}>
-                        {medicine.quantity}
+                        {medicine.quantity} {quantityUnit !== "Units" ? quantityUnit : ""}
                       </span>
                       {sellingType === "per_packet" && tabletsPerPacket > 0 && (
                         <span className="text-xs text-muted-foreground block">
@@ -174,13 +188,17 @@ const Medicines = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className={
-                        new Date(medicine.expiry_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                          ? "text-destructive font-bold"
-                          : ""
-                      }>
-                        {format(new Date(medicine.expiry_date), "MMM dd, yyyy")}
-                      </span>
+                      {medicine.expiry_date ? (
+                        <span className={
+                          new Date(medicine.expiry_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                            ? "text-destructive font-bold"
+                            : ""
+                        }>
+                          {format(new Date(medicine.expiry_date), "MMM dd, yyyy")}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">N/A</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
