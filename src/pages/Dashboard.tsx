@@ -29,7 +29,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { 
-  DollarSign, 
   Pill, 
   Sparkles, 
   TrendingUp,
@@ -430,7 +429,7 @@ const Dashboard = () => {
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Today's Sales</CardTitle>
-                <DollarSign className={`h-4 w-4 ${activeCard === 'sales' ? 'text-primary' : 'text-muted-foreground'}`} aria-hidden="true" />
+                <span className={`text-xs font-bold ${activeCard === 'sales' ? 'text-primary' : 'text-muted-foreground'}`} aria-hidden="true">PKR</span>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-primary" aria-label={`Today's sales: ${formatCurrency(todaySales?.totalSales || 0)}`}>
@@ -458,7 +457,7 @@ const Dashboard = () => {
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Cash in Hand</CardTitle>
-                <DollarSign className={`h-4 w-4 ${activeCard === 'cash' ? 'text-success' : 'text-muted-foreground'}`} />
+                <span className={`text-xs font-bold ${activeCard === 'cash' ? 'text-success' : 'text-muted-foreground'}`}>PKR</span>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-success">
