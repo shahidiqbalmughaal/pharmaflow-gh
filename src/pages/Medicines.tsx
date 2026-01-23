@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Pencil, Trash2, AlertTriangle, Camera } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, AlertTriangle, Camera, FileText } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { getSellingTypeLabel, getQuantityUnit } from "@/lib/medicineTypes";
 import {
@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { MedicineDialog } from "@/components/MedicineDialog";
 import { ImageInventoryDialog } from "@/components/ImageInventoryDialog";
+import { InvoiceInventoryDialog } from "@/components/InvoiceInventoryDialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -24,6 +25,7 @@ const Medicines = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [editingMedicine, setEditingMedicine] = useState<any>(null);
   const queryClient = useQueryClient();
 
@@ -84,7 +86,15 @@ const Medicines = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center flex-wrap gap-2">
         <h2 className="text-2xl font-bold text-foreground">Medicines Inventory</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button 
+            variant="outline" 
+            onClick={() => setInvoiceDialogOpen(true)} 
+            className="gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Import Invoice
+          </Button>
           <Button 
             variant="outline" 
             onClick={() => setImageDialogOpen(true)} 
@@ -253,6 +263,11 @@ const Medicines = () => {
       <ImageInventoryDialog
         open={imageDialogOpen}
         onClose={() => setImageDialogOpen(false)}
+      />
+
+      <InvoiceInventoryDialog
+        open={invoiceDialogOpen}
+        onClose={() => setInvoiceDialogOpen(false)}
       />
     </div>
   );
