@@ -38,6 +38,10 @@ export const SELLING_TYPES = [
   { value: "supplement", label: "Supplement", unit: "Units", priceUnit: "Per Unit" },
   { value: "narcotic", label: "Narcotic", unit: "Units", priceUnit: "Per Unit" },
   { value: "per_packet", label: "Per Packet", unit: "Tablets", priceUnit: "Per Tablet" },
+  { value: "powder", label: "Powder", unit: "Units", priceUnit: "Per Unit" },
+  { value: "lotion", label: "Lotion", unit: "Units", priceUnit: "Per Unit" },
+  { value: "shampoo", label: "Shampoo", unit: "Units", priceUnit: "Per Unit" },
+  { value: "inhaler", label: "Inhaler", unit: "Units", priceUnit: "Per Unit" },
 ] as const;
 
 export type SellingType = typeof SELLING_TYPES[number]["value"];
@@ -68,6 +72,10 @@ export const EXPIRY_REQUIRED_TYPES: SellingType[] = [
   "sachet",
   "supplement",
   "per_packet",
+  "powder",
+  "lotion",
+  "shampoo",
+  "inhaler",
 ];
 
 // Non-drug items where expiry is optional

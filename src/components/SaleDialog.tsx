@@ -27,6 +27,7 @@ import { SaleReceipt } from "./SaleReceipt";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { usePharmacySettings } from "@/hooks/usePharmacySettings";
+import { getBestBatchFEFO, isExpired } from "@/hooks/useFEFOSelection";
 
 interface InitialProduct {
   type: 'medicine' | 'cosmetic';

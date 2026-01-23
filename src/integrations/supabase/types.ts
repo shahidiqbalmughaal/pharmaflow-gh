@@ -379,6 +379,7 @@ export type Database = {
       }
       medicines: {
         Row: {
+          barcode: string | null
           batch_no: string
           company_name: string
           created_at: string | null
@@ -399,6 +400,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          barcode?: string | null
           batch_no: string
           company_name: string
           created_at?: string | null
@@ -419,6 +421,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          barcode?: string | null
           batch_no?: string
           company_name?: string
           created_at?: string | null
