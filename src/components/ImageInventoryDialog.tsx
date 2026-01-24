@@ -31,6 +31,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { Camera, Upload, Loader2, AlertTriangle, CheckCircle2, ImageIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useShop } from "@/hooks/useShop";
 import { useDuplicateDetection, type DuplicateMedicine } from "@/hooks/useDuplicateDetection";
 import { useStockMerge } from "@/hooks/useStockMerge";
 import { StockMergeConfirmDialog } from "@/components/StockMergeConfirmDialog";
@@ -82,6 +83,7 @@ type ProcessingStep = "upload" | "processing" | "preview" | "error";
 export function ImageInventoryDialog({ open, onClose }: ImageInventoryDialogProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { currentShop } = useShop();
   const { checkForDuplicate, isChecking } = useDuplicateDetection();
   const { mergeStockAsync, isMerging } = useStockMerge();
   
@@ -249,6 +251,7 @@ export function ImageInventoryDialog({ open, onClose }: ImageInventoryDialogProp
         expiry_date: data.expiry_date || null,
         supplier: data.supplier || "Unknown",
         is_narcotic: data.is_narcotic,
+        shop_id: currentShop?.shop_id || null,
       };
 
       const { error } = await supabase.from("medicines").insert(inventoryData);
