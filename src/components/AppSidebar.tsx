@@ -53,9 +53,10 @@ const getMenuItems = (userRole: string | null, shopRole: string | null) => {
     { title: "Suppliers", url: "/suppliers", icon: Building2, visible: !isCashier },
   ];
 
-  // Settings only for owners/managers/admins
+  // Settings and Security for owners/managers/admins
   const settingsItems = [
     { title: "Settings", url: "/settings", icon: Settings, visible: !isCashier || isAdmin },
+    { title: "Security", url: "/security", icon: Shield, visible: isOwnerOrManager || isAdmin },
   ];
 
   return [...baseItems, ...managerItems, ...settingsItems].filter(item => item.visible);

@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          resource_count: number | null
+          resource_type: string
+          shop_id: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          resource_count?: number | null
+          resource_type: string
+          shop_id?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          resource_count?: number | null
+          resource_type?: string
+          shop_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       alert_history: {
         Row: {
           alert_type: string
@@ -1355,6 +1394,18 @@ export type Database = {
         Returns: undefined
       }
       generate_order_number: { Args: never; Returns: string }
+      get_access_anomalies: {
+        Args: { p_hours?: number; p_shop_id: string }
+        Returns: {
+          action_type: string
+          avg_count_per_session: number
+          is_anomaly: boolean
+          resource_type: string
+          total_count: number
+          unique_sessions: number
+          user_id: string
+        }[]
+      }
       get_shop_role: {
         Args: { _shop_id: string; _user_id: string }
         Returns: string
