@@ -38,6 +38,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useRealtimeInventory } from "@/hooks/useRealtimeInventory";
+import { useShop } from "@/hooks/useShop";
 
 const LOW_STOCK_THRESHOLD = 10;
 
@@ -55,6 +57,14 @@ const Medicines = () => {
   const queryClient = useQueryClient();
   const { settings: pharmacySettings } = usePharmacySettings();
   const isMobile = useIsMobile();
+  const { currentShop } = useShop();
+
+  // Enable real-time sync for medicines
+  useRealtimeInventory({
+    tableName: 'medicines',
+    queryKey: ['medicines'],
+    showNotifications: true,
+  });
 
   const { data: medicines, isLoading } = useQuery({
     queryKey: ["medicines"],
