@@ -25,6 +25,7 @@ import { Zap, Loader2, Printer, Package, MapPin, Check } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { SaleReceipt } from "./SaleReceipt";
 import { usePharmacySettings } from "@/hooks/usePharmacySettings";
+import { useShop } from "@/hooks/useShop";
 
 interface QuickSaleProduct {
   type: 'medicine' | 'cosmetic';
@@ -49,6 +50,7 @@ interface QuickSaleDialogProps {
 export function QuickSaleDialog({ open, onClose, product }: QuickSaleDialogProps) {
   const queryClient = useQueryClient();
   const receiptRef = useRef<HTMLDivElement>(null);
+  const { currentShop } = useShop();
   
   const [salesmanId, setSalesmanId] = useState("");
   const [quantity, setQuantity] = useState(1);
@@ -91,6 +93,7 @@ export function QuickSaleDialog({ open, onClose, product }: QuickSaleDialogProps
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (!currentShop?.shop_id) throw new Error("No shop selected");
       if (!salesmanId) throw new Error("Please select a salesman");
       if (!product) throw new Error("No product selected");
       if (quantity < 1) throw new Error("Quantity must be at least 1");
@@ -103,6 +106,7 @@ export function QuickSaleDialog({ open, onClose, product }: QuickSaleDialogProps
       const { data: sale, error: saleError } = await supabase
         .from("sales")
         .insert({
+          shop_id: currentShop.shop_id,
           salesman_id: salesmanId,
           salesman_name: salesman.name,
           subtotal: totalPrice,
@@ -120,6 +124,7 @@ export function QuickSaleDialog({ open, onClose, product }: QuickSaleDialogProps
 
       // Insert sale item
       const { error: itemError } = await supabase.from("sale_items").insert({
+        shop_id: currentShop.shop_id,
         sale_id: sale.id,
         item_type: product.type,
         item_id: product.id,

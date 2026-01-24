@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { usePharmacySettings } from "@/hooks/usePharmacySettings";
 import { getBestBatchFEFO, isExpired } from "@/hooks/useFEFOSelection";
+import { useShop } from "@/hooks/useShop";
 
 interface InitialProduct {
   type: 'medicine' | 'cosmetic';
@@ -64,6 +65,7 @@ interface SaleItem {
 export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   const queryClient = useQueryClient();
   const receiptRef = useRef<HTMLDivElement>(null);
+  const { currentShop } = useShop();
   const [salesmanId, setSalesmanId] = useState("");
   const [customerId, setCustomerId] = useState("walk-in");
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
@@ -195,6 +197,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (!currentShop?.shop_id) throw new Error("No shop selected");
       // Validation
       if (!salesmanId) throw new Error("Please select a salesman");
       if (saleItems.length === 0) throw new Error("Please add at least one item");
@@ -256,6 +259,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       const { data: sale, error: saleError } = await supabase
         .from("sales")
         .insert({
+          shop_id: currentShop.shop_id,
           salesman_id: salesmanId,
           salesman_name: salesman.name,
           customer_id: customer?.id || null,
@@ -289,6 +293,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
 
       // Insert sale items
       const saleItemsData = saleItems.map((item) => ({
+        shop_id: currentShop.shop_id,
         sale_id: sale.id,
         item_type: item.itemType,
         item_id: item.itemId,
