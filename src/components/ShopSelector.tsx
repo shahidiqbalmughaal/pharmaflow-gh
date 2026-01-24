@@ -36,7 +36,7 @@ export function ShopSelector() {
             Super Admin
           </Badge>
         )}
-        {!isSuperAdmin && currentShop?.shop_role && (
+        {!isSuperAdmin && currentShop?.shop_role && currentShop.shop_role !== 'super_admin' && (
           <Badge variant="outline" className="text-xs capitalize">
             {currentShop?.shop_role?.replace('_', ' ')}
           </Badge>
@@ -61,9 +61,11 @@ export function ShopSelector() {
             <SelectItem key={shop.shop_id} value={shop.shop_id}>
               <div className="flex items-center gap-2">
                 <span>{shop.shop_name}</span>
-                <Badge variant="secondary" className="text-xs capitalize">
-                  {shop.shop_role?.replace('_', ' ')}
-                </Badge>
+                {shop.shop_role && shop.shop_role !== 'super_admin' && (
+                  <Badge variant="secondary" className="text-xs capitalize">
+                    {shop.shop_role?.replace('_', ' ')}
+                  </Badge>
+                )}
               </div>
             </SelectItem>
           ))}
