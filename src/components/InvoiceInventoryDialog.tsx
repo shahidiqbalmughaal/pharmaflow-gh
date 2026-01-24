@@ -26,6 +26,7 @@ import {
   Package
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useShop } from "@/hooks/useShop";
 
 interface InvoiceInventoryDialogProps {
   open: boolean;
@@ -81,6 +82,7 @@ type ProcessingStep = "upload" | "processing" | "preview" | "saving" | "error";
 export function InvoiceInventoryDialog({ open, onClose }: InvoiceInventoryDialogProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { currentShop } = useShop();
   
   const [step, setStep] = useState<ProcessingStep>("upload");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -260,6 +262,7 @@ export function InvoiceInventoryDialog({ open, onClose }: InvoiceInventoryDialog
             expiry_date: item.expiry_date || null,
             supplier: supplierName || "Invoice Import",
             is_narcotic: false,
+            shop_id: currentShop?.shop_id || null,
           };
 
           const { error } = await supabase.from("medicines").insert(inventoryData);
