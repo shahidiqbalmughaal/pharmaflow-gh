@@ -37,6 +37,7 @@ import { useDuplicateDetection, type DuplicateMedicine } from "@/hooks/useDuplic
 import { useStockMerge } from "@/hooks/useStockMerge";
 import { StockMergeConfirmDialog } from "@/components/StockMergeConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
+import { useShop } from "@/hooks/useShop";
 
 interface MedicineDialogProps {
   open: boolean;
@@ -49,6 +50,7 @@ type MedicineFormData = z.infer<typeof medicineSchema>;
 export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { currentShop } = useShop();
   const { checkForDuplicate, isChecking } = useDuplicateDetection();
   const { mergeStockAsync, isMerging } = useStockMerge();
   
@@ -110,9 +112,14 @@ export function MedicineDialog({ open, onClose, medicine }: MedicineDialogProps)
           .eq("id", medicine.id);
         if (error) throw error;
       } else {
+        // Add shop_id for new medicines
+        const insertData = {
+          ...cleanData,
+          shop_id: currentShop?.shop_id || null,
+        };
         const { error } = await supabase
           .from("medicines")
-          .insert(cleanData);
+          .insert(insertData);
         if (error) throw error;
       }
     },

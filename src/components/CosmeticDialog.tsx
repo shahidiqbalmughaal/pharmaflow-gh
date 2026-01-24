@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cosmeticSchema } from "@/lib/validations";
+import { useShop } from "@/hooks/useShop";
 import type { z } from "zod";
 import {
   Dialog,
@@ -26,6 +27,7 @@ type CosmeticFormData = z.infer<typeof cosmeticSchema>;
 
 export function CosmeticDialog({ open, onClose, cosmetic }: CosmeticDialogProps) {
   const queryClient = useQueryClient();
+  const { currentShop } = useShop();
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CosmeticFormData>({
     resolver: zodResolver(cosmeticSchema),
     defaultValues: cosmetic || {},
@@ -48,9 +50,14 @@ export function CosmeticDialog({ open, onClose, cosmetic }: CosmeticDialogProps)
           .eq("id", cosmetic.id);
         if (error) throw error;
       } else {
+        // Add shop_id for new cosmetics
+        const insertData = {
+          ...data,
+          shop_id: currentShop?.shop_id || null,
+        };
         const { error } = await supabase
           .from("cosmetics")
-          .insert(data);
+          .insert(insertData);
         if (error) throw error;
       }
     },
