@@ -652,13 +652,11 @@ const Dashboard = () => {
         <ExpenseBreakdownChart expenses={todayExpensesData?.expenses || []} />
       </div>
 
-      {/* Alerts Overview - Admin only */}
-      {canViewFullDashboard && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <AlertsOverview />
-          <AlertStatusCard />
-        </div>
-      )}
+      {/* Alerts Overview - Visible to all users */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <AlertsOverview />
+        <AlertStatusCard />
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card 

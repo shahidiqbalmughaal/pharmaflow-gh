@@ -6,25 +6,8 @@ import { Receipt, AlertTriangle, Clock, DollarSign } from "lucide-react";
 import { format, isToday, isTomorrow, addDays, isBefore } from "date-fns";
 
 export function AlertStatusCard() {
-  // Check if user is admin
-  const { data: userRole } = useQuery({
-    queryKey: ["userRole"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
-      
-      return data?.role;
-    },
-  });
-
-  // Fetch upcoming expense alerts (due within 7 days)
-  const { data: expenseAlerts } = useQuery({
+  // Fetch upcoming expense alerts (due within 7 days) - all staff can now view
+  const { data: expenseAlerts, isError } = useQuery({
     queryKey: ["expenseAlerts"],
     queryFn: async () => {
       const today = new Date();
@@ -40,13 +23,8 @@ export function AlertStatusCard() {
       if (error) throw error;
       return data || [];
     },
-    enabled: userRole === "admin",
     refetchInterval: 300000, // Refetch every 5 minutes
   });
-
-  if (userRole !== "admin") {
-    return null;
-  }
 
   const overdueExpenses = expenseAlerts?.filter(e => isBefore(new Date(e.due_date), new Date()) && !isToday(new Date(e.due_date))) || [];
   const dueTodayExpenses = expenseAlerts?.filter(e => isToday(new Date(e.due_date))) || [];
