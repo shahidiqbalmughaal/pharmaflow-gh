@@ -25,8 +25,29 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [currentShop, setCurrentShop] = useState<Shop | null>(null);
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userFullName, setUserFullName] = useState<string | null>(null);
 
-  const isSuperAdmin = userRole === 'admin';
+  // Super Admin status is restricted to only "Shahid Iqbal"
+  const isSuperAdmin = userRole === 'admin' && userFullName === 'Shahid Iqbal';
+
+  // Fetch user's full name from profile
+  const fetchUserProfile = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (!error && data) {
+        setUserFullName(data.full_name);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  }, [user]);
 
   const fetchShops = useCallback(async () => {
     if (!user) {
@@ -87,8 +108,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!authLoading) {
       fetchShops();
+      fetchUserProfile();
     }
-  }, [authLoading, fetchShops]);
+  }, [authLoading, fetchShops, fetchUserProfile]);
 
   const switchShop = async (shopId: string): Promise<boolean> => {
     if (!user) return false;

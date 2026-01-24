@@ -31,9 +31,11 @@ export function ShopSelector() {
       <div className="flex items-center gap-2">
         <Store className="h-4 w-4 text-primary" />
         <span className="font-medium text-sm">{currentShop?.shop_name}</span>
-        <Badge variant="outline" className="text-xs capitalize">
-          {currentShop?.shop_role?.replace('_', ' ')}
-        </Badge>
+        {currentShop?.shop_role && currentShop.shop_role !== 'Super Admin' && (
+          <Badge variant="outline" className="text-xs capitalize">
+            {currentShop?.shop_role?.replace('_', ' ')}
+          </Badge>
+        )}
       </div>
     );
   }
