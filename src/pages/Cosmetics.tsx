@@ -16,12 +16,20 @@ import {
 import { CosmeticDialog } from "@/components/CosmeticDialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useRealtimeInventory } from "@/hooks/useRealtimeInventory";
 
 const Cosmetics = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCosmetic, setEditingCosmetic] = useState<any>(null);
   const queryClient = useQueryClient();
+
+  // Enable real-time sync for cosmetics
+  useRealtimeInventory({
+    tableName: 'cosmetics',
+    queryKey: ['cosmetics'],
+    showNotifications: true,
+  });
 
   const { data: cosmetics, isLoading } = useQuery({
     queryKey: ["cosmetics"],
