@@ -2,8 +2,10 @@ import { ReactNode } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { useShop } from "@/hooks/useShop";
 import { ShopSelector } from "./ShopSelector";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { LogOut } from "lucide-react";
 
 interface LayoutProps {
@@ -12,6 +14,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { signOut } = useAuth();
+  const { isSuperAdmin } = useShop();
 
   return (
     <SidebarProvider>
@@ -22,6 +25,11 @@ export function Layout({ children }: LayoutProps) {
             <div className="flex items-center gap-4">
               <SidebarTrigger className="mr-2" />
               <ShopSelector />
+              {isSuperAdmin && (
+                <Badge variant="outline" className="text-xs font-medium border-primary text-primary">
+                  Super Admin
+                </Badge>
+              )}
             </div>
             <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut className="h-4 w-4 mr-2" />
