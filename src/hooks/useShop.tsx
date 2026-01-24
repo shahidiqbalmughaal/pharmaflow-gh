@@ -112,11 +112,16 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    if (!authLoading) {
-      fetchShops();
-      fetchUserProfile();
-    }
-  }, [authLoading, fetchShops, fetchUserProfile]);
+    if (authLoading) return;
+
+    // Prevent stale state from a previous session (e.g., Shahid -> another user)
+    // which could briefly show the Super Admin badge.
+    setProfileLoaded(false);
+    setUserFullName(null);
+
+    fetchShops();
+    fetchUserProfile();
+  }, [authLoading, user?.id, fetchShops, fetchUserProfile]);
 
   const switchShop = async (shopId: string): Promise<boolean> => {
     if (!user) return false;
