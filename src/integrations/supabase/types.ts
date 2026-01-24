@@ -1398,6 +1398,7 @@ export type Database = {
         Args: { p_hours?: number; p_shop_id: string }
         Returns: {
           action_type: string
+          anomaly_reason: string
           avg_count_per_session: number
           is_anomaly: boolean
           resource_type: string
