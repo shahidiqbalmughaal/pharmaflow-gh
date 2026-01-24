@@ -26,13 +26,17 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [userFullName, setUserFullName] = useState<string | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
-  // Super Admin status is restricted to only "Shahid Iqbal"
-  const isSuperAdmin = userRole === 'admin' && userFullName === 'Shahid Iqbal';
+  // Super Admin status is restricted to only "Shahid Iqbal" - requires profile to be loaded
+  const isSuperAdmin = profileLoaded && userRole === 'admin' && userFullName === 'Shahid Iqbal';
 
   // Fetch user's full name from profile
   const fetchUserProfile = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setProfileLoaded(true);
+      return;
+    }
     
     try {
       const { data, error } = await supabase
@@ -46,6 +50,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
+    } finally {
+      setProfileLoaded(true);
     }
   }, [user]);
 

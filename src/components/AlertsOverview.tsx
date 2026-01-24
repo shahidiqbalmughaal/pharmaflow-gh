@@ -102,9 +102,13 @@ export function AlertsOverview() {
   const totalNearExpiry = (nearExpiryMedicines?.length || 0) + (nearExpiryCosmetics?.length || 0);
   const totalAlerts = totalLowStock + totalNearExpiry;
 
-  if (!settings) {
-    return null;
-  }
+  // Show with default values if settings not yet loaded
+  const displaySettings = settings || {
+    low_stock_threshold: 10,
+    expiry_warning_days: 30,
+    email_enabled: false,
+    check_frequency_hours: 24
+  };
 
   return (
     <Card>
@@ -146,7 +150,7 @@ export function AlertsOverview() {
             </div>
             {totalNearExpiry > 0 && (
               <p className="text-sm text-muted-foreground mt-2">
-                Within {settings.expiry_warning_days} days
+                Within {displaySettings.expiry_warning_days} days
               </p>
             )}
           </div>
@@ -158,13 +162,11 @@ export function AlertsOverview() {
           </p>
         )}
 
-        {totalAlerts > 0 && (
-          <div className="text-sm text-muted-foreground">
-            <p>
-              Automated alerts are {settings.email_enabled ? 'enabled' : 'disabled'} and run every {settings.check_frequency_hours} hours.
-            </p>
-          </div>
-        )}
+        <div className="text-sm text-muted-foreground">
+          <p>
+            Automated alerts are {displaySettings.email_enabled ? 'enabled' : 'disabled'} and run every {displaySettings.check_frequency_hours} hours.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

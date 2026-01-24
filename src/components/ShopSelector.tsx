@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
 export function ShopSelector() {
-  const { currentShop, shops, loading, switchShop } = useShop();
+  const { currentShop, shops, loading, switchShop, isSuperAdmin } = useShop();
 
   if (loading) {
     return <Skeleton className="h-9 w-48" />;
@@ -31,7 +31,12 @@ export function ShopSelector() {
       <div className="flex items-center gap-2">
         <Store className="h-4 w-4 text-primary" />
         <span className="font-medium text-sm">{currentShop?.shop_name}</span>
-        {currentShop?.shop_role && currentShop.shop_role !== 'Super Admin' && (
+        {isSuperAdmin && (
+          <Badge variant="outline" className="text-xs font-medium border-primary text-primary">
+            Super Admin
+          </Badge>
+        )}
+        {!isSuperAdmin && currentShop?.shop_role && (
           <Badge variant="outline" className="text-xs capitalize">
             {currentShop?.shop_role?.replace('_', ' ')}
           </Badge>
