@@ -1130,10 +1130,16 @@ export type Database = {
           address: string | null
           company: string | null
           created_at: string | null
+          delivery_person_name: string | null
+          delivery_person_phone: string | null
+          delivery_person_whatsapp: string | null
           email: string | null
           id: string
           name: string
           notes: string | null
+          order_booker_name: string | null
+          order_booker_phone: string | null
+          order_booker_whatsapp: string | null
           phone: string
           shop_id: string | null
           updated_at: string | null
@@ -1143,10 +1149,16 @@ export type Database = {
           address?: string | null
           company?: string | null
           created_at?: string | null
+          delivery_person_name?: string | null
+          delivery_person_phone?: string | null
+          delivery_person_whatsapp?: string | null
           email?: string | null
           id?: string
           name: string
           notes?: string | null
+          order_booker_name?: string | null
+          order_booker_phone?: string | null
+          order_booker_whatsapp?: string | null
           phone: string
           shop_id?: string | null
           updated_at?: string | null
@@ -1156,10 +1168,16 @@ export type Database = {
           address?: string | null
           company?: string | null
           created_at?: string | null
+          delivery_person_name?: string | null
+          delivery_person_phone?: string | null
+          delivery_person_whatsapp?: string | null
           email?: string | null
           id?: string
           name?: string
           notes?: string | null
+          order_booker_name?: string | null
+          order_booker_phone?: string | null
+          order_booker_whatsapp?: string | null
           phone?: string
           shop_id?: string | null
           updated_at?: string | null
