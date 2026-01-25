@@ -1411,6 +1411,7 @@ export type Database = {
         Args: { medicine_id: string; qty: number }
         Returns: undefined
       }
+      gen_random_uuid: { Args: never; Returns: string }
       generate_order_number: { Args: never; Returns: string }
       get_access_anomalies: {
         Args: { p_hours?: number; p_shop_id: string }
