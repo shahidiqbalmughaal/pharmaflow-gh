@@ -206,6 +206,14 @@ export const salesmanSchema = z.object({
   }
 );
 
+// Phone validation helper (reusable for optional phone fields)
+const optionalPhoneSchema = z.string()
+  .trim()
+  .regex(/^[\d\s\-\+\(\)]*$/, "Invalid phone number format")
+  .max(20, "Phone must be less than 20 characters")
+  .optional()
+  .or(z.literal(""));
+
 // Supplier validation schema
 export const supplierSchema = z.object({
   name: z.string()
@@ -242,6 +250,22 @@ export const supplierSchema = z.object({
     .trim()
     .max(1000, "Notes must be less than 1000 characters")
     .optional(),
+  // Order Booker contact fields
+  order_booker_name: z.string()
+    .trim()
+    .max(200, "Name must be less than 200 characters")
+    .optional()
+    .or(z.literal("")),
+  order_booker_phone: optionalPhoneSchema,
+  order_booker_whatsapp: optionalPhoneSchema,
+  // Delivery Person contact fields
+  delivery_person_name: z.string()
+    .trim()
+    .max(200, "Name must be less than 200 characters")
+    .optional()
+    .or(z.literal("")),
+  delivery_person_phone: optionalPhoneSchema,
+  delivery_person_whatsapp: optionalPhoneSchema,
 });
 
 // Sale item validation

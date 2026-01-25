@@ -49,6 +49,12 @@ export function SupplierDialog({ open, onOpenChange, supplier }: SupplierDialogP
       email: "",
       address: "",
       notes: "",
+      order_booker_name: "",
+      order_booker_phone: "",
+      order_booker_whatsapp: "",
+      delivery_person_name: "",
+      delivery_person_phone: "",
+      delivery_person_whatsapp: "",
     },
   });
 
@@ -62,6 +68,12 @@ export function SupplierDialog({ open, onOpenChange, supplier }: SupplierDialogP
         email: supplier.email || "",
         address: supplier.address || "",
         notes: supplier.notes || "",
+        order_booker_name: supplier.order_booker_name || "",
+        order_booker_phone: supplier.order_booker_phone || "",
+        order_booker_whatsapp: supplier.order_booker_whatsapp || "",
+        delivery_person_name: supplier.delivery_person_name || "",
+        delivery_person_phone: supplier.delivery_person_phone || "",
+        delivery_person_whatsapp: supplier.delivery_person_whatsapp || "",
       });
     } else {
       form.reset({
@@ -72,6 +84,12 @@ export function SupplierDialog({ open, onOpenChange, supplier }: SupplierDialogP
         email: "",
         address: "",
         notes: "",
+        order_booker_name: "",
+        order_booker_phone: "",
+        order_booker_whatsapp: "",
+        delivery_person_name: "",
+        delivery_person_phone: "",
+        delivery_person_whatsapp: "",
       });
     }
   }, [supplier, form]);
@@ -87,6 +105,12 @@ export function SupplierDialog({ open, onOpenChange, supplier }: SupplierDialogP
         email: data.email || null,
         address: data.address || null,
         notes: data.notes || null,
+        order_booker_name: data.order_booker_name || null,
+        order_booker_phone: data.order_booker_phone || null,
+        order_booker_whatsapp: data.order_booker_whatsapp || null,
+        delivery_person_name: data.delivery_person_name || null,
+        delivery_person_phone: data.delivery_person_phone || null,
+        delivery_person_whatsapp: data.delivery_person_whatsapp || null,
       };
 
       if (isEditing) {
@@ -230,6 +254,102 @@ export function SupplierDialog({ open, onOpenChange, supplier }: SupplierDialogP
                 </FormItem>
               )}
             />
+
+            {/* Order Booker Section */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Order Booker Details (Optional)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="order_booker_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Order booker name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="order_booker_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+92 300 1234567" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="order_booker_whatsapp"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>WhatsApp Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+923001234567" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Delivery Person Section */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Delivery Person Details (Optional)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="delivery_person_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Delivery person name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="delivery_person_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+92 300 1234567" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="delivery_person_whatsapp"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>WhatsApp Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+923001234567" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
