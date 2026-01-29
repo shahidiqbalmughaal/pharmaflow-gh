@@ -93,6 +93,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   const [activeCell, setActiveCell] = useState<{ row: number; col: number }>({ row: 0, col: 0 });
   const [searchQuery, setSearchQuery] = useState("");
   const [showItemDropdown, setShowItemDropdown] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   
   // Refs for keyboard navigation
   const itemInputRefs = useRef<(HTMLInputElement | null)[][]>([]);
@@ -707,10 +708,82 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>, rowIndex: number, colIndex: number) => {
     const item = saleItems[rowIndex];
     
+    // Handle dropdown navigation when dropdown is visible (only for item name column)
+    if (colIndex === 0 && showItemDropdown && filteredProducts.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setHighlightedIndex(prev => 
+          prev < filteredProducts.length - 1 ? prev + 1 : 0
+        );
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setHighlightedIndex(prev => 
+          prev > 0 ? prev - 1 : filteredProducts.length - 1
+        );
+        return;
+      }
+      if (e.key === "Enter" && highlightedIndex >= 0) {
+        e.preventDefault();
+        selectProduct(filteredProducts[highlightedIndex], rowIndex);
+        setHighlightedIndex(-1);
+        return;
+      }
+    }
+    
+    // Tab key support - move between fields
+    if (e.key === "Tab") {
+      if (e.shiftKey) {
+        // Shift+Tab - go to previous field
+        if (colIndex > 0) {
+          e.preventDefault();
+          const prevInput = itemInputRefs.current[rowIndex]?.[colIndex - 1];
+          if (prevInput) prevInput.focus();
+        } else if (rowIndex > 0) {
+          e.preventDefault();
+          const prevInput = itemInputRefs.current[rowIndex - 1]?.[2];
+          if (prevInput) prevInput.focus();
+        }
+      } else {
+        // Tab - go to next field
+        if (colIndex === 0 && item.itemId) {
+          e.preventDefault();
+          const nextInput = itemInputRefs.current[rowIndex]?.[1];
+          if (nextInput) nextInput.focus();
+        } else if (colIndex === 1) {
+          e.preventDefault();
+          const nextInput = itemInputRefs.current[rowIndex]?.[2];
+          if (nextInput) nextInput.focus();
+        } else if (colIndex === 2 && item.itemId && item.quantity > 0) {
+          e.preventDefault();
+          // Create new row if needed and focus it
+          const hasEmptyRowAfter = saleItems.slice(rowIndex + 1).some(i => !i.itemId);
+          if (!hasEmptyRowAfter) {
+            const newItems = [...saleItems, createEmptyRow()];
+            setSaleItems(newItems);
+            setTimeout(() => {
+              const nextInput = itemInputRefs.current[newItems.length - 1]?.[0];
+              if (nextInput) nextInput.focus();
+            }, 100);
+          } else {
+            const nextEmptyIndex = saleItems.findIndex((i, idx) => idx > rowIndex && !i.itemId);
+            if (nextEmptyIndex !== -1) {
+              setTimeout(() => {
+                const nextInput = itemInputRefs.current[nextEmptyIndex]?.[0];
+                if (nextInput) nextInput.focus();
+              }, 50);
+            }
+          }
+        }
+      }
+      return;
+    }
+    
     if (e.key === "Enter") {
       e.preventDefault();
       
-      // If on item name column and item is selected, move to quantity
+      // If on item name column and no dropdown selection, move to quantity if item selected
       if (colIndex === 0 && item.itemId) {
         const qtyInput = itemInputRefs.current[rowIndex]?.[1];
         if (qtyInput) {
@@ -810,15 +883,17 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
     }
     else if (e.key === "Escape") {
       e.preventDefault();
-      if (item.itemId) {
+      if (showItemDropdown) {
+        setShowItemDropdown(false);
+        setHighlightedIndex(-1);
+      } else if (item.itemId) {
         const newItems = [...saleItems];
         newItems[rowIndex] = createEmptyRow();
         setSaleItems(newItems);
       }
       setSearchQuery("");
-      setShowItemDropdown(false);
     }
-  }, [saleItems, removeItem]);
+  }, [saleItems, removeItem, showItemDropdown, filteredProducts, highlightedIndex, selectProduct]);
 
   // Calculate totals
   const validItems = saleItems.filter(item => item.itemId);
@@ -1045,13 +1120,18 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                             onChange={(e) => {
                               setSearchQuery(e.target.value);
                               setShowItemDropdown(true);
+                              setHighlightedIndex(-1); // Reset highlight on search change
                             }}
                             onFocus={() => {
                               setActiveCell({ row: rowIndex, col: 0 });
                               setShowItemDropdown(true); // Show dropdown immediately on focus
+                              setHighlightedIndex(-1); // Reset highlight
                             }}
                             onBlur={() => {
-                              setTimeout(() => setShowItemDropdown(false), 200);
+                              setTimeout(() => {
+                                setShowItemDropdown(false);
+                                setHighlightedIndex(-1);
+                              }, 200);
                             }}
                             onKeyDown={(e) => handleKeyDown(e, rowIndex, 0)}
                           />
@@ -1063,27 +1143,40 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                                   Loading items...
                                 </div>
                               ) : filteredProducts.length > 0 ? (
-                                filteredProducts.map((product) => (
+                              filteredProducts.map((product, productIndex) => (
                                   <button
                                     key={product.id}
-                                    className="w-full px-3 py-2 text-left hover:bg-muted text-sm flex items-center justify-between"
+                                    className={cn(
+                                      "w-full px-3 py-2 text-left text-sm flex items-center justify-between",
+                                      highlightedIndex === productIndex 
+                                        ? "bg-primary text-primary-foreground" 
+                                        : "hover:bg-muted"
+                                    )}
                                     onMouseDown={(e) => {
                                       e.preventDefault();
                                       selectProduct(product, rowIndex);
                                     }}
+                                    onMouseEnter={() => setHighlightedIndex(productIndex)}
                                   >
                                     <span className="truncate">
                                       <span className={cn(
                                         "text-xs font-medium mr-2 px-1.5 py-0.5 rounded",
-                                        product.type === 'medicine'
-                                          ? "bg-primary/10 text-primary"
-                                          : "bg-accent/10 text-accent"
+                                        highlightedIndex === productIndex
+                                          ? "bg-primary-foreground/20 text-primary-foreground"
+                                          : product.type === 'medicine'
+                                            ? "bg-primary/10 text-primary"
+                                            : "bg-accent/10 text-accent"
                                       )}>
                                         {product.type === 'medicine' ? 'M' : 'C'}
                                       </span>
                                       {product.displayName}
                                     </span>
-                                    <span className="text-xs text-muted-foreground ml-2">
+                                    <span className={cn(
+                                      "text-xs ml-2",
+                                      highlightedIndex === productIndex 
+                                        ? "text-primary-foreground/80" 
+                                        : "text-muted-foreground"
+                                    )}>
                                       {formatCurrency(Number(product.selling_price))} | Qty: {product.quantity}
                                     </span>
                                   </button>
@@ -1163,10 +1256,10 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
 
           {/* Keyboard Shortcuts Hint */}
           <p className="text-xs text-muted-foreground">
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> next field • 
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">↑↓</kbd> navigate rows • 
+            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd>/<kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Tab</kbd> next field • 
+            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">↑↓</kbd> navigate dropdown/rows • 
             <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">Del</kbd> remove row • 
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">Esc</kbd> clear row
+            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">Esc</kbd> close/clear
           </p>
         </div>
 
