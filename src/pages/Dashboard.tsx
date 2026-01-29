@@ -100,7 +100,7 @@ const Dashboard = () => {
   
   // Modal state
   const [activeCard, setActiveCard] = useState<string | null>(null);
-  const [modalType, setModalType] = useState<"sales" | "cash" | "expenses" | "netProfit" | "medicines" | "cosmetics" | "lowStock" | "expiry" | "allLowStock" | null>(null);
+  const [modalType, setModalType] = useState<"sales" | "cash" | "expenses" | "netProfit" | "medicines" | "cosmetics" | "lowStock" | "expiry" | "allLowStock" | "allExpiry" | null>(null);
 
   // Fetch salesmen for filter (use salesmen_list view for security - excludes CNIC/contact)
   const { data: salesmen } = useQuery({
@@ -694,7 +694,13 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card 
+          className={`cursor-pointer transition-all hover:shadow-lg ${activeCard === 'allExpiry' ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+          onClick={() => {
+            setActiveCard('allExpiry');
+            setModalType('allExpiry');
+          }}
+        >
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-destructive" aria-hidden="true" />
@@ -718,6 +724,9 @@ const Dashboard = () => {
               ) : (
                 <p className="text-sm text-muted-foreground">No expiry alerts</p>
               )}
+              <p className="text-xs text-muted-foreground text-center pt-2 border-t">
+                Click to view complete list
+              </p>
             </div>
           </CardContent>
         </Card>

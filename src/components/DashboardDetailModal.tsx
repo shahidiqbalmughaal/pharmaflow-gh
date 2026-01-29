@@ -18,7 +18,7 @@ import { LoadingSpinner } from "./LoadingSpinner";
 interface DashboardDetailModalProps {
   open: boolean;
   onClose: () => void;
-  type: "sales" | "cash" | "expenses" | "netProfit" | "medicines" | "cosmetics" | "lowStock" | "expiry" | "allLowStock" | null;
+  type: "sales" | "cash" | "expenses" | "netProfit" | "medicines" | "cosmetics" | "lowStock" | "expiry" | "allLowStock" | "allExpiry" | null;
 }
 
 export function DashboardDetailModal({ open, onClose, type }: DashboardDetailModalProps) {
@@ -132,7 +132,7 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
       if (error) throw error;
       return data;
     },
-    enabled: open && type === "expiry",
+    enabled: open && (type === "expiry" || type === "allExpiry"),
   });
 
   const getTitle = () => {
@@ -146,6 +146,7 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
       case "lowStock": return "Low Stock Alert";
       case "expiry": return "Expiry Alerts (Next 6 Months)";
       case "allLowStock": return "All Low Stock Items";
+      case "allExpiry": return "All Expiring Items (Next 6 Months)";
       default: return "";
     }
   };
@@ -300,7 +301,7 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
                 ))}
               </TableBody>
             </Table>
-          ) : type === "expiry" && expiryAlerts ? (
+          ) : (type === "expiry" || type === "allExpiry") && expiryAlerts ? (
             <Table>
               <TableHeader>
                 <TableRow>
