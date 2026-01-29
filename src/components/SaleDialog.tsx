@@ -1057,18 +1057,18 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
             </div>
           )}
 
-          {/* Items Table - Dense */}
+          {/* Items Table */}
           {/* NOTE: Outer wrapper must NOT be overflow-hidden, otherwise the item search dropdown gets clipped */}
           <div ref={tableContainerRef} className="border rounded overflow-visible bg-background">
-            <table className="w-full text-sm">
+            <table className="w-full text-base">
               <thead className="bg-muted/50">
                 <tr className="border-b">
-                  <th className="text-center px-2 py-2 font-medium text-xs w-12">S.No</th>
-                  <th className="text-left px-2 py-2 font-medium text-xs">Item Name</th>
-                  <th className="text-left px-2 py-2 font-medium text-xs w-20">Qty</th>
-                  <th className="text-left px-2 py-2 font-medium text-xs w-24">Rate</th>
-                  <th className="text-left px-2 py-2 font-medium text-xs w-24">Total</th>
-                  <th className="text-center px-2 py-2 font-medium text-xs w-10"></th>
+                  <th className="text-center px-3 py-3 font-semibold text-sm w-14">S.No</th>
+                  <th className="text-left px-3 py-3 font-semibold text-sm">Item Name</th>
+                  <th className="text-left px-3 py-3 font-semibold text-sm w-24">Qty</th>
+                  <th className="text-left px-3 py-3 font-semibold text-sm w-28">Rate</th>
+                  <th className="text-left px-3 py-3 font-semibold text-sm w-28">Total</th>
+                  <th className="text-center px-3 py-3 font-semibold text-sm w-12"></th>
                 </tr>
               </thead>
               <tbody>
@@ -1080,16 +1080,16 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                       item.itemId ? "bg-background" : "bg-muted/10"
                     )}
                   >
-                    <td className="px-2 py-1 text-center">
-                      <span className="text-sm text-muted-foreground font-medium">
+                    <td className="px-3 py-2 text-center">
+                      <span className="text-base text-muted-foreground font-medium">
                         {rowIndex + 1}
                       </span>
                     </td>
-                    <td className="px-1 py-1 relative">
+                    <td className="px-2 py-2 relative">
                       {item.itemId ? (
-                        <div className="flex items-center gap-1 px-2 h-8 bg-muted/30 rounded text-sm">
-                          <span className="truncate flex-1">{item.itemName}</span>
-                          <span className="text-xs text-muted-foreground">({item.batchNo})</span>
+                        <div className="flex items-center gap-2 px-3 h-10 bg-muted/30 rounded">
+                          <span className="truncate flex-1 text-base font-medium">{item.itemName}</span>
+                          <span className="text-sm text-muted-foreground">({item.batchNo})</span>
                           <button
                             onClick={() => {
                               const newItems = [...saleItems];
@@ -1114,7 +1114,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                               }
                               itemInputRefs.current[rowIndex][0] = el;
                             }}
-                            className="h-8 text-sm border-0 shadow-none focus:ring-1"
+                            className="h-10 text-base border-0 shadow-none focus:ring-1"
                             placeholder="Search item..."
                             value={activeCell.row === rowIndex ? searchQuery : ""}
                             onChange={(e) => {
@@ -1136,10 +1136,10 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                             onKeyDown={(e) => handleKeyDown(e, rowIndex, 0)}
                           />
                           {showItemDropdown && activeCell.row === rowIndex && (
-                            <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                            <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-popover border rounded-md shadow-lg max-h-64 overflow-y-auto">
                               {(medicinesLoading || cosmeticsLoading) ? (
-                                <div className="px-3 py-3 text-sm text-muted-foreground flex items-center gap-2">
-                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                <div className="px-4 py-4 text-base text-muted-foreground flex items-center gap-2">
+                                  <Loader2 className="h-5 w-5 animate-spin" />
                                   Loading items...
                                 </div>
                               ) : filteredProducts.length > 0 ? (
@@ -1147,7 +1147,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                                   <button
                                     key={product.id}
                                     className={cn(
-                                      "w-full px-3 py-2 text-left text-sm flex items-center justify-between",
+                                      "w-full px-4 py-3 text-left flex items-center justify-between",
                                       highlightedIndex === productIndex 
                                         ? "bg-primary text-primary-foreground" 
                                         : "hover:bg-muted"
@@ -1158,9 +1158,9 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                                     }}
                                     onMouseEnter={() => setHighlightedIndex(productIndex)}
                                   >
-                                    <span className="truncate">
+                                    <span className="truncate flex items-center">
                                       <span className={cn(
-                                        "text-xs font-medium mr-2 px-1.5 py-0.5 rounded",
+                                        "text-sm font-bold mr-3 px-2 py-1 rounded",
                                         highlightedIndex === productIndex
                                           ? "bg-primary-foreground/20 text-primary-foreground"
                                           : product.type === 'medicine'
@@ -1169,10 +1169,10 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                                       )}>
                                         {product.type === 'medicine' ? 'M' : 'C'}
                                       </span>
-                                      {product.displayName}
+                                      <span className="text-base font-medium">{product.displayName}</span>
                                     </span>
                                     <span className={cn(
-                                      "text-xs ml-2",
+                                      "text-sm ml-3 whitespace-nowrap",
                                       highlightedIndex === productIndex 
                                         ? "text-primary-foreground/80" 
                                         : "text-muted-foreground"
@@ -1182,7 +1182,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                                   </button>
                                 ))
                               ) : (
-                                <div className="px-3 py-3 text-sm text-muted-foreground">
+                                <div className="px-4 py-4 text-base text-muted-foreground">
                                   {searchQuery ? `No items found for "${searchQuery}"` : "No items available in inventory"}
                                 </div>
                               )}
@@ -1191,7 +1191,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                         </div>
                       )}
                     </td>
-                    <td className="px-1 py-1">
+                    <td className="px-2 py-2">
                       <Input
                         ref={(el) => {
                           if (!itemInputRefs.current[rowIndex]) {
@@ -1201,7 +1201,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                         }}
                         type="number"
                         min="1"
-                        className="h-8 text-sm border-0 shadow-none focus:ring-1 text-center"
+                        className="h-10 text-base border-0 shadow-none focus:ring-1 text-center font-medium"
                         value={item.quantity}
                         onChange={(e) => updateItemField(rowIndex, "quantity", e.target.value)}
                         onFocus={() => setActiveCell({ row: rowIndex, col: 1 })}
@@ -1209,7 +1209,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                         disabled={!item.itemId}
                       />
                     </td>
-                    <td className="px-1 py-1">
+                    <td className="px-2 py-2">
                       <Input
                         ref={(el) => {
                           if (!itemInputRefs.current[rowIndex]) {
@@ -1220,7 +1220,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                         type="number"
                         min="0"
                         step="0.01"
-                        className="h-8 text-sm border-0 shadow-none focus:ring-1"
+                        className="h-10 text-base border-0 shadow-none focus:ring-1 font-medium"
                         value={item.unitPrice || ""}
                         onChange={(e) => updateItemField(rowIndex, "unitPrice", e.target.value)}
                         onFocus={() => setActiveCell({ row: rowIndex, col: 2 })}
@@ -1228,24 +1228,24 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                         disabled={!item.itemId}
                       />
                     </td>
-                    <td className="px-2 py-1">
+                    <td className="px-3 py-2">
                       <span className={cn(
-                        "font-medium text-sm",
+                        "font-semibold text-base",
                         item.itemId ? "text-foreground" : "text-muted-foreground"
                       )}>
                         {item.itemId ? formatCurrency(item.totalPrice) : "-"}
                       </span>
                     </td>
-                    <td className="px-1 py-1 text-center">
+                    <td className="px-2 py-2 text-center">
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6"
+                        className="h-8 w-8"
                         onClick={() => removeItem(rowIndex)}
                         disabled={saleItems.length === 1 && !item.itemId}
                       >
-                        <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                        <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                       </Button>
                     </td>
                   </tr>
@@ -1255,11 +1255,11 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
           </div>
 
           {/* Keyboard Shortcuts Hint */}
-          <p className="text-xs text-muted-foreground">
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd>/<kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Tab</kbd> next field • 
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">↑↓</kbd> navigate dropdown/rows • 
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">Del</kbd> remove row • 
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">Esc</kbd> close/clear
+          <p className="text-sm text-muted-foreground">
+            <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">Enter</kbd>/<kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">Tab</kbd> next field • 
+            <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs ml-1">↑↓</kbd> navigate dropdown/rows • 
+            <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs ml-1">Del</kbd> remove row • 
+            <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs ml-1">Esc</kbd> close/clear
           </p>
         </div>
 
