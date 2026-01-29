@@ -195,10 +195,13 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       return allProducts.slice(0, 15);
     }
     const lowerQuery = searchQuery.toLowerCase();
-    return allProducts.filter(p => 
-      p.displayName.toLowerCase().includes(lowerQuery) ||
-      p.batch_no.toLowerCase().includes(lowerQuery)
-    ).slice(0, 15);
+    return allProducts
+      .filter((p: any) => {
+        const name = String(p.displayName ?? "").toLowerCase();
+        const batchNo = String(p.batch_no ?? "").toLowerCase();
+        return name.includes(lowerQuery) || batchNo.includes(lowerQuery);
+      })
+      .slice(0, 15);
   }, [searchQuery, allProducts]);
 
   // Auto-focus on first item input when dialog opens
@@ -965,7 +968,8 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
           )}
 
           {/* Items Table - Dense */}
-          <div ref={tableContainerRef} className="border rounded overflow-hidden">
+          {/* NOTE: Outer wrapper must NOT be overflow-hidden, otherwise the item search dropdown gets clipped */}
+          <div ref={tableContainerRef} className="border rounded overflow-visible bg-background">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr className="border-b">
@@ -1056,7 +1060,9 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                                     <span className="truncate">
                                       <span className={cn(
                                         "text-xs font-medium mr-2 px-1.5 py-0.5 rounded",
-                                        product.type === 'medicine' ? "bg-blue-100 text-blue-700" : "bg-pink-100 text-pink-700"
+                                        product.type === 'medicine'
+                                          ? "bg-primary/10 text-primary"
+                                          : "bg-accent/10 text-accent"
                                       )}>
                                         {product.type === 'medicine' ? 'M' : 'C'}
                                       </span>
