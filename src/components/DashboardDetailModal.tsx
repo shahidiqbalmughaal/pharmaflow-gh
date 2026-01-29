@@ -316,16 +316,40 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
                   const daysUntilExpiry = Math.floor(
                     (new Date(item.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
                   );
-                  const isUrgent = daysUntilExpiry < 30;
+                  
+                  // Color coding: red for expired, orange for within 30 days, yellow for within 60 days
+                  const isExpired = daysUntilExpiry < 0;
+                  const isUrgent = daysUntilExpiry >= 0 && daysUntilExpiry <= 30;
+                  const isWarning = daysUntilExpiry > 30 && daysUntilExpiry <= 60;
+                  
+                  const rowClass = isExpired 
+                    ? "bg-red-100 dark:bg-red-950/30" 
+                    : isUrgent 
+                    ? "bg-orange-100 dark:bg-orange-950/30" 
+                    : isWarning 
+                    ? "bg-yellow-100 dark:bg-yellow-950/30" 
+                    : "";
+                  
+                  const textClass = isExpired 
+                    ? "text-red-600 dark:text-red-400 font-bold" 
+                    : isUrgent 
+                    ? "text-orange-600 dark:text-orange-400 font-bold" 
+                    : isWarning 
+                    ? "text-yellow-600 dark:text-yellow-400 font-semibold" 
+                    : "";
+                  
+                  const statusLabel = isExpired 
+                    ? "Expired" 
+                    : `${daysUntilExpiry} days`;
                   
                   return (
-                    <TableRow key={item.id} className={isUrgent ? "bg-orange-50" : ""}>
+                    <TableRow key={item.id} className={rowClass}>
                       <TableCell>{item.medicine_name}</TableCell>
                       <TableCell>{item.batch_no}</TableCell>
-                      <TableCell className={isUrgent ? "text-orange-600 font-bold" : ""}>
+                      <TableCell className={textClass}>
                         {format(new Date(item.expiry_date), "MMM dd, yyyy")}
-                        <span className="text-xs block text-muted-foreground">
-                          ({daysUntilExpiry} days)
+                        <span className={`text-xs block ${isExpired ? 'text-red-500' : 'text-muted-foreground'}`}>
+                          ({statusLabel})
                         </span>
                       </TableCell>
                       <TableCell>{item.quantity}</TableCell>
