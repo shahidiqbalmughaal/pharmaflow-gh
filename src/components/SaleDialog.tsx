@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, KeyboardEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useReactToPrint } from "react-to-print";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,15 +20,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Printer, Sparkles, Loader2, X } from "lucide-react";
+import { Plus, Trash2, Printer, Sparkles, Loader2, X, QrCode } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { QRScanner } from "./QRScanner";
 import { SaleReceipt } from "./SaleReceipt";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { usePharmacySettings } from "@/hooks/usePharmacySettings";
-import { getBestBatchFEFO, isExpired } from "@/hooks/useFEFOSelection";
 import { useShop } from "@/hooks/useShop";
+import { cn } from "@/lib/utils";
 
 interface InitialProduct {
   type: 'medicine' | 'cosmetic';
@@ -62,17 +62,41 @@ interface SaleItem {
   totalPackets?: number;
 }
 
+// Create an empty row template
+const createEmptyRow = (): SaleItem => ({
+  itemType: "medicine",
+  itemId: "",
+  itemName: "",
+  batchNo: "",
+  quantity: 1,
+  unitPrice: 0,
+  totalPrice: 0,
+  profit: 0,
+  purchasePrice: 0,
+  sellingType: "per_tablet",
+  tabletsPerPacket: 1,
+  totalTablets: 0,
+  totalPackets: 0,
+});
+
 export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   const queryClient = useQueryClient();
   const receiptRef = useRef<HTMLDivElement>(null);
   const { currentShop } = useShop();
   const [salesmanId, setSalesmanId] = useState("");
   const [customerId, setCustomerId] = useState("walk-in");
-  const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
+  const [saleItems, setSaleItems] = useState<SaleItem[]>([createEmptyRow()]);
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [tax, setTax] = useState(0);
   const [completedSale, setCompletedSale] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [activeCell, setActiveCell] = useState<{ row: number; col: number }>({ row: 0, col: 0 });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showItemDropdown, setShowItemDropdown] = useState(false);
+  
+  // Refs for keyboard navigation
+  const itemInputRefs = useRef<(HTMLInputElement | null)[][]>([]);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
   
   // Pharmacy settings for receipt
   const { settings: pharmacySettings } = usePharmacySettings();
@@ -83,7 +107,6 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState<any[]>([]);
 
-  // Use salesmen_list view for dropdown (excludes sensitive CNIC/contact data)
   const { data: salesmen } = useQuery({
     queryKey: ["salesmen-list"],
     queryFn: async () => {
@@ -131,6 +154,32 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       return data;
     },
   });
+
+  // Combine all products for search
+  const allProducts = [
+    ...(medicines?.map(m => ({ ...m, type: 'medicine' as const, displayName: m.medicine_name })) || []),
+    ...(cosmetics?.map(c => ({ ...c, type: 'cosmetic' as const, displayName: c.product_name })) || []),
+  ];
+
+  // Filter products based on search query
+  const filteredProducts = searchQuery.length > 0
+    ? allProducts.filter(p => 
+        p.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.batch_no.toLowerCase().includes(searchQuery.toLowerCase())
+      ).slice(0, 10)
+    : [];
+
+  // Auto-focus on first item input when dialog opens
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => {
+        const firstInput = itemInputRefs.current[0]?.[0];
+        if (firstInput) {
+          firstInput.focus();
+        }
+      }, 100);
+    }
+  }, [open]);
 
   // Apply customer discount when customer is selected
   useEffect(() => {
@@ -180,13 +229,17 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
           totalPackets: isMedicine && sellingType === 'per_packet' ? 1 : 0,
         };
         
-        // Check if item already exists in saleItems
         const existingIndex = saleItems.findIndex(
           (item) => item.itemId === initialProduct.id && item.itemType === initialProduct.type
         );
         
         if (existingIndex === -1) {
-          setSaleItems((prev) => [...prev, newItem]);
+          // Replace empty first row or add to existing items
+          if (saleItems.length === 1 && !saleItems[0].itemId) {
+            setSaleItems([newItem, createEmptyRow()]);
+          } else {
+            setSaleItems((prev) => [...prev, newItem]);
+          }
           toast.success(`${initialProduct.name} added to sale`);
         } else {
           toast.info(`${initialProduct.name} is already in the sale`);
@@ -198,21 +251,20 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!currentShop?.shop_id) throw new Error("No shop selected");
-      // Validation
       if (!salesmanId) throw new Error("Please select a salesman");
-      if (saleItems.length === 0) throw new Error("Please add at least one item");
+      
+      // Filter out empty rows
+      const validItems = saleItems.filter(item => item.itemId);
+      if (validItems.length === 0) throw new Error("Please add at least one item");
 
       const salesman = salesmen?.find((s) => s.id === salesmanId);
       if (!salesman) throw new Error("Salesman not found");
 
-      // Validate all items have required fields
-      for (const item of saleItems) {
-        if (!item.itemId) throw new Error("Please select an item for all rows");
+      for (const item of validItems) {
         if (item.quantity < 1) throw new Error("Quantity must be at least 1");
         if (item.unitPrice < 0) throw new Error(`${item.itemName}: Rate must be positive`);
         if (item.totalPrice < 0) throw new Error(`${item.itemName}: Total Price must be positive`);
         
-        // Validate Quantity × Rate = Total Price
         const calculatedTotal = item.quantity * item.unitPrice;
         const difference = Math.abs(calculatedTotal - item.totalPrice);
         if (difference >= 0.01) {
@@ -221,7 +273,6 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
           );
         }
 
-        // Validate stock availability
         const availableItems = item.itemType === "medicine" ? medicines : cosmetics;
         const validation = validateStockAvailability(
           item.itemType,
@@ -235,27 +286,20 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
         }
       }
 
-      const subtotal = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
+      const subtotal = validItems.reduce((sum, item) => sum + item.totalPrice, 0);
       
-      // Validate discount percentage
       if (discountPercentage < 0) throw new Error("Discount cannot be negative");
       if (discountPercentage > 100) throw new Error("Discount cannot exceed 100%");
       
-      // Calculate discount amount
       const discountAmount = (subtotal * discountPercentage) / 100;
       
-      // Validate tax
       if (tax < 0) throw new Error("Tax cannot be negative");
 
-      const totalProfit = saleItems.reduce((sum, item) => sum + item.profit, 0);
+      const totalProfit = validItems.reduce((sum, item) => sum + item.profit, 0);
       const totalAmount = subtotal - discountAmount + tax;
-
-      // Calculate loyalty points (1 point per 100 currency spent)
       const loyaltyPointsEarned = Math.floor(totalAmount / 100);
-
       const customer = customerId && customerId !== "walk-in" ? customers?.find((c) => c.id === customerId) : null;
 
-      // Insert sale
       const { data: sale, error: saleError } = await supabase
         .from("sales")
         .insert({
@@ -277,7 +321,6 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
 
       if (saleError) throw saleError;
 
-      // Update customer stats if customer is selected
       if (customer) {
         const { error: updateError } = await supabase
           .from("customers")
@@ -291,8 +334,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
         if (updateError) throw updateError;
       }
 
-      // Insert sale items
-      const saleItemsData = saleItems.map((item) => ({
+      const saleItemsData = validItems.map((item) => ({
         shop_id: currentShop.shop_id,
         sale_id: sale.id,
         item_type: item.itemType,
@@ -314,8 +356,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
 
       if (itemsError) throw itemsError;
 
-      // Update inventory
-      for (const item of saleItems) {
+      for (const item of validItems) {
         if (item.itemType === "medicine") {
           const { error } = await supabase.rpc("decrement_medicine_quantity", {
             medicine_id: item.itemId,
@@ -331,7 +372,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
         }
       }
 
-      return { sale, salesman };
+      return { sale, salesman, validItems };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
@@ -342,17 +383,20 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       queryClient.invalidateQueries({ queryKey: ["medicinesSoldToday"] });
       queryClient.invalidateQueries({ queryKey: ["cosmeticsSoldToday"] });
       
-      const discountAmount = (subtotal * discountPercentage) / 100;
+      const validItems = data.validItems;
+      const itemSubtotal = validItems.reduce((sum: number, item: SaleItem) => sum + item.totalPrice, 0);
+      const discAmount = (itemSubtotal * discountPercentage) / 100;
+      
       setCompletedSale({
         saleId: data.sale.id,
         salesmanName: data.salesman.name,
         customerName: data.sale.customer_name,
         loyaltyPointsEarned: data.sale.loyalty_points_earned,
         saleDate: new Date(data.sale.sale_date),
-        items: saleItems,
-        subtotal,
+        items: validItems,
+        subtotal: itemSubtotal,
         discountPercentage,
-        discountAmount,
+        discountAmount: discAmount,
         tax,
         total: data.sale.total_amount,
       });
@@ -367,7 +411,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   const resetForm = () => {
     setSalesmanId("");
     setCustomerId("walk-in");
-    setSaleItems([]);
+    setSaleItems([createEmptyRow()]);
     setDiscountPercentage(0);
     setTax(0);
     setCompletedSale(null);
@@ -375,6 +419,8 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
     setShowAIPanel(false);
     setAiSymptoms("");
     setAiRecommendations([]);
+    setSearchQuery("");
+    setActiveCell({ row: 0, col: 0 });
   };
 
   const handleGetAIRecommendations = async () => {
@@ -418,25 +464,33 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
 
     const sellingType = (medicine as any).selling_type || "per_tablet";
     const tabletsPerPacket = (medicine as any).tablets_per_packet || 1;
-    const quantity = 1;
 
     const newItem: SaleItem = {
       itemType: "medicine",
       itemId: medicine.id,
       itemName: medicine.medicine_name,
       batchNo: medicine.batch_no,
-      quantity,
+      quantity: 1,
       unitPrice: Number(medicine.selling_price),
       totalPrice: Number(medicine.selling_price),
       profit: Number(medicine.selling_price) - Number(medicine.purchase_price),
       purchasePrice: Number(medicine.purchase_price),
       sellingType,
       tabletsPerPacket,
-      totalTablets: sellingType === "per_packet" ? quantity * tabletsPerPacket : quantity,
-      totalPackets: sellingType === "per_packet" ? quantity : 0,
+      totalTablets: sellingType === "per_packet" ? tabletsPerPacket : 1,
+      totalPackets: sellingType === "per_packet" ? 1 : 0,
     };
 
-    setSaleItems([...saleItems, newItem]);
+    // Find the last empty row or add new one
+    const emptyIndex = saleItems.findIndex(item => !item.itemId);
+    if (emptyIndex !== -1) {
+      const newItems = [...saleItems];
+      newItems[emptyIndex] = newItem;
+      newItems.push(createEmptyRow());
+      setSaleItems(newItems);
+    } else {
+      setSaleItems([...saleItems, newItem, createEmptyRow()]);
+    }
     toast.success(`Added: ${medicine.medicine_name}`);
   };
 
@@ -450,17 +504,14 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
 
   const handleQRScan = (decodedText: string) => {
     try {
-      // Assuming QR code contains item ID in format: "ITEM_ID" or "medicine:ITEM_ID" or "cosmetic:ITEM_ID"
       const parts = decodedText.split(":");
       const itemType = parts.length > 1 ? (parts[0] as "medicine" | "cosmetic") : "medicine";
       const itemId = parts.length > 1 ? parts[1] : decodedText;
 
-      // Find the item
       const allItems = itemType === "medicine" ? medicines : cosmetics;
       const item = allItems?.find((i) => i.id === itemId);
 
       if (item) {
-        // Add item to sale
         let sellingType: "per_tablet" | "per_packet" = "per_tablet";
         let tabletsPerPacket = 1;
         
@@ -469,24 +520,32 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
           tabletsPerPacket = (item as any).tablets_per_packet || 1;
         }
         
-        const quantity = 1;
-        
         const newItem: SaleItem = {
           itemType,
           itemId: item.id,
           itemName: item[itemType === "medicine" ? "medicine_name" : "product_name"],
           batchNo: item.batch_no,
-          quantity,
+          quantity: 1,
           unitPrice: Number(item.selling_price),
           totalPrice: Number(item.selling_price),
           profit: Number(item.selling_price) - Number(item.purchase_price),
           purchasePrice: Number(item.purchase_price),
           sellingType,
           tabletsPerPacket,
-          totalTablets: sellingType === "per_packet" ? quantity * tabletsPerPacket : quantity,
-          totalPackets: sellingType === "per_packet" ? quantity : 0,
+          totalTablets: sellingType === "per_packet" ? tabletsPerPacket : 1,
+          totalPackets: sellingType === "per_packet" ? 1 : 0,
         };
-        setSaleItems([...saleItems, newItem]);
+        
+        // Find empty row or add new
+        const emptyIndex = saleItems.findIndex(i => !i.itemId);
+        if (emptyIndex !== -1) {
+          const newItems = [...saleItems];
+          newItems[emptyIndex] = newItem;
+          newItems.push(createEmptyRow());
+          setSaleItems(newItems);
+        } else {
+          setSaleItems([...saleItems, newItem, createEmptyRow()]);
+        }
         toast.success(`Added: ${newItem.itemName}`);
       } else {
         toast.error("Item not found");
@@ -496,98 +555,57 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
     }
   };
 
-  const addItem = () => {
-    setSaleItems([
-      ...saleItems,
-      {
-        itemType: "medicine",
-        itemId: "",
-        itemName: "",
-        batchNo: "",
-        quantity: 1,
-        unitPrice: 0,
-        totalPrice: 0,
-        profit: 0,
-        purchasePrice: 0,
-        sellingType: "per_tablet",
-        tabletsPerPacket: 1,
-        totalTablets: 0,
-        totalPackets: 0,
-      },
-    ]);
-  };
+  const selectProduct = useCallback((product: typeof allProducts[0], rowIndex: number) => {
+    const newItems = [...saleItems];
+    const isMedicine = product.type === 'medicine';
+    
+    const medicineItem = product as any;
+    const sellingType = isMedicine ? (medicineItem.selling_type || 'per_tablet') : 'per_tablet';
+    const tabletsPerPacket = isMedicine ? (medicineItem.tablets_per_packet || 1) : 1;
+    
+    let unitPrice = product.selling_price;
+    if (isMedicine && sellingType === 'per_packet') {
+      unitPrice = medicineItem.price_per_packet || (product.selling_price * tabletsPerPacket);
+    }
 
-  const updateItem = (index: number, field: string, value: any) => {
+    newItems[rowIndex] = {
+      itemType: product.type,
+      itemId: product.id,
+      itemName: product.displayName,
+      batchNo: product.batch_no,
+      quantity: 1,
+      unitPrice: Number(unitPrice),
+      totalPrice: Number(unitPrice),
+      profit: Number(unitPrice) - Number(product.purchase_price),
+      purchasePrice: Number(product.purchase_price),
+      sellingType,
+      tabletsPerPacket,
+      totalTablets: isMedicine && sellingType === 'per_packet' ? tabletsPerPacket : 1,
+      totalPackets: isMedicine && sellingType === 'per_packet' ? 1 : 0,
+    };
+
+    setSaleItems(newItems);
+    setSearchQuery("");
+    setShowItemDropdown(false);
+    
+    // Move focus to quantity field
+    setTimeout(() => {
+      const qtyInput = itemInputRefs.current[rowIndex]?.[1];
+      if (qtyInput) {
+        qtyInput.focus();
+        qtyInput.select();
+      }
+    }, 50);
+  }, [saleItems]);
+
+  const updateItemField = useCallback((index: number, field: keyof SaleItem, value: any) => {
     const newItems = [...saleItems];
     const item = newItems[index];
-    
-    if (field === "itemType") {
-      // Reset item when type changes
-      item.itemType = value as "medicine" | "cosmetic";
-      item.itemId = "";
-      item.itemName = "";
-      item.batchNo = "";
-      item.unitPrice = 0;
-      item.purchasePrice = 0;
-      item.totalPrice = 0;
-      item.profit = 0;
-    } else if (field === "itemId") {
-      const allItems = item.itemType === "medicine" ? medicines : cosmetics;
-      const selectedItem = allItems?.find((i) => i.id === value);
-      if (selectedItem) {
-        const availableQuantity = selectedItem.quantity;
-        
-        item.itemId = value;
-        item.itemName = selectedItem[item.itemType === "medicine" ? "medicine_name" : "product_name"];
-        item.batchNo = selectedItem.batch_no;
-        
-        // Handle selling type for medicines
-        if (item.itemType === "medicine") {
-          const medicineItem = selectedItem as any;
-          item.sellingType = medicineItem.selling_type || "per_tablet";
-          item.tabletsPerPacket = medicineItem.tablets_per_packet || 1;
-          
-          if (item.sellingType === "per_packet") {
-            item.unitPrice = Number(medicineItem.price_per_packet || medicineItem.selling_price);
-          } else {
-            item.unitPrice = Number(medicineItem.selling_price);
-          }
-        } else {
-          item.sellingType = "per_tablet";
-          item.tabletsPerPacket = 1;
-          item.unitPrice = Number(selectedItem.selling_price);
-        }
-        
-        item.purchasePrice = Number(selectedItem.purchase_price);
-        
-        // Validate quantity doesn't exceed available stock
-        if (item.quantity > availableQuantity) {
-          item.quantity = availableQuantity;
-          toast.error(`Quantity adjusted to available stock: ${availableQuantity} units`);
-        }
-        
-        // Calculate totals based on selling type
-        if (item.sellingType === "per_packet" && item.tabletsPerPacket) {
-          item.totalPackets = item.quantity;
-          item.totalTablets = item.quantity * item.tabletsPerPacket;
-          item.totalPrice = item.unitPrice * item.quantity;
-          item.profit = (item.unitPrice - item.purchasePrice) * item.quantity;
-        } else {
-          item.totalTablets = item.quantity;
-          item.totalPackets = 0;
-          item.totalPrice = item.unitPrice * item.quantity;
-          item.profit = (item.unitPrice - item.purchasePrice) * item.quantity;
-        }
-      }
-    } else if (field === "quantity") {
-      const qty = Number(value);
-      
-      if (qty < 1) {
-        toast.error("Quantity must be at least 1");
-        return;
-      }
 
-      // For per-packet items, validate against total tablets available
+    if (field === "quantity") {
+      const qty = Number(value) || 1;
+      if (qty < 1) return;
+
       if (item.itemId) {
         const allItems = item.itemType === "medicine" ? medicines : cosmetics;
         const selectedItem = allItems?.find((i) => i.id === item.itemId);
@@ -598,21 +616,15 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
             : qty;
           
           if (requiredTablets > selectedItem.quantity) {
-            const maxPackets = item.sellingType === "per_packet" && item.tabletsPerPacket
-              ? Math.floor(selectedItem.quantity / item.tabletsPerPacket)
-              : selectedItem.quantity;
-            toast.error(`Only ${maxPackets} ${item.sellingType === "per_packet" ? "packets" : "tablets"} available (${selectedItem.quantity} tablets in stock)`);
+            toast.error(`Only ${selectedItem.quantity} units available`);
             return;
           }
         }
       }
 
       item.quantity = qty;
-      
-      // Auto-calculate Total Price: Total = Quantity × Rate
       item.totalPrice = item.unitPrice * qty;
       
-      // Update totals based on selling type
       if (item.sellingType === "per_packet" && item.tabletsPerPacket) {
         item.totalPackets = qty;
         item.totalTablets = qty * item.tabletsPerPacket;
@@ -623,55 +635,150 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
         item.profit = (item.unitPrice - item.purchasePrice) * qty;
       }
     } else if (field === "unitPrice") {
-      const rate = Number(value);
-      
-      if (rate < 0) {
-        toast.error("Rate must be positive");
-        return;
-      }
+      const rate = Number(value) || 0;
+      if (rate < 0) return;
       
       item.unitPrice = rate;
-      
-      // Auto-calculate Total Price: Total = Quantity × Rate
       item.totalPrice = item.quantity * rate;
       item.profit = (rate - item.purchasePrice) * item.quantity;
-      
     } else if (field === "totalPrice") {
-      const total = Number(value);
-      
-      if (total < 0) {
-        toast.error("Total Price must be positive");
-        return;
-      }
+      const total = Number(value) || 0;
+      if (total < 0) return;
       
       item.totalPrice = total;
-      
-      // Auto-calculate Rate: Rate = Total ÷ Quantity
       if (item.quantity > 0) {
         item.unitPrice = total / item.quantity;
         item.profit = (item.unitPrice - item.purchasePrice) * item.quantity;
       }
-    } else {
-      (item as any)[field] = value;
     }
-    
+
     setSaleItems(newItems);
-  };
+  }, [saleItems, medicines, cosmetics]);
 
-  const removeItem = (index: number) => {
-    setSaleItems(saleItems.filter((_, i) => i !== index));
-  };
+  const removeItem = useCallback((index: number) => {
+    if (saleItems.length === 1) {
+      setSaleItems([createEmptyRow()]);
+    } else {
+      setSaleItems(saleItems.filter((_, i) => i !== index));
+    }
+  }, [saleItems]);
 
-  const subtotal = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
+  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>, rowIndex: number, colIndex: number) => {
+    const item = saleItems[rowIndex];
+    
+    if (e.key === "Enter") {
+      e.preventDefault();
+      
+      // If on item name column and item is selected, move to quantity
+      if (colIndex === 0 && item.itemId) {
+        const qtyInput = itemInputRefs.current[rowIndex]?.[1];
+        if (qtyInput) {
+          qtyInput.focus();
+          qtyInput.select();
+        }
+      }
+      // If on quantity column, move to rate
+      else if (colIndex === 1) {
+        const rateInput = itemInputRefs.current[rowIndex]?.[2];
+        if (rateInput) {
+          rateInput.focus();
+          rateInput.select();
+        }
+      }
+      // If on rate column, save row and create new row
+      else if (colIndex === 2) {
+        if (item.itemId && item.quantity > 0) {
+          // Check if there's already an empty row at the end
+          const hasEmptyRow = saleItems.some(i => !i.itemId);
+          if (!hasEmptyRow) {
+            setSaleItems([...saleItems, createEmptyRow()]);
+          }
+          
+          // Move to the next empty row
+          const nextEmptyIndex = saleItems.findIndex((i, idx) => idx > rowIndex && !i.itemId);
+          const targetIndex = nextEmptyIndex !== -1 ? nextEmptyIndex : saleItems.length;
+          
+          setTimeout(() => {
+            const nextInput = itemInputRefs.current[targetIndex]?.[0];
+            if (nextInput) {
+              nextInput.focus();
+            }
+          }, 50);
+        }
+      }
+    }
+    else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const nextRow = rowIndex + 1;
+      if (nextRow < saleItems.length) {
+        const nextInput = itemInputRefs.current[nextRow]?.[colIndex];
+        if (nextInput) nextInput.focus();
+      }
+    }
+    else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const prevRow = rowIndex - 1;
+      if (prevRow >= 0) {
+        const prevInput = itemInputRefs.current[prevRow]?.[colIndex];
+        if (prevInput) prevInput.focus();
+      }
+    }
+    else if (e.key === "ArrowRight" && colIndex < 2) {
+      const input = e.target as HTMLInputElement;
+      if (input.selectionStart === input.value.length) {
+        e.preventDefault();
+        const nextInput = itemInputRefs.current[rowIndex]?.[colIndex + 1];
+        if (nextInput) nextInput.focus();
+      }
+    }
+    else if (e.key === "ArrowLeft" && colIndex > 0) {
+      const input = e.target as HTMLInputElement;
+      if (input.selectionStart === 0) {
+        e.preventDefault();
+        const prevInput = itemInputRefs.current[rowIndex]?.[colIndex - 1];
+        if (prevInput) prevInput.focus();
+      }
+    }
+    else if (e.key === "Backspace" && colIndex === 0) {
+      const input = e.target as HTMLInputElement;
+      if (input.value === "" && !item.itemId && saleItems.length > 1) {
+        e.preventDefault();
+        removeItem(rowIndex);
+        
+        // Focus previous row
+        if (rowIndex > 0) {
+          setTimeout(() => {
+            const prevInput = itemInputRefs.current[rowIndex - 1]?.[0];
+            if (prevInput) prevInput.focus();
+          }, 50);
+        }
+      }
+    }
+    else if (e.key === "Delete") {
+      e.preventDefault();
+      removeItem(rowIndex);
+    }
+    else if (e.key === "Escape") {
+      e.preventDefault();
+      if (item.itemId) {
+        const newItems = [...saleItems];
+        newItems[rowIndex] = createEmptyRow();
+        setSaleItems(newItems);
+      }
+      setSearchQuery("");
+      setShowItemDropdown(false);
+    }
+  }, [saleItems, removeItem]);
+
+  // Calculate totals
+  const validItems = saleItems.filter(item => item.itemId);
+  const subtotal = validItems.reduce((sum, item) => sum + item.totalPrice, 0);
   const discountAmount = (subtotal * discountPercentage) / 100;
   const total = subtotal - discountAmount + tax;
 
   if (showReceipt && completedSale) {
     return (
-      <Dialog open={open} onOpenChange={() => {
-        onClose();
-        resetForm();
-      }}>
+      <Dialog open={open} onOpenChange={() => { onClose(); resetForm(); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Sale Completed</DialogTitle>
@@ -683,10 +790,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                 <Printer className="h-4 w-4" />
                 Print Receipt
               </Button>
-              <Button variant="outline" onClick={() => {
-                onClose();
-                resetForm();
-              }} className="flex-1">
+              <Button variant="outline" onClick={() => { onClose(); resetForm(); }} className="flex-1">
                 Close
               </Button>
             </div>
@@ -698,303 +802,352 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>New Sale</DialogTitle>
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="px-4 py-3 border-b bg-muted/30">
+          <DialogTitle className="text-lg">New Sale</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Salesman *</Label>
-            <Select value={salesmanId} onValueChange={setSalesmanId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select salesman" />
-              </SelectTrigger>
-              <SelectContent>
-                {salesmen?.map((salesman) => (
-                  <SelectItem key={salesman.id} value={salesman.id}>
-                    {salesman.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Customer (Optional)</Label>
-            <Select value={customerId} onValueChange={setCustomerId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select customer or leave blank" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="walk-in">Walk-in Customer</SelectItem>
-                {customers?.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {customer.name} - {customer.phone}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {customerId && customerId !== "walk-in" && (
-              <p className="text-xs text-muted-foreground">
-                Loyalty Points: {customers?.find(c => c.id === customerId)?.loyalty_points || 0}
-              </p>
-            )}
-          </div>
-
-          {/* AI Recommendations Panel */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Button
-                type="button"
-                variant={showAIPanel ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => setShowAIPanel(!showAIPanel)}
-                className="gap-2"
-              >
-                <Sparkles className="h-4 w-4" />
-                AI Medicine Finder
-              </Button>
-              {showAIPanel && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => {
-                    setShowAIPanel(false);
-                    setAiSymptoms("");
-                    setAiRecommendations([]);
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
+        
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          {/* Header Controls - Compact */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Salesman *</Label>
+              <Select value={salesmanId} onValueChange={setSalesmanId}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {salesmen?.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            
-            {showAIPanel && (
-              <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
-                <div className="flex gap-2">
-                  <Textarea
-                    placeholder="Describe symptoms (e.g., headache, fever, cough...)"
-                    value={aiSymptoms}
-                    onChange={(e) => setAiSymptoms(e.target.value)}
-                    rows={2}
-                    className="flex-1 text-sm"
-                    disabled={aiLoading}
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleGetAIRecommendations}
-                    disabled={aiLoading || !aiSymptoms.trim()}
-                    className="self-end"
-                  >
-                    {aiLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-                
-                {aiRecommendations.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      Suggested medicines (click to add):
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {aiRecommendations.map((rec, idx) => (
-                        <Badge
-                          key={idx}
-                          variant="outline"
-                          className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors py-1.5 px-3"
-                          onClick={() => addRecommendedMedicine(rec)}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          {rec.medicine_name}
-                          {rec.selling_price && (
-                            <span className="ml-1 text-xs opacity-70">
-                              ({formatCurrency(rec.selling_price)})
-                            </span>
-                          )}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
 
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Label>Items</Label>
-              <div className="flex gap-2">
-                <QRScanner onScan={handleQRScan} />
-                <Button type="button" size="sm" onClick={addItem}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Item
-                </Button>
-              </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Customer</Label>
+              <Select value={customerId} onValueChange={setCustomerId}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Walk-in" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="walk-in">Walk-in Customer</SelectItem>
+                  {customers?.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            {saleItems.map((item, index) => (
-              <div key={index} className="space-y-2">
-                <div className="grid grid-cols-12 gap-2 p-3 border rounded bg-card">
-                  <div className="col-span-2">
-                    <Label className="text-xs">Type</Label>
-                    <Select
-                      value={item.itemType}
-                      onValueChange={(value) => updateItem(index, "itemType", value)}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="medicine">Medicine</SelectItem>
-                        <SelectItem value="cosmetic">Cosmetic</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-4">
-                    <Label className="text-xs">Item Name</Label>
-                    <Select
-                      value={item.itemId}
-                      onValueChange={(value) => updateItem(index, "itemId", value)}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select item" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(item.itemType === "medicine" ? medicines : cosmetics)?.map((i) => (
-                          <SelectItem key={i.id} value={i.id}>
-                            {i[item.itemType === "medicine" ? "medicine_name" : "product_name"]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="text-xs">Quantity</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      step="1"
-                      className="h-9"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(index, "quantity", e.target.value)}
-                      placeholder={item.sellingType === "per_packet" ? "Packets" : "Qty"}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="text-xs">Rate</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="h-9"
-                      value={item.unitPrice}
-                      onChange={(e) => updateItem(index, "unitPrice", e.target.value)}
-                      placeholder="Rate"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="text-xs">Total Price</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="h-9"
-                      value={item.totalPrice}
-                      onChange={(e) => updateItem(index, "totalPrice", e.target.value)}
-                      placeholder="Total"
-                    />
-                  </div>
-                  <div className="col-span-12 sm:col-span-1 flex items-end justify-center">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-9"
-                      onClick={() => removeItem(index)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-                {item.sellingType === "per_packet" && item.tabletsPerPacket && item.itemId && (
-                  <p className="text-xs text-muted-foreground px-2">
-                    Each packet = {item.tabletsPerPacket} tablets | Total = {item.totalTablets} tablets | Profit: {formatCurrency(item.profit)}
-                  </p>
-                )}
-                {item.itemId && item.quantity > 0 && (
-                  <p className="text-xs text-success font-medium px-2">
-                    Profit: {formatCurrency(item.profit)} | Rate × Qty = {formatCurrency(item.unitPrice * item.quantity)}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Discount (%)</Label>
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Discount %</Label>
               <Input
                 type="number"
-                step="0.01"
+                className="h-8 text-sm"
                 min="0"
                 max="100"
                 value={discountPercentage}
-                onChange={(e) => {
-                  const val = Number(e.target.value);
-                  if (val >= 0 && val <= 100) {
-                    setDiscountPercentage(val);
-                  }
-                }}
+                onChange={(e) => setDiscountPercentage(Math.min(100, Math.max(0, Number(e.target.value))))}
               />
-              {discountPercentage > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Discount amount: {formatCurrency(discountAmount)}
-                </p>
-              )}
             </div>
-            <div className="space-y-2">
-              <Label>Tax</Label>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Tax</Label>
               <Input
                 type="number"
-                step="0.01"
+                className="h-8 text-sm"
+                min="0"
                 value={tax}
                 onChange={(e) => setTax(Number(e.target.value))}
               />
             </div>
           </div>
 
-          <div className="border-t pt-4 space-y-2">
-            <div className="flex justify-between">
-              <span className="font-medium">Subtotal:</span>
-              <span>{formatCurrency(subtotal)}</span>
-            </div>
-            {discountPercentage > 0 && (
-              <div className="flex justify-between">
-                <span className="font-medium">Discount ({discountPercentage}%):</span>
-                <span className="text-success">-{formatCurrency(discountAmount)}</span>
-              </div>
-            )}
-            {tax > 0 && (
-              <div className="flex justify-between">
-                <span className="font-medium">Tax:</span>
-                <span>+{formatCurrency(tax)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-lg font-bold">
-              <span>Final Total:</span>
-              <span className="text-primary">{formatCurrency(total)}</span>
-            </div>
+          {/* AI Panel - Collapsible */}
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant={showAIPanel ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowAIPanel(!showAIPanel)}
+              className="h-7 text-xs gap-1"
+            >
+              <Sparkles className="h-3 w-3" />
+              AI Finder
+            </Button>
+            <QRScanner onScan={handleQRScan} />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const hasEmptyRow = saleItems.some(i => !i.itemId);
+                if (!hasEmptyRow) {
+                  setSaleItems([...saleItems, createEmptyRow()]);
+                }
+              }}
+              className="h-7 text-xs gap-1"
+            >
+              <Plus className="h-3 w-3" />
+              Add Row
+            </Button>
           </div>
 
+          {showAIPanel && (
+            <div className="p-3 border rounded bg-muted/20 space-y-2">
+              <div className="flex gap-2">
+                <Textarea
+                  placeholder="Describe symptoms..."
+                  value={aiSymptoms}
+                  onChange={(e) => setAiSymptoms(e.target.value)}
+                  rows={1}
+                  className="text-sm resize-none"
+                  disabled={aiLoading}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleGetAIRecommendations}
+                  disabled={aiLoading || !aiSymptoms.trim()}
+                  className="h-8"
+                >
+                  {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                </Button>
+              </div>
+              {aiRecommendations.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {aiRecommendations.map((rec, idx) => (
+                    <Badge
+                      key={idx}
+                      variant="outline"
+                      className="cursor-pointer hover:bg-primary hover:text-primary-foreground text-xs py-0.5"
+                      onClick={() => addRecommendedMedicine(rec)}
+                    >
+                      <Plus className="h-2.5 w-2.5 mr-0.5" />
+                      {rec.medicine_name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Items Table - Dense */}
+          <div ref={tableContainerRef} className="border rounded overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr className="border-b">
+                  <th className="text-left px-2 py-2 font-medium text-xs w-16">Type</th>
+                  <th className="text-left px-2 py-2 font-medium text-xs">Item Name</th>
+                  <th className="text-left px-2 py-2 font-medium text-xs w-20">Qty</th>
+                  <th className="text-left px-2 py-2 font-medium text-xs w-24">Rate</th>
+                  <th className="text-left px-2 py-2 font-medium text-xs w-24">Total</th>
+                  <th className="text-center px-2 py-2 font-medium text-xs w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {saleItems.map((item, rowIndex) => (
+                  <tr 
+                    key={rowIndex} 
+                    className={cn(
+                      "border-b last:border-b-0 transition-colors",
+                      item.itemId ? "bg-background" : "bg-muted/10"
+                    )}
+                  >
+                    <td className="px-1 py-1">
+                      <Select
+                        value={item.itemType}
+                        onValueChange={(value) => {
+                          const newItems = [...saleItems];
+                          newItems[rowIndex] = { ...createEmptyRow(), itemType: value as "medicine" | "cosmetic" };
+                          setSaleItems(newItems);
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="medicine">Med</SelectItem>
+                          <SelectItem value="cosmetic">Cos</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-1 py-1 relative">
+                      {item.itemId ? (
+                        <div className="flex items-center gap-1 px-2 h-8 bg-muted/30 rounded text-sm">
+                          <span className="truncate flex-1">{item.itemName}</span>
+                          <span className="text-xs text-muted-foreground">({item.batchNo})</span>
+                          <button
+                            onClick={() => {
+                              const newItems = [...saleItems];
+                              newItems[rowIndex] = { ...createEmptyRow(), itemType: item.itemType };
+                              setSaleItems(newItems);
+                              setTimeout(() => {
+                                const input = itemInputRefs.current[rowIndex]?.[0];
+                                if (input) input.focus();
+                              }, 50);
+                            }}
+                            className="text-muted-foreground hover:text-foreground ml-1"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <Input
+                            ref={(el) => {
+                              if (!itemInputRefs.current[rowIndex]) {
+                                itemInputRefs.current[rowIndex] = [];
+                              }
+                              itemInputRefs.current[rowIndex][0] = el;
+                            }}
+                            className="h-8 text-sm border-0 shadow-none focus:ring-1"
+                            placeholder="Search item..."
+                            value={activeCell.row === rowIndex ? searchQuery : ""}
+                            onChange={(e) => {
+                              setSearchQuery(e.target.value);
+                              setShowItemDropdown(true);
+                            }}
+                            onFocus={() => {
+                              setActiveCell({ row: rowIndex, col: 0 });
+                              setShowItemDropdown(searchQuery.length > 0);
+                            }}
+                            onBlur={() => {
+                              setTimeout(() => setShowItemDropdown(false), 200);
+                            }}
+                            onKeyDown={(e) => handleKeyDown(e, rowIndex, 0)}
+                          />
+                          {showItemDropdown && activeCell.row === rowIndex && filteredProducts.length > 0 && (
+                            <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                              {filteredProducts.map((product, idx) => (
+                                <button
+                                  key={product.id}
+                                  className="w-full px-3 py-2 text-left hover:bg-muted text-sm flex items-center justify-between"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    selectProduct(product, rowIndex);
+                                  }}
+                                >
+                                  <span className="truncate">
+                                    <span className={cn(
+                                      "text-xs font-medium mr-2 px-1.5 py-0.5 rounded",
+                                      product.type === 'medicine' ? "bg-blue-100 text-blue-700" : "bg-pink-100 text-pink-700"
+                                    )}>
+                                      {product.type === 'medicine' ? 'M' : 'C'}
+                                    </span>
+                                    {product.displayName}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground ml-2">
+                                    {formatCurrency(Number(product.selling_price))} | Qty: {product.quantity}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-1 py-1">
+                      <Input
+                        ref={(el) => {
+                          if (!itemInputRefs.current[rowIndex]) {
+                            itemInputRefs.current[rowIndex] = [];
+                          }
+                          itemInputRefs.current[rowIndex][1] = el;
+                        }}
+                        type="number"
+                        min="1"
+                        className="h-8 text-sm border-0 shadow-none focus:ring-1 text-center"
+                        value={item.quantity}
+                        onChange={(e) => updateItemField(rowIndex, "quantity", e.target.value)}
+                        onFocus={() => setActiveCell({ row: rowIndex, col: 1 })}
+                        onKeyDown={(e) => handleKeyDown(e, rowIndex, 1)}
+                        disabled={!item.itemId}
+                      />
+                    </td>
+                    <td className="px-1 py-1">
+                      <Input
+                        ref={(el) => {
+                          if (!itemInputRefs.current[rowIndex]) {
+                            itemInputRefs.current[rowIndex] = [];
+                          }
+                          itemInputRefs.current[rowIndex][2] = el;
+                        }}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="h-8 text-sm border-0 shadow-none focus:ring-1"
+                        value={item.unitPrice || ""}
+                        onChange={(e) => updateItemField(rowIndex, "unitPrice", e.target.value)}
+                        onFocus={() => setActiveCell({ row: rowIndex, col: 2 })}
+                        onKeyDown={(e) => handleKeyDown(e, rowIndex, 2)}
+                        disabled={!item.itemId}
+                      />
+                    </td>
+                    <td className="px-2 py-1">
+                      <span className={cn(
+                        "font-medium text-sm",
+                        item.itemId ? "text-foreground" : "text-muted-foreground"
+                      )}>
+                        {item.itemId ? formatCurrency(item.totalPrice) : "-"}
+                      </span>
+                    </td>
+                    <td className="px-1 py-1 text-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => removeItem(rowIndex)}
+                        disabled={saleItems.length === 1 && !item.itemId}
+                      >
+                        <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Keyboard Shortcuts Hint */}
+          <p className="text-xs text-muted-foreground">
+            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> next field • 
+            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">↑↓</kbd> navigate rows • 
+            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">Del</kbd> remove row • 
+            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">Esc</kbd> clear row
+          </p>
+        </div>
+
+        {/* Footer - Fixed */}
+        <div className="border-t bg-muted/30 px-4 py-3 space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex gap-4">
+              <span>Items: <strong>{validItems.length}</strong></span>
+              <span>Subtotal: <strong>{formatCurrency(subtotal)}</strong></span>
+              {discountPercentage > 0 && (
+                <span className="text-green-600">Discount: <strong>-{formatCurrency(discountAmount)}</strong></span>
+              )}
+              {tax > 0 && (
+                <span>Tax: <strong>+{formatCurrency(tax)}</strong></span>
+              )}
+            </div>
+            <div className="text-lg font-bold text-primary">
+              Total: {formatCurrency(total)}
+            </div>
+          </div>
+          
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="button" onClick={() => saveMutation.mutate()}>
+            <Button 
+              type="button" 
+              size="sm"
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending || validItems.length === 0 || !salesmanId}
+            >
+              {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
               Complete Sale
             </Button>
           </div>
