@@ -619,6 +619,12 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       totalPackets: isMedicine && sellingType === 'per_packet' ? 1 : 0,
     };
 
+    // Ensure there's always an empty row at the end for the next item
+    const hasEmptyRowAfter = newItems.slice(rowIndex + 1).some(i => !i.itemId);
+    if (!hasEmptyRowAfter) {
+      newItems.push(createEmptyRow());
+    }
+
     setSaleItems(newItems);
     setSearchQuery("");
     setShowItemDropdown(false);
@@ -723,22 +729,31 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       // If on rate column, save row and create new row
       else if (colIndex === 2) {
         if (item.itemId && item.quantity > 0) {
-          // Check if there's already an empty row at the end
-          const hasEmptyRow = saleItems.some(i => !i.itemId);
-          if (!hasEmptyRow) {
-            setSaleItems([...saleItems, createEmptyRow()]);
+          // Always ensure there's an empty row for the next item
+          const hasEmptyRowAfter = saleItems.slice(rowIndex + 1).some(i => !i.itemId);
+          
+          if (!hasEmptyRowAfter) {
+            // Add new empty row and focus it
+            const newItems = [...saleItems, createEmptyRow()];
+            setSaleItems(newItems);
+            
+            // Focus the newly created row's item search
+            setTimeout(() => {
+              const nextInput = itemInputRefs.current[newItems.length - 1]?.[0];
+              if (nextInput) {
+                nextInput.focus();
+              }
+            }, 100);
+          } else {
+            // Find next empty row after current and focus it
+            const nextEmptyIndex = saleItems.findIndex((i, idx) => idx > rowIndex && !i.itemId);
+            setTimeout(() => {
+              const nextInput = itemInputRefs.current[nextEmptyIndex]?.[0];
+              if (nextInput) {
+                nextInput.focus();
+              }
+            }, 50);
           }
-          
-          // Move to the next empty row
-          const nextEmptyIndex = saleItems.findIndex((i, idx) => idx > rowIndex && !i.itemId);
-          const targetIndex = nextEmptyIndex !== -1 ? nextEmptyIndex : saleItems.length;
-          
-          setTimeout(() => {
-            const nextInput = itemInputRefs.current[targetIndex]?.[0];
-            if (nextInput) {
-              nextInput.focus();
-            }
-          }, 50);
         }
       }
     }
