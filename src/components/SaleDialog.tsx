@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, KeyboardEvent } from "react";
+import { useState, useEffect, useRef, useCallback, KeyboardEvent, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useReactToPrint } from "react-to-print";
 import { supabase } from "@/integrations/supabase/client";
@@ -137,41 +137,69 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
     },
   });
 
-  const { data: medicines } = useQuery({
-    queryKey: ["medicines"],
+  const { data: medicines, isLoading: medicinesLoading } = useQuery({
+    queryKey: ["medicines-for-sale"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("medicines").select("*").gt("quantity", 0);
-      if (error) throw error;
-      return data;
+      const { data, error } = await supabase
+        .from("medicines")
+        .select("*")
+        .gt("quantity", 0)
+        .order("medicine_name");
+      if (error) {
+        console.error("Error fetching medicines:", error);
+        throw error;
+      }
+      console.log("Fetched medicines for sale:", data?.length || 0);
+      return data || [];
     },
   });
 
-  const { data: cosmetics } = useQuery({
-    queryKey: ["cosmetics"],
+  const { data: cosmetics, isLoading: cosmeticsLoading } = useQuery({
+    queryKey: ["cosmetics-for-sale"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("cosmetics").select("*").gt("quantity", 0);
-      if (error) throw error;
-      return data;
+      const { data, error } = await supabase
+        .from("cosmetics")
+        .select("*")
+        .gt("quantity", 0)
+        .order("product_name");
+      if (error) {
+        console.error("Error fetching cosmetics:", error);
+        throw error;
+      }
+      console.log("Fetched cosmetics for sale:", data?.length || 0);
+      return data || [];
     },
   });
 
-  // Combine all products for search
-  const allProducts = [
-    ...(medicines?.map(m => ({ ...m, type: 'medicine' as const, displayName: m.medicine_name })) || []),
-    ...(cosmetics?.map(c => ({ ...c, type: 'cosmetic' as const, displayName: c.product_name })) || []),
-  ];
+  // Combine all products for search - memoized to prevent unnecessary recalculations
+  const allProducts = useMemo(() => {
+    const medicineProducts = (medicines || []).map(m => ({ 
+      ...m, 
+      type: 'medicine' as const, 
+      displayName: m.medicine_name 
+    }));
+    const cosmeticProducts = (cosmetics || []).map(c => ({ 
+      ...c, 
+      type: 'cosmetic' as const, 
+      displayName: c.product_name 
+    }));
+    const combined = [...medicineProducts, ...cosmeticProducts];
+    console.log("All products available for search:", combined.length);
+    return combined;
+  }, [medicines, cosmetics]);
 
-  // Filter products based on search query - search across all products
-  const getFilteredProducts = useCallback((query: string) => {
-    if (query.length === 0) return [];
-    const lowerQuery = query.toLowerCase();
+  // Filter products based on search query - show all items when query is empty on focus
+  const filteredProducts = useMemo(() => {
+    if (searchQuery.length === 0) {
+      // Show first 15 items when no search query (for immediate dropdown)
+      return allProducts.slice(0, 15);
+    }
+    const lowerQuery = searchQuery.toLowerCase();
     return allProducts.filter(p => 
       p.displayName.toLowerCase().includes(lowerQuery) ||
       p.batch_no.toLowerCase().includes(lowerQuery)
     ).slice(0, 15);
-  }, [allProducts]);
-
-  const filteredProducts = getFilteredProducts(searchQuery);
+  }, [searchQuery, allProducts]);
 
   // Auto-focus on first item input when dialog opens
   useEffect(() => {
@@ -1001,38 +1029,49 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                             }}
                             onFocus={() => {
                               setActiveCell({ row: rowIndex, col: 0 });
-                              setShowItemDropdown(searchQuery.length > 0);
+                              setShowItemDropdown(true); // Show dropdown immediately on focus
                             }}
                             onBlur={() => {
                               setTimeout(() => setShowItemDropdown(false), 200);
                             }}
                             onKeyDown={(e) => handleKeyDown(e, rowIndex, 0)}
                           />
-                          {showItemDropdown && activeCell.row === rowIndex && filteredProducts.length > 0 && (
+                          {showItemDropdown && activeCell.row === rowIndex && (
                             <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                              {filteredProducts.map((product, idx) => (
-                                <button
-                                  key={product.id}
-                                  className="w-full px-3 py-2 text-left hover:bg-muted text-sm flex items-center justify-between"
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    selectProduct(product, rowIndex);
-                                  }}
-                                >
-                                  <span className="truncate">
-                                    <span className={cn(
-                                      "text-xs font-medium mr-2 px-1.5 py-0.5 rounded",
-                                      product.type === 'medicine' ? "bg-blue-100 text-blue-700" : "bg-pink-100 text-pink-700"
-                                    )}>
-                                      {product.type === 'medicine' ? 'M' : 'C'}
+                              {(medicinesLoading || cosmeticsLoading) ? (
+                                <div className="px-3 py-3 text-sm text-muted-foreground flex items-center gap-2">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  Loading items...
+                                </div>
+                              ) : filteredProducts.length > 0 ? (
+                                filteredProducts.map((product) => (
+                                  <button
+                                    key={product.id}
+                                    className="w-full px-3 py-2 text-left hover:bg-muted text-sm flex items-center justify-between"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      selectProduct(product, rowIndex);
+                                    }}
+                                  >
+                                    <span className="truncate">
+                                      <span className={cn(
+                                        "text-xs font-medium mr-2 px-1.5 py-0.5 rounded",
+                                        product.type === 'medicine' ? "bg-blue-100 text-blue-700" : "bg-pink-100 text-pink-700"
+                                      )}>
+                                        {product.type === 'medicine' ? 'M' : 'C'}
+                                      </span>
+                                      {product.displayName}
                                     </span>
-                                    {product.displayName}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground ml-2">
-                                    {formatCurrency(Number(product.selling_price))} | Qty: {product.quantity}
-                                  </span>
-                                </button>
-                              ))}
+                                    <span className="text-xs text-muted-foreground ml-2">
+                                      {formatCurrency(Number(product.selling_price))} | Qty: {product.quantity}
+                                    </span>
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="px-3 py-3 text-sm text-muted-foreground">
+                                  {searchQuery ? `No items found for "${searchQuery}"` : "No items available in inventory"}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
