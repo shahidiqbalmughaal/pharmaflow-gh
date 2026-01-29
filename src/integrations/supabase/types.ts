@@ -1459,6 +1459,10 @@ export type Database = {
         Args: { _shop_id: string; _user_id: string }
         Returns: boolean
       }
+      users_share_shop: {
+        Args: { target_user_id: string; viewing_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "manager" | "salesman"
