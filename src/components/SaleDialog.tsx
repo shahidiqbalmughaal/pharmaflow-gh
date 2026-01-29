@@ -666,7 +666,59 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>, rowIndex: number, colIndex: number) => {
     const item = saleItems[rowIndex];
     
-    if (e.key === "Enter") {
+    // Tab navigation - move forward through cells
+    if (e.key === "Tab" && !e.shiftKey) {
+      e.preventDefault();
+      
+      // Move to next cell in same row
+      if (colIndex < 2) {
+        const nextInput = itemInputRefs.current[rowIndex]?.[colIndex + 1];
+        if (nextInput && !nextInput.disabled) {
+          nextInput.focus();
+          nextInput.select();
+        }
+      }
+      // At last cell, move to first cell of next row
+      else if (rowIndex < saleItems.length - 1) {
+        const nextRowInput = itemInputRefs.current[rowIndex + 1]?.[0];
+        if (nextRowInput) {
+          nextRowInput.focus();
+        }
+      }
+      // At last row's last cell, create new row and focus it
+      else if (item.itemId) {
+        const hasEmptyRow = saleItems.some(i => !i.itemId);
+        if (!hasEmptyRow) {
+          setSaleItems([...saleItems, createEmptyRow()]);
+        }
+        setTimeout(() => {
+          const newRowInput = itemInputRefs.current[saleItems.length]?.[0];
+          if (newRowInput) newRowInput.focus();
+        }, 50);
+      }
+    }
+    // Shift+Tab navigation - move backward through cells
+    else if (e.key === "Tab" && e.shiftKey) {
+      e.preventDefault();
+      
+      // Move to previous cell in same row
+      if (colIndex > 0) {
+        const prevInput = itemInputRefs.current[rowIndex]?.[colIndex - 1];
+        if (prevInput) {
+          prevInput.focus();
+          prevInput.select();
+        }
+      }
+      // At first cell, move to last cell of previous row
+      else if (rowIndex > 0) {
+        const prevRowInput = itemInputRefs.current[rowIndex - 1]?.[2];
+        if (prevRowInput && !prevRowInput.disabled) {
+          prevRowInput.focus();
+          prevRowInput.select();
+        }
+      }
+    }
+    else if (e.key === "Enter") {
       e.preventDefault();
       
       // If on item name column and item is selected, move to quantity
@@ -728,7 +780,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       if (input.selectionStart === input.value.length) {
         e.preventDefault();
         const nextInput = itemInputRefs.current[rowIndex]?.[colIndex + 1];
-        if (nextInput) nextInput.focus();
+        if (nextInput && !nextInput.disabled) nextInput.focus();
       }
     }
     else if (e.key === "ArrowLeft" && colIndex > 0) {
@@ -1112,10 +1164,11 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
 
           {/* Keyboard Shortcuts Hint */}
           <p className="text-xs text-muted-foreground">
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> next field • 
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">↑↓</kbd> navigate rows • 
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">Del</kbd> remove row • 
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">Esc</kbd> clear row
+            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Tab</kbd> / <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> next field • 
+            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">Shift+Tab</kbd> previous • 
+            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">↑↓</kbd> rows • 
+            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">Del</kbd> remove • 
+            <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">Esc</kbd> clear
           </p>
         </div>
 
