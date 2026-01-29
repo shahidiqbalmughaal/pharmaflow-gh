@@ -161,13 +161,17 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
     ...(cosmetics?.map(c => ({ ...c, type: 'cosmetic' as const, displayName: c.product_name })) || []),
   ];
 
-  // Filter products based on search query
-  const filteredProducts = searchQuery.length > 0
-    ? allProducts.filter(p => 
-        p.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.batch_no.toLowerCase().includes(searchQuery.toLowerCase())
-      ).slice(0, 10)
-    : [];
+  // Filter products based on search query - search across all products
+  const getFilteredProducts = useCallback((query: string) => {
+    if (query.length === 0) return [];
+    const lowerQuery = query.toLowerCase();
+    return allProducts.filter(p => 
+      p.displayName.toLowerCase().includes(lowerQuery) ||
+      p.batch_no.toLowerCase().includes(lowerQuery)
+    ).slice(0, 15);
+  }, [allProducts]);
+
+  const filteredProducts = getFilteredProducts(searchQuery);
 
   // Auto-focus on first item input when dialog opens
   useEffect(() => {
@@ -937,7 +941,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr className="border-b">
-                  <th className="text-left px-2 py-2 font-medium text-xs w-16">Type</th>
+                  <th className="text-center px-2 py-2 font-medium text-xs w-12">S.No</th>
                   <th className="text-left px-2 py-2 font-medium text-xs">Item Name</th>
                   <th className="text-left px-2 py-2 font-medium text-xs w-20">Qty</th>
                   <th className="text-left px-2 py-2 font-medium text-xs w-24">Rate</th>
@@ -954,23 +958,10 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                       item.itemId ? "bg-background" : "bg-muted/10"
                     )}
                   >
-                    <td className="px-1 py-1">
-                      <Select
-                        value={item.itemType}
-                        onValueChange={(value) => {
-                          const newItems = [...saleItems];
-                          newItems[rowIndex] = { ...createEmptyRow(), itemType: value as "medicine" | "cosmetic" };
-                          setSaleItems(newItems);
-                        }}
-                      >
-                        <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="medicine">Med</SelectItem>
-                          <SelectItem value="cosmetic">Cos</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <td className="px-2 py-1 text-center">
+                      <span className="text-sm text-muted-foreground font-medium">
+                        {rowIndex + 1}
+                      </span>
                     </td>
                     <td className="px-1 py-1 relative">
                       {item.itemId ? (
