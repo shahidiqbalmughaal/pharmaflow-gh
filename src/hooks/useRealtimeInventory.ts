@@ -34,7 +34,8 @@ export function useRealtimeInventory({
         (payload) => {
           // Invalidate queries to refresh data
           queryClient.invalidateQueries({ queryKey });
-
+          // Also invalidate count query for pagination
+          queryClient.invalidateQueries({ queryKey: [`${tableName}-count`] });
           // Show notification based on event type
           if (showNotifications) {
             const itemName = payload.new && typeof payload.new === 'object' 
