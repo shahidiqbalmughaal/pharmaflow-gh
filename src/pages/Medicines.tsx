@@ -1,8 +1,6 @@
 import { useState, useMemo } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { usePaginatedMedicines } from "@/hooks/usePaginatedMedicines";
-import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -61,17 +59,19 @@ const Medicines = () => {
   const isMobile = useIsMobile();
   const { currentShop } = useShop();
 
-  // Paginated medicine data
-  const {
-    medicines,
-    isLoading,
-    currentPage,
-    totalPages,
-    pageSize,
-    totalItems,
-    onPageChange,
-    onPageSizeChange,
-  } = usePaginatedMedicines({ pageSize: 50 });
+  // Fetch all medicines (no pagination - enables full search)
+  const { data: medicines, isLoading } = useQuery({
+    queryKey: ['medicines'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .select('*')
+        .order('medicine_name');
+      
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Enable real-time sync for medicines (invalidates paginated queries)
   useRealtimeInventory({
@@ -91,7 +91,6 @@ const Medicines = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["medicines"] });
-      queryClient.invalidateQueries({ queryKey: ["medicines-count"] });
       toast.success("Medicine deleted successfully");
     },
     onError: () => {
@@ -109,7 +108,6 @@ const Medicines = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["medicines"] });
-      queryClient.invalidateQueries({ queryKey: ["medicines-count"] });
       setSelectedIds(new Set());
       toast.success("Selected medicines deleted successfully");
     },
@@ -379,17 +377,6 @@ const Medicines = () => {
           )}
         </div>
 
-        {/* Mobile pagination */}
-        {totalItems > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            totalItems={totalItems}
-            onPageChange={onPageChange}
-            onPageSizeChange={onPageSizeChange}
-          />
-        )}
         <MedicineDialog
           open={dialogOpen}
           onClose={handleDialogClose}
@@ -689,17 +676,6 @@ const Medicines = () => {
         </div>
       </div>
 
-      {/* Desktop pagination */}
-      {totalItems > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={pageSize}
-          totalItems={totalItems}
-          onPageChange={onPageChange}
-          onPageSizeChange={onPageSizeChange}
-        />
-      )}
       <MedicineDialog
         open={dialogOpen}
         onClose={handleDialogClose}
