@@ -2,13 +2,14 @@ import { useState, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePaginatedMedicines } from "@/hooks/usePaginatedMedicines";
+import { useGlobalMedicineSearch } from "@/hooks/useGlobalMedicineSearch";
 import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Plus, Search, Pencil, Trash2, AlertTriangle, Camera, FileText, 
-  Download, Printer, ChevronDown, ChevronUp, MoreVertical 
+  Download, Printer, ChevronDown, ChevronUp, MoreVertical, X
 } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { getSellingTypeLabel, getQuantityUnit } from "@/lib/medicineTypes";
@@ -29,7 +30,7 @@ import { MedicineCard } from "@/components/MedicineCard";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { isExpired, isExpiringWithinDays, groupMedicinesByName } from "@/hooks/useFEFOSelection";
-import { exportToCSV, exportToExcel, exportToPDF, printStockList } from "@/lib/exportUtils";
+import { exportToCSV, exportMedicineInventoryToExcel, exportToPDF, printStockList } from "@/lib/exportUtils";
 import { usePharmacySettings } from "@/hooks/usePharmacySettings";
 import { cn } from "@/lib/utils";
 import {
@@ -46,7 +47,6 @@ import { useShop } from "@/hooks/useShop";
 const LOW_STOCK_THRESHOLD = 10;
 
 const Medicines = () => {
-  const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
@@ -61,7 +61,7 @@ const Medicines = () => {
   const isMobile = useIsMobile();
   const { currentShop } = useShop();
 
-  // Paginated medicine data
+  // Paginated medicine data for normal browsing
   const {
     medicines,
     isLoading,
@@ -72,6 +72,17 @@ const Medicines = () => {
     onPageChange,
     onPageSizeChange,
   } = usePaginatedMedicines({ pageSize: 50 });
+
+  // Global search across all inventory
+  const {
+    searchQuery,
+    setSearchQuery,
+    clearSearch,
+    isSearching,
+    searchResults,
+    isSearchLoading,
+    resultCount,
+  } = useGlobalMedicineSearch({ enabled: true });
 
   // Enable real-time sync for medicines (invalidates paginated queries)
   useRealtimeInventory({
@@ -142,24 +153,20 @@ const Medicines = () => {
     return groupMedicinesByName(medicines);
   }, [medicines]);
 
-  // Filter medicines based on search (search by name, batch, company, or barcode)
-  const filteredMedicines = useMemo(() => {
-    if (!medicines) return [];
-    const query = searchQuery.toLowerCase();
-    return medicines.filter((medicine) =>
-      medicine.medicine_name.toLowerCase().includes(query) ||
-      medicine.batch_no.toLowerCase().includes(query) ||
-      medicine.company_name.toLowerCase().includes(query) ||
-      (medicine.barcode && medicine.barcode.toLowerCase().includes(query))
-    );
-  }, [medicines, searchQuery]);
+  // Use global search results when searching, otherwise use paginated medicines
+  const displayMedicines = useMemo(() => {
+    if (isSearching && searchResults.length > 0) {
+      return searchResults;
+    }
+    return medicines ?? [];
+  }, [isSearching, searchResults, medicines]);
 
-  // Get unique medicine names from filtered results
+  // Get unique medicine names from displayed results
   const uniqueFilteredNames = useMemo(() => {
     const names = new Set<string>();
-    filteredMedicines.forEach((m) => names.add(m.medicine_name.toLowerCase()));
+    displayMedicines.forEach((m) => names.add(m.medicine_name.toLowerCase()));
     return names;
-  }, [filteredMedicines]);
+  }, [displayMedicines]);
 
   const handleEdit = (medicine: any) => {
     setEditingMedicine(medicine);
@@ -178,11 +185,11 @@ const Medicines = () => {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredMedicines.filter(m => !isExpired(m.expiry_date)).length) {
+    if (selectedIds.size === displayMedicines.filter(m => !isExpired(m.expiry_date)).length) {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(
-        filteredMedicines
+        displayMedicines
           .filter(m => !isExpired(m.expiry_date))
           .map(m => m.id)
       ));
@@ -232,27 +239,15 @@ const Medicines = () => {
   };
 
   const handleExportExcel = () => {
-    if (!filteredMedicines.length) return;
-    const exportData = filteredMedicines.map(m => ({
-      "Medicine Name": m.medicine_name,
-      "Batch No": m.batch_no,
-      "Company": m.company_name,
-      "Quantity": m.quantity,
-      "Rack No": m.rack_no,
-      "Selling Price": m.selling_price,
-      "Purchase Price": m.purchase_price,
-      "Expiry Date": m.expiry_date ? format(new Date(m.expiry_date), "yyyy-MM-dd") : "N/A",
-      "Supplier": m.supplier,
-      "Barcode": m.barcode || "",
-      "Last Updated": m.updated_at ? format(new Date(m.updated_at), "yyyy-MM-dd HH:mm") : "",
-    }));
-    exportToExcel(exportData, "medicines-inventory");
+    if (!displayMedicines.length) return;
+    // Use enhanced medicine inventory export with professional formatting
+    exportMedicineInventoryToExcel(displayMedicines, "medicines-inventory", LOW_STOCK_THRESHOLD);
     toast.success("Excel export started");
   };
 
   const handleExportPDF = () => {
-    if (!filteredMedicines.length) return;
-    const exportData = filteredMedicines.map(m => ({
+    if (!displayMedicines.length) return;
+    const exportData = displayMedicines.map(m => ({
       "Name": m.medicine_name,
       "Batch": m.batch_no,
       "Qty": m.quantity,
@@ -264,9 +259,9 @@ const Medicines = () => {
   };
 
   const handlePrintStockList = () => {
-    if (!filteredMedicines.length) return;
+    if (!displayMedicines.length) return;
     printStockList(
-      filteredMedicines,
+      displayMedicines,
       pharmacySettings?.pharmacy_name || "Pharmacy",
       "Stock List"
     );
@@ -318,12 +313,28 @@ const Medicines = () => {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name, batch, barcode..."
+            placeholder="Search all inventory..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 pr-9"
           />
+          {isSearching && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+              onClick={clearSearch}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
+        
+        {isSearching && (
+          <div className="text-sm text-muted-foreground">
+            {isSearchLoading ? "Searching..." : `Found ${resultCount} results across all inventory`}
+          </div>
+        )}
 
         {selectedIds.size > 0 && (
           <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
@@ -354,12 +365,12 @@ const Medicines = () => {
         )}
 
         <div className="space-y-3">
-          {isLoading ? (
+          {isLoading || isSearchLoading ? (
             <div className="text-center py-8 text-muted-foreground">Loading...</div>
-          ) : filteredMedicines.length === 0 ? (
+          ) : displayMedicines.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No medicines found</div>
           ) : (
-            filteredMedicines.map((medicine) => (
+            displayMedicines.map((medicine) => (
               <MedicineCard
                 key={medicine.id}
                 medicine={medicine}
@@ -379,8 +390,8 @@ const Medicines = () => {
           )}
         </div>
 
-        {/* Mobile pagination */}
-        {totalItems > 0 && (
+        {/* Mobile pagination - only show when not searching */}
+        {!isSearching && totalItems > 0 && (
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -468,12 +479,28 @@ const Medicines = () => {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name, batch, company, or barcode..."
+            placeholder="Search all inventory..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 pr-9"
           />
+          {isSearching && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+              onClick={clearSearch}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
+        
+        {isSearching && (
+          <Badge variant="secondary" className="text-sm">
+            {isSearchLoading ? "Searching..." : `${resultCount} results`}
+          </Badge>
+        )}
         
         {selectedIds.size > 0 && (
           <div className="flex items-center gap-2">
@@ -511,7 +538,7 @@ const Medicines = () => {
               <TableRow>
                 <TableHead className="w-[40px]">
                   <Checkbox
-                    checked={selectedIds.size > 0 && selectedIds.size === filteredMedicines.filter(m => !isExpired(m.expiry_date)).length}
+                    checked={selectedIds.size > 0 && selectedIds.size === displayMedicines.filter(m => !isExpired(m.expiry_date)).length}
                     onCheckedChange={toggleSelectAll}
                   />
                 </TableHead>
@@ -530,14 +557,14 @@ const Medicines = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {isLoading || isSearchLoading ? (
                 <TableRow>
                   <TableCell colSpan={13} className="text-center">
                     Loading...
                   </TableCell>
                 </TableRow>
-              ) : filteredMedicines && filteredMedicines.length > 0 ? (
-                filteredMedicines.map((medicine) => {
+              ) : displayMedicines && displayMedicines.length > 0 ? (
+                displayMedicines.map((medicine) => {
                   const medicineData = medicine as any;
                   const sellingType = medicineData.selling_type || "per_tablet";
                   const tabletsPerPacket = medicineData.tablets_per_packet || 1;
@@ -689,8 +716,8 @@ const Medicines = () => {
         </div>
       </div>
 
-      {/* Desktop pagination */}
-      {totalItems > 0 && (
+      {/* Desktop pagination - only show when not searching */}
+      {!isSearching && totalItems > 0 && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

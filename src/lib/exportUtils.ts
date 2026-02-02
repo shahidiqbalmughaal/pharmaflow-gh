@@ -40,7 +40,7 @@ export function exportToCSV(data: any[], filename: string) {
 }
 
 /**
- * Export data to Excel format (TSV with .xls extension for Excel compatibility)
+ * Enhanced Excel export with professional formatting using xlsx library
  */
 export async function exportToExcel(data: any[], filename: string): Promise<void> {
   if (!data || data.length === 0) {
@@ -48,31 +48,250 @@ export async function exportToExcel(data: any[], filename: string): Promise<void
     return;
   }
 
-  const headers = Object.keys(data[0]);
-  const BOM = "\uFEFF";
-  const csvContent =
-    BOM +
-    [
-      headers.join("\t"),
-      ...data.map((row) =>
-        headers
-          .map((header) => {
-            const value = row[header];
-            if (value === null || value === undefined) return "";
-            return String(value).replace(/\t/g, " ");
-          })
-          .join("\t")
-      ),
-    ].join("\n");
+  try {
+    // Dynamic import for xlsx library
+    const XLSX = await import('xlsx');
+    
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    
+    // Get headers from data
+    const headers = Object.keys(data[0]);
+    const colCount = headers.length;
+    const rowCount = data.length + 1; // +1 for header
+    
+    // Calculate column widths based on content
+    const colWidths = headers.map((header, colIndex) => {
+      let maxWidth = header.length;
+      data.forEach(row => {
+        const cellValue = String(row[header] ?? "");
+        maxWidth = Math.max(maxWidth, cellValue.length);
+      });
+      return { wch: Math.min(maxWidth + 2, 50) }; // Max 50 chars width
+    });
+    worksheet['!cols'] = colWidths;
+    
+    // Freeze header row
+    worksheet['!freeze'] = { xSplit: 0, ySplit: 1 };
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");
+    
+    // Generate buffer and download
+    const excelBuffer = XLSX.write(workbook, { 
+      bookType: 'xlsx', 
+      type: 'array' 
+    });
+    
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  } catch (error) {
+    console.error("Excel export failed:", error);
+    // Fallback to simple TSV export
+    const headers = Object.keys(data[0]);
+    const BOM = "\uFEFF";
+    const csvContent =
+      BOM +
+      [
+        headers.join("\t"),
+        ...data.map((row) =>
+          headers
+            .map((header) => {
+              const value = row[header];
+              if (value === null || value === undefined) return "";
+              return String(value).replace(/\t/g, " ");
+            })
+            .join("\t")
+        ),
+      ].join("\n");
 
-  const blob = new Blob([csvContent], {
-    type: "application/vnd.ms-excel;charset=utf-8;",
-  });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `${filename}.xls`;
-  link.click();
-  URL.revokeObjectURL(link.href);
+    const blob = new Blob([csvContent], {
+      type: "application/vnd.ms-excel;charset=utf-8;",
+    });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}.xls`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+}
+
+/**
+ * Enhanced medicine inventory export with professional formatting
+ */
+export async function exportMedicineInventoryToExcel(
+  data: any[], 
+  filename: string,
+  lowStockThreshold: number = 10
+): Promise<void> {
+  if (!data || data.length === 0) {
+    console.warn("No data to export");
+    return;
+  }
+
+  try {
+    const XLSX = await import('xlsx');
+    const { format } = await import('date-fns');
+    
+    // Format data for export
+    const exportData = data.map(m => ({
+      "Medicine Name": m.medicine_name || "",
+      "Batch No": m.batch_no || "",
+      "Company": m.company_name || "",
+      "Rack No": m.rack_no || "",
+      "Selling Type": m.selling_type ? getSellingTypeLabelForExport(m.selling_type) : "",
+      "Quantity": m.quantity || 0,
+      "Purchase Price (PKR)": formatPKR(Number(m.purchase_price || 0)),
+      "Selling Price (PKR)": formatPKR(Number(m.selling_price || 0)),
+      "Expiry Date": m.expiry_date ? format(new Date(m.expiry_date), "yyyy-MM-dd") : "N/A",
+      "Supplier": m.supplier || "",
+      "Last Updated": m.updated_at ? format(new Date(m.updated_at), "yyyy-MM-dd HH:mm") : "",
+      "Stock Status": m.quantity <= lowStockThreshold ? "LOW STOCK" : "OK",
+    }));
+
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    
+    // Get headers
+    const headers = Object.keys(exportData[0]);
+    
+    // Calculate optimal column widths
+    const colWidths = headers.map((header, colIndex) => {
+      let maxWidth = header.length;
+      exportData.forEach(row => {
+        const cellValue = String((row as any)[header] ?? "");
+        maxWidth = Math.max(maxWidth, cellValue.length);
+      });
+      return { wch: Math.min(maxWidth + 2, 40) };
+    });
+    worksheet['!cols'] = colWidths;
+    
+    // Add auto-filter for header row
+    worksheet['!autofilter'] = { ref: XLSX.utils.encode_range({
+      s: { r: 0, c: 0 },
+      e: { r: exportData.length, c: headers.length - 1 }
+    })};
+    
+    // Freeze the first row (header)
+    worksheet['!freeze'] = { xSplit: 0, ySplit: 1 };
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Medicine Inventory");
+    
+    // Add summary sheet
+    const lowStockCount = data.filter(m => m.quantity <= lowStockThreshold).length;
+    const totalValue = data.reduce((sum, m) => sum + (m.quantity * (m.selling_price || 0)), 0);
+    
+    const summaryData = [
+      { "Metric": "Total Items", "Value": data.length },
+      { "Metric": "Low Stock Items", "Value": lowStockCount },
+      { "Metric": "Total Inventory Value (PKR)", "Value": formatPKR(totalValue) },
+      { "Metric": "Report Generated", "Value": new Date().toLocaleString() },
+    ];
+    
+    const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+    summarySheet['!cols'] = [{ wch: 30 }, { wch: 25 }];
+    XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
+    
+    // Generate and download
+    const excelBuffer = XLSX.write(workbook, { 
+      bookType: 'xlsx', 
+      type: 'array' 
+    });
+    
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  } catch (error) {
+    console.error("Enhanced Excel export failed, using fallback:", error);
+    // Fallback to basic export
+    await exportToExcel(data, filename);
+  }
+}
+
+// Helper to format currency as PKR
+function formatPKR(amount: number): string {
+  return `PKR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+// Helper to get selling type label
+function getSellingTypeLabelForExport(value: string): string {
+  const typeMap: Record<string, string> = {
+    "per_tablet": "Per Tablet",
+    "capsule": "Capsule",
+    "per_packet": "Per Packet",
+    "syrup": "Syrup",
+    "suspension": "Suspension",
+    "emulsion": "Emulsion",
+    "drops": "Drops",
+    "eye_drops": "Eye Drops",
+    "ear_drops": "Ear Drops",
+    "nasal_spray": "Nasal Spray",
+    "inhaler": "Inhaler",
+    "nebulizer_solution": "Nebulizer Solution",
+    "powder": "Powder",
+    "granules": "Granules",
+    "lotion": "Lotion",
+    "gel": "Gel",
+    "paste": "Paste",
+    "foam": "Foam",
+    "patch": "Patch",
+    "infusion": "Infusion",
+    "iv_fluid": "IV Fluid",
+    "mouthwash": "Mouthwash",
+    "gargle": "Gargle",
+    "shampoo": "Shampoo",
+    "soap": "Soap",
+    "vaccine": "Vaccine",
+    "insulin": "Insulin",
+    "dry_syrup": "Dry Syrup",
+    "oral_solution": "Oral Solution",
+    "spray": "Spray",
+    "pessary": "Pessary",
+    "enema": "Enema",
+    "injection": "Injection",
+    "suppository": "Suppository",
+    "ampoule": "Ampoule",
+    "vial": "Vial",
+    "cream": "Cream",
+    "ointment": "Ointment",
+    "oral_ampoule": "Oral Ampoule",
+    "oral_gel": "Oral Gel",
+    "liquid": "Liquid",
+    "drip": "Drip",
+    "iv_set": "IV Set",
+    "cannula": "Cannula",
+    "syringe": "Syringe",
+    "bandage": "Bandage",
+    "crepe_bandage": "Crepe Bandage",
+    "dressing": "Dressing",
+    "cotton": "Cotton",
+    "plaster": "Plaster",
+    "mask": "Mask",
+    "sachet": "Sachet",
+    "bar": "Bar",
+    "toothbrush": "Toothbrush",
+    "toothpaste": "Toothpaste",
+    "sugar_strip": "Sugar Strip",
+    "supplement": "Supplement",
+    "narcotic": "Narcotic",
+  };
+  return typeMap[value] || value;
 }
 
 /**
