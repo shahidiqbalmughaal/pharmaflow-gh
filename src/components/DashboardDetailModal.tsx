@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -12,7 +12,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Search, X } from "lucide-react";
 import { LoadingSpinner } from "./LoadingSpinner";
 
 interface DashboardDetailModalProps {
@@ -23,6 +31,12 @@ interface DashboardDetailModalProps {
 
 export function DashboardDetailModal({ open, onClose, type }: DashboardDetailModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Expiry filter states
+  const [expiryMonthFilter, setExpiryMonthFilter] = useState<string>("all");
+  const [companyFilter, setCompanyFilter] = useState<string>("all");
+  const [supplierFilter, setSupplierFilter] = useState<string>("all");
+  const [expiryStatusFilter, setExpiryStatusFilter] = useState<string>("all");
 
   // Fetch today's sales
   const { data: todaySales, isLoading: salesLoading } = useQuery({
@@ -158,6 +172,99 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
     );
   };
 
+  // Get unique companies and suppliers from expiry data for filter dropdowns
+  const { uniqueCompanies, uniqueSuppliers, uniqueMonths } = useMemo(() => {
+    if (!expiryAlerts) return { uniqueCompanies: [], uniqueSuppliers: [], uniqueMonths: [] };
+    
+    const companies = [...new Set(expiryAlerts.map((item: any) => item.company_name).filter(Boolean))].sort();
+    const suppliers = [...new Set(expiryAlerts.map((item: any) => item.supplier).filter(Boolean))].sort();
+    
+    // Get unique months (format: "YYYY-MM" for sorting, display as "Month YYYY")
+    const monthsSet = new Set<string>();
+    expiryAlerts.forEach((item: any) => {
+      const date = new Date(item.expiry_date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      monthsSet.add(monthKey);
+    });
+    const months = [...monthsSet].sort();
+    
+    return { uniqueCompanies: companies, uniqueSuppliers: suppliers, uniqueMonths: months };
+  }, [expiryAlerts]);
+
+  // Format month key for display
+  const formatMonthLabel = (monthKey: string) => {
+    const [year, month] = monthKey.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    return format(date, "MMM yyyy");
+  };
+
+  // Filter expiry data with all filters
+  const filterExpiryData = (data: any[]) => {
+    let filtered = data;
+    
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter(item => 
+        JSON.stringify(item).toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    // Apply month filter
+    if (expiryMonthFilter !== "all") {
+      filtered = filtered.filter(item => {
+        const date = new Date(item.expiry_date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        return monthKey === expiryMonthFilter;
+      });
+    }
+    
+    // Apply company filter
+    if (companyFilter !== "all") {
+      filtered = filtered.filter(item => item.company_name === companyFilter);
+    }
+    
+    // Apply supplier filter
+    if (supplierFilter !== "all") {
+      filtered = filtered.filter(item => item.supplier === supplierFilter);
+    }
+    
+    // Apply expiry status filter
+    if (expiryStatusFilter !== "all") {
+      const now = new Date();
+      filtered = filtered.filter(item => {
+        const expiryDate = new Date(item.expiry_date);
+        const daysUntilExpiry = Math.floor((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        
+        switch (expiryStatusFilter) {
+          case "expired":
+            return daysUntilExpiry < 0;
+          case "this_month":
+            return daysUntilExpiry >= 0 && daysUntilExpiry <= 30;
+          case "next_3_months":
+            return daysUntilExpiry >= 0 && daysUntilExpiry <= 90;
+          case "next_6_months":
+            return daysUntilExpiry >= 0 && daysUntilExpiry <= 180;
+          default:
+            return true;
+        }
+      });
+    }
+    
+    return filtered;
+  };
+
+  // Check if any filter is active
+  const hasActiveFilters = expiryMonthFilter !== "all" || companyFilter !== "all" || 
+    supplierFilter !== "all" || expiryStatusFilter !== "all";
+
+  // Clear all filters
+  const clearFilters = () => {
+    setExpiryMonthFilter("all");
+    setCompanyFilter("all");
+    setSupplierFilter("all");
+    setExpiryStatusFilter("all");
+  };
+
   const isLoading = salesLoading || medicinesLoading || cosmeticsLoading || lowStockLoading || expiryLoading;
 
   return (
@@ -177,6 +284,102 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
               className="pl-10"
             />
           </div>
+
+          {/* Expiry Filters - Only shown for expiry modals */}
+          {(type === "expiry" || type === "allExpiry") && expiryAlerts && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {/* Expiry Month Filter */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Expiry Month</label>
+                  <Select value={expiryMonthFilter} onValueChange={setExpiryMonthFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="All Months" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Months</SelectItem>
+                      {uniqueMonths.map((monthKey) => (
+                        <SelectItem key={monthKey} value={monthKey}>
+                          {formatMonthLabel(monthKey)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Company Filter */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Company</label>
+                  <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="All Companies" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Companies</SelectItem>
+                      {uniqueCompanies.map((company) => (
+                        <SelectItem key={company} value={company}>
+                          {company}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Supplier Filter */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Supplier</label>
+                  <Select value={supplierFilter} onValueChange={setSupplierFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="All Suppliers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Suppliers</SelectItem>
+                      {uniqueSuppliers.map((supplier) => (
+                        <SelectItem key={supplier} value={supplier}>
+                          {supplier}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Expiry Status Filter */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Expiry Status</label>
+                  <Select value={expiryStatusFilter} onValueChange={setExpiryStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="expired">Expired</SelectItem>
+                      <SelectItem value="this_month">This Month (30 days)</SelectItem>
+                      <SelectItem value="next_3_months">Next 3 Months</SelectItem>
+                      <SelectItem value="next_6_months">Next 6 Months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Clear Filters Button */}
+              {hasActiveFilters && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="h-8 px-3 text-xs"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Clear Filters
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Showing {filterExpiryData(expiryAlerts).length} of {expiryAlerts.length} items
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           {isLoading ? (
             <LoadingSpinner />
@@ -312,7 +515,7 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filterData(expiryAlerts).map((item: any) => {
+                {filterExpiryData(expiryAlerts).map((item: any) => {
                   const daysUntilExpiry = Math.floor(
                     (new Date(item.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
                   );
