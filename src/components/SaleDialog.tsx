@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { usePharmacySettings } from "@/hooks/usePharmacySettings";
 import { useShop } from "@/hooks/useShop";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 interface InitialProduct {
@@ -83,7 +84,9 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   const queryClient = useQueryClient();
   const receiptRef = useRef<HTMLDivElement>(null);
   const { currentShop } = useShop();
+  const { user } = useAuth();
   const [salesmanId, setSalesmanId] = useState("");
+  const [autoSelectedSalesman, setAutoSelectedSalesman] = useState<{ id: string; name: string } | null>(null);
   const [customerId, setCustomerId] = useState("walk-in");
   const [saleItems, setSaleItems] = useState<SaleItem[]>([createEmptyRow()]);
   const [discountPercentage, setDiscountPercentage] = useState(0);
@@ -116,6 +119,26 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       return data;
     },
   });
+
+  // Auto-select salesman based on logged-in user
+  useEffect(() => {
+    if (open && user && salesmen && salesmen.length > 0) {
+      // First, try to find salesman matching user's full_name from profiles
+      const matchedSalesman = salesmen.find(s => {
+        // Match by user id stored in salesman or by name
+        return s.name && user.email?.toLowerCase().includes(s.name.toLowerCase().split(' ')[0]);
+      });
+      
+      if (matchedSalesman) {
+        setSalesmanId(matchedSalesman.id);
+        setAutoSelectedSalesman({ id: matchedSalesman.id, name: matchedSalesman.name });
+      } else if (salesmen.length === 1) {
+        // If only one salesman, auto-select them
+        setSalesmanId(salesmen[0].id);
+        setAutoSelectedSalesman({ id: salesmen[0].id, name: salesmen[0].name });
+      }
+    }
+  }, [open, user, salesmen]);
 
   const { data: customers } = useQuery({
     queryKey: ["customers"],
@@ -484,6 +507,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
 
   const resetForm = () => {
     setSalesmanId("");
+    setAutoSelectedSalesman(null);
     setCustomerId("walk-in");
     setSaleItems([createEmptyRow()]);
     setDiscountPercentage(0);
@@ -965,32 +989,38 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="px-4 py-3 border-b bg-muted/30">
-          <DialogTitle className="text-lg">New Sale</DialogTitle>
+      <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="px-6 py-4 border-b bg-muted/30">
+          <DialogTitle className="text-xl">New Sale</DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {/* Header Controls - Compact */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs font-medium">Salesman *</Label>
-              <Select value={salesmanId} onValueChange={setSalesmanId}>
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {salesmen?.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Salesman *</Label>
+              {autoSelectedSalesman ? (
+                <div className="h-9 px-3 flex items-center border rounded-md bg-muted/50 text-sm font-medium">
+                  {autoSelectedSalesman.name}
+                </div>
+              ) : (
+                <Select value={salesmanId} onValueChange={setSalesmanId}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {salesmen?.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-medium">Customer</Label>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Customer</Label>
               <Select value={customerId} onValueChange={setCustomerId}>
-                <SelectTrigger className="h-8 text-sm">
+                <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Walk-in" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1002,11 +1032,11 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
               </Select>
             </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-medium">Discount %</Label>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Discount %</Label>
               <Input
                 type="number"
-                className="h-8 text-sm"
+                className="h-9 text-sm"
                 min="0"
                 max="100"
                 value={discountPercentage}
@@ -1014,11 +1044,11 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
               />
             </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-medium">Tax</Label>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Tax</Label>
               <Input
                 type="number"
-                className="h-8 text-sm"
+                className="h-9 text-sm"
                 min="0"
                 value={tax}
                 onChange={(e) => setTax(Number(e.target.value))}
@@ -1027,15 +1057,15 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
           </div>
 
           {/* AI Panel - Collapsible */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button
               type="button"
               variant={showAIPanel ? "secondary" : "outline"}
               size="sm"
               onClick={() => setShowAIPanel(!showAIPanel)}
-              className="h-7 text-xs gap-1"
+              className="h-8 text-sm gap-1.5"
             >
-              <Sparkles className="h-3 w-3" />
+              <Sparkles className="h-4 w-4" />
               AI Finder
             </Button>
             <QRScanner onScan={handleQRScan} />
@@ -1049,9 +1079,9 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                   setSaleItems([...saleItems, createEmptyRow()]);
                 }
               }}
-              className="h-7 text-xs gap-1"
+              className="h-8 text-sm gap-1.5"
             >
-              <Plus className="h-3 w-3" />
+              <Plus className="h-4 w-4" />
               Add Row
             </Button>
           </div>
