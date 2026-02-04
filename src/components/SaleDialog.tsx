@@ -138,37 +138,75 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
     },
   });
 
+  // Fetch ALL medicines using pagination to bypass 1000 row limit
   const { data: medicines, isLoading: medicinesLoading } = useQuery({
     queryKey: ["medicines-for-sale"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("medicines")
-        .select("*")
-        .gt("quantity", 0)
-        .order("medicine_name");
-      if (error) {
-        console.error("Error fetching medicines:", error);
-        throw error;
+      const allMedicines: any[] = [];
+      const batchSize = 1000;
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("medicines")
+          .select("*")
+          .gt("quantity", 0)
+          .order("medicine_name")
+          .range(offset, offset + batchSize - 1);
+        
+        if (error) {
+          console.error("Error fetching medicines:", error);
+          throw error;
+        }
+        
+        if (data && data.length > 0) {
+          allMedicines.push(...data);
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
       }
-      console.log("Fetched medicines for sale:", data?.length || 0);
-      return data || [];
+      
+      console.log("Fetched medicines for sale:", allMedicines.length);
+      return allMedicines;
     },
   });
 
+  // Fetch ALL cosmetics using pagination to bypass 1000 row limit
   const { data: cosmetics, isLoading: cosmeticsLoading } = useQuery({
     queryKey: ["cosmetics-for-sale"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("cosmetics")
-        .select("*")
-        .gt("quantity", 0)
-        .order("product_name");
-      if (error) {
-        console.error("Error fetching cosmetics:", error);
-        throw error;
+      const allCosmetics: any[] = [];
+      const batchSize = 1000;
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("cosmetics")
+          .select("*")
+          .gt("quantity", 0)
+          .order("product_name")
+          .range(offset, offset + batchSize - 1);
+        
+        if (error) {
+          console.error("Error fetching cosmetics:", error);
+          throw error;
+        }
+        
+        if (data && data.length > 0) {
+          allCosmetics.push(...data);
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
       }
-      console.log("Fetched cosmetics for sale:", data?.length || 0);
-      return data || [];
+      
+      console.log("Fetched cosmetics for sale:", allCosmetics.length);
+      return allCosmetics;
     },
   });
 
