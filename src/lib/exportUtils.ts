@@ -40,7 +40,8 @@ export function exportToCSV(data: any[], filename: string) {
 }
 
 /**
- * Enhanced Excel export with professional formatting using xlsx library
+ * Enhanced Excel export with professional formatting using exceljs library
+ * (More secure alternative to xlsx - no prototype pollution vulnerabilities)
  */
 export async function exportToExcel(data: any[], filename: string): Promise<void> {
   if (!data || data.length === 0) {
@@ -49,42 +50,51 @@ export async function exportToExcel(data: any[], filename: string): Promise<void
   }
 
   try {
-    // Dynamic import for xlsx library
-    const XLSX = await import('xlsx');
+    // Dynamic import for exceljs library
+    const ExcelJS = await import('exceljs');
     
     // Create workbook and worksheet
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Inventory');
     
     // Get headers from data
     const headers = Object.keys(data[0]);
-    const colCount = headers.length;
-    const rowCount = data.length + 1; // +1 for header
     
-    // Calculate column widths based on content
-    const colWidths = headers.map((header, colIndex) => {
+    // Set up columns with auto-width calculation
+    worksheet.columns = headers.map(header => {
       let maxWidth = header.length;
       data.forEach(row => {
         const cellValue = String(row[header] ?? "");
         maxWidth = Math.max(maxWidth, cellValue.length);
       });
-      return { wch: Math.min(maxWidth + 2, 50) }; // Max 50 chars width
+      return { 
+        header, 
+        key: header, 
+        width: Math.min(maxWidth + 2, 50)
+      };
     });
-    worksheet['!cols'] = colWidths;
+    
+    // Add data rows
+    data.forEach(row => {
+      worksheet.addRow(row);
+    });
+    
+    // Style header row
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    };
     
     // Freeze header row
-    worksheet['!freeze'] = { xSplit: 0, ySplit: 1 };
-    
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");
+    worksheet.views = [{ state: 'frozen', ySplit: 1 }];
     
     // Generate buffer and download
-    const excelBuffer = XLSX.write(workbook, { 
-      bookType: 'xlsx', 
-      type: 'array' 
-    });
+    const buffer = await workbook.xlsx.writeBuffer();
     
-    const blob = new Blob([excelBuffer], {
+    const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     
@@ -126,6 +136,7 @@ export async function exportToExcel(data: any[], filename: string): Promise<void
 
 /**
  * Enhanced medicine inventory export with professional formatting
+ * Uses exceljs - a secure Excel library without prototype pollution vulnerabilities
  */
 export async function exportMedicineInventoryToExcel(
   data: any[], 
@@ -138,77 +149,112 @@ export async function exportMedicineInventoryToExcel(
   }
 
   try {
-    const XLSX = await import('xlsx');
+    const ExcelJS = await import('exceljs');
     const { format } = await import('date-fns');
     
-    // Format data for export
-    const exportData = data.map(m => ({
-      "Medicine Name": m.medicine_name || "",
-      "Batch No": m.batch_no || "",
-      "Company": m.company_name || "",
-      "Rack No": m.rack_no || "",
-      "Selling Type": m.selling_type ? getSellingTypeLabelForExport(m.selling_type) : "",
-      "Quantity": m.quantity || 0,
-      "Purchase Price (PKR)": formatPKR(Number(m.purchase_price || 0)),
-      "Selling Price (PKR)": formatPKR(Number(m.selling_price || 0)),
-      "Expiry Date": m.expiry_date ? format(new Date(m.expiry_date), "yyyy-MM-dd") : "N/A",
-      "Supplier": m.supplier || "",
-      "Last Updated": m.updated_at ? format(new Date(m.updated_at), "yyyy-MM-dd HH:mm") : "",
-      "Stock Status": m.quantity <= lowStockThreshold ? "LOW STOCK" : "OK",
-    }));
-
-    // Create workbook and worksheet
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    // Create workbook
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Pharmacy Management System';
+    workbook.created = new Date();
     
-    // Get headers
-    const headers = Object.keys(exportData[0]);
+    // Create main worksheet
+    const worksheet = workbook.addWorksheet('Medicine Inventory');
     
-    // Calculate optimal column widths
-    const colWidths = headers.map((header, colIndex) => {
-      let maxWidth = header.length;
-      exportData.forEach(row => {
-        const cellValue = String((row as any)[header] ?? "");
-        maxWidth = Math.max(maxWidth, cellValue.length);
+    // Define columns
+    const columns = [
+      { header: 'Medicine Name', key: 'medicineName', width: 30 },
+      { header: 'Batch No', key: 'batchNo', width: 15 },
+      { header: 'Company', key: 'company', width: 20 },
+      { header: 'Rack No', key: 'rackNo', width: 10 },
+      { header: 'Selling Type', key: 'sellingType', width: 15 },
+      { header: 'Quantity', key: 'quantity', width: 12 },
+      { header: 'Purchase Price (PKR)', key: 'purchasePrice', width: 20 },
+      { header: 'Selling Price (PKR)', key: 'sellingPrice', width: 20 },
+      { header: 'Expiry Date', key: 'expiryDate', width: 15 },
+      { header: 'Supplier', key: 'supplier', width: 20 },
+      { header: 'Last Updated', key: 'lastUpdated', width: 20 },
+      { header: 'Stock Status', key: 'stockStatus', width: 12 },
+    ];
+    
+    worksheet.columns = columns;
+    
+    // Add data rows
+    data.forEach(m => {
+      const isLowStock = m.quantity <= lowStockThreshold;
+      const row = worksheet.addRow({
+        medicineName: m.medicine_name || "",
+        batchNo: m.batch_no || "",
+        company: m.company_name || "",
+        rackNo: m.rack_no || "",
+        sellingType: m.selling_type ? getSellingTypeLabelForExport(m.selling_type) : "",
+        quantity: m.quantity || 0,
+        purchasePrice: formatPKR(Number(m.purchase_price || 0)),
+        sellingPrice: formatPKR(Number(m.selling_price || 0)),
+        expiryDate: m.expiry_date ? format(new Date(m.expiry_date), "yyyy-MM-dd") : "N/A",
+        supplier: m.supplier || "",
+        lastUpdated: m.updated_at ? format(new Date(m.updated_at), "yyyy-MM-dd HH:mm") : "",
+        stockStatus: isLowStock ? "LOW STOCK" : "OK",
       });
-      return { wch: Math.min(maxWidth + 2, 40) };
+      
+      // Highlight low stock rows
+      if (isLowStock) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFFEE2E2' } // Light red
+          };
+        });
+      }
     });
-    worksheet['!cols'] = colWidths;
     
-    // Add auto-filter for header row
-    worksheet['!autofilter'] = { ref: XLSX.utils.encode_range({
-      s: { r: 0, c: 0 },
-      e: { r: exportData.length, c: headers.length - 1 }
-    })};
+    // Style header row
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1A1A2E' } // Dark blue
+    };
+    headerRow.alignment = { horizontal: 'center' };
     
-    // Freeze the first row (header)
-    worksheet['!freeze'] = { xSplit: 0, ySplit: 1 };
+    // Freeze header row
+    worksheet.views = [{ state: 'frozen', ySplit: 1 }];
     
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Medicine Inventory");
+    // Add auto-filter
+    worksheet.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: data.length + 1, column: columns.length }
+    };
     
     // Add summary sheet
+    const summarySheet = workbook.addWorksheet('Summary');
     const lowStockCount = data.filter(m => m.quantity <= lowStockThreshold).length;
     const totalValue = data.reduce((sum, m) => sum + (m.quantity * (m.selling_price || 0)), 0);
     
-    const summaryData = [
-      { "Metric": "Total Items", "Value": data.length },
-      { "Metric": "Low Stock Items", "Value": lowStockCount },
-      { "Metric": "Total Inventory Value (PKR)", "Value": formatPKR(totalValue) },
-      { "Metric": "Report Generated", "Value": new Date().toLocaleString() },
+    summarySheet.columns = [
+      { header: 'Metric', key: 'metric', width: 30 },
+      { header: 'Value', key: 'value', width: 25 },
     ];
     
-    const summarySheet = XLSX.utils.json_to_sheet(summaryData);
-    summarySheet['!cols'] = [{ wch: 30 }, { wch: 25 }];
-    XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
+    summarySheet.addRow({ metric: 'Total Items', value: data.length });
+    summarySheet.addRow({ metric: 'Low Stock Items', value: lowStockCount });
+    summarySheet.addRow({ metric: 'Total Inventory Value (PKR)', value: formatPKR(totalValue) });
+    summarySheet.addRow({ metric: 'Report Generated', value: new Date().toLocaleString() });
+    
+    // Style summary header
+    const summaryHeader = summarySheet.getRow(1);
+    summaryHeader.font = { bold: true };
+    summaryHeader.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    };
     
     // Generate and download
-    const excelBuffer = XLSX.write(workbook, { 
-      bookType: 'xlsx', 
-      type: 'array' 
-    });
+    const buffer = await workbook.xlsx.writeBuffer();
     
-    const blob = new Blob([excelBuffer], {
+    const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     
@@ -290,6 +336,8 @@ function getSellingTypeLabelForExport(value: string): string {
     "sugar_strip": "Sugar Strip",
     "supplement": "Supplement",
     "narcotic": "Narcotic",
+    "solution": "Solution",
+    "elixir": "Elixir",
   };
   return typeMap[value] || value;
 }
