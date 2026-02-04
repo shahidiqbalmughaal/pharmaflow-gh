@@ -120,13 +120,45 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
     },
   });
 
+  // Fetch user profile for name matching
+  const { data: userProfile } = useQuery({
+    queryKey: ["user-profile", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
   // Auto-select salesman based on logged-in user
   useEffect(() => {
     if (open && user && salesmen && salesmen.length > 0) {
-      // First, try to find salesman matching user's full_name from profiles
+      // Try to match salesman by user's profile full_name
+      const userName = userProfile?.full_name?.toLowerCase() || '';
+      const userEmail = user.email?.toLowerCase() || '';
+      
       const matchedSalesman = salesmen.find(s => {
-        // Match by user id stored in salesman or by name
-        return s.name && user.email?.toLowerCase().includes(s.name.toLowerCase().split(' ')[0]);
+        if (!s.name) return false;
+        const salesmanName = s.name.toLowerCase();
+        
+        // Match by full name (exact or partial)
+        if (userName && (salesmanName === userName || userName.includes(salesmanName) || salesmanName.includes(userName))) {
+          return true;
+        }
+        
+        // Match by first name in email
+        const firstName = salesmanName.split(' ')[0];
+        if (firstName && userEmail.includes(firstName)) {
+          return true;
+        }
+        
+        return false;
       });
       
       if (matchedSalesman) {
@@ -136,9 +168,12 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
         // If only one salesman, auto-select them
         setSalesmanId(salesmen[0].id);
         setAutoSelectedSalesman({ id: salesmen[0].id, name: salesmen[0].name });
+      } else {
+        // No match found - keep dropdown for manual selection
+        setAutoSelectedSalesman(null);
       }
     }
-  }, [open, user, salesmen]);
+  }, [open, user, salesmen, userProfile]);
 
   const { data: customers } = useQuery({
     queryKey: ["customers"],
