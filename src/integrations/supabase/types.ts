@@ -422,7 +422,7 @@ export type Database = {
           batch_no: string
           company_name: string
           created_at: string | null
-          expiry_date: string
+          expiry_date: string | null
           id: string
           is_narcotic: boolean | null
           manufacturing_date: string
@@ -443,7 +443,7 @@ export type Database = {
           batch_no: string
           company_name: string
           created_at?: string | null
-          expiry_date: string
+          expiry_date?: string | null
           id?: string
           is_narcotic?: boolean | null
           manufacturing_date: string
@@ -464,7 +464,7 @@ export type Database = {
           batch_no?: string
           company_name?: string
           created_at?: string | null
-          expiry_date?: string
+          expiry_date?: string | null
           id?: string
           is_narcotic?: boolean | null
           manufacturing_date?: string

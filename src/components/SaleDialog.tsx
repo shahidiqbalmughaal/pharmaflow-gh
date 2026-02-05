@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Printer, Sparkles, Loader2, X, QrCode } from "lucide-react";
+import { Plus, Trash2, Printer, Sparkles, Loader2, X, QrCode, History, CreditCard, Banknote, Check, Clock } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { QRScanner } from "./QRScanner";
 import { SaleReceipt } from "./SaleReceipt";
@@ -97,6 +97,15 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showItemDropdown, setShowItemDropdown] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  
+  // Payment enhancements state
+  const [collectedCash, setCollectedCash] = useState(0);
+  const [paymentType, setPaymentType] = useState<"cash" | "online">("cash");
+  const [onlinePaymentMethod, setOnlinePaymentMethod] = useState<string>("");
+  const [transactionStatus, setTransactionStatus] = useState<"completed" | "pending">("completed");
+  
+  // Customer purchase history state
+  const [showCustomerHistory, setShowCustomerHistory] = useState(false);
   
   // Refs for keyboard navigation
   const itemInputRefs = useRef<(HTMLInputElement | null)[][]>([]);
@@ -194,6 +203,66 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch customer's last purchased medicines for suggestions
+  const { data: customerPurchaseHistory } = useQuery({
+    queryKey: ["customer-purchase-history", customerId],
+    queryFn: async () => {
+      if (!customerId || customerId === "walk-in") return [];
+      
+      // Get the last 3 months of purchases for this customer
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      
+      const { data, error } = await supabase
+        .from("sales")
+        .select(`
+          id,
+          sale_date,
+          sale_items (
+            item_id,
+            item_name,
+            item_type,
+            batch_no,
+            quantity,
+            unit_price
+          )
+        `)
+        .eq("customer_id", customerId)
+        .gte("sale_date", threeMonthsAgo.toISOString())
+        .order("sale_date", { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      
+      // Aggregate items by item_id to find frequently purchased items
+      const itemMap = new Map<string, { item_id: string; item_name: string; item_type: string; batch_no: string; purchase_count: number; last_price: number }>();
+      
+      data?.forEach(sale => {
+        (sale.sale_items as any[])?.forEach(item => {
+          const existing = itemMap.get(item.item_id);
+          if (existing) {
+            existing.purchase_count += 1;
+          } else {
+            itemMap.set(item.item_id, {
+              item_id: item.item_id,
+              item_name: item.item_name,
+              item_type: item.item_type,
+              batch_no: item.batch_no,
+              purchase_count: 1,
+              last_price: item.unit_price
+            });
+          }
+        });
+      });
+      
+      // Sort by purchase count and return top 10
+      return Array.from(itemMap.values())
+        .sort((a, b) => b.purchase_count - a.purchase_count)
+        .slice(0, 10);
+    },
+    enabled: !!customerId && customerId !== "walk-in",
   });
 
   // Fetch ALL medicines using pagination to bypass 1000 row limit
@@ -549,6 +618,11 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
     setTax(0);
     setCompletedSale(null);
     setShowReceipt(false);
+    setShowCustomerHistory(false);
+    setCollectedCash(0);
+    setPaymentType("cash");
+    setOnlinePaymentMethod("");
+    setTransactionStatus("completed");
     setShowAIPanel(false);
     setAiSymptoms("");
     setAiRecommendations([]);
@@ -802,6 +876,63 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
     }
   }, [saleItems]);
 
+  // Add item from customer purchase history (with availability check)
+  const addFromHistory = useCallback((historyItem: { item_id: string; item_name: string; item_type: string; batch_no: string; last_price: number }) => {
+    // Check if item is still available in inventory
+    const allItems = historyItem.item_type === "medicine" ? medicines : cosmetics;
+    const inventoryItem = allItems?.find((i) => i.id === historyItem.item_id);
+    
+    if (!inventoryItem || inventoryItem.quantity <= 0) {
+      toast.error(`${historyItem.item_name} is out of stock`);
+      return;
+    }
+    
+    // Check if already in sale
+    const existingIndex = saleItems.findIndex(item => item.itemId === historyItem.item_id);
+    if (existingIndex !== -1) {
+      toast.info(`${historyItem.item_name} is already in the sale`);
+      return;
+    }
+    
+    const isMedicine = historyItem.item_type === "medicine";
+    const medicineItem = inventoryItem as any;
+    const sellingType = isMedicine ? (medicineItem.selling_type || 'per_tablet') : 'per_tablet';
+    const tabletsPerPacket = isMedicine ? (medicineItem.tablets_per_packet || 1) : 1;
+    
+    let unitPrice = inventoryItem.selling_price;
+    if (isMedicine && sellingType === 'per_packet') {
+      unitPrice = medicineItem.price_per_packet || (inventoryItem.selling_price * tabletsPerPacket);
+    }
+
+    const newItem: SaleItem = {
+      itemType: historyItem.item_type as "medicine" | "cosmetic",
+      itemId: historyItem.item_id,
+      itemName: historyItem.item_name,
+      batchNo: inventoryItem.batch_no,
+      quantity: 1,
+      unitPrice: Number(unitPrice),
+      totalPrice: Number(unitPrice),
+      profit: Number(unitPrice) - Number(inventoryItem.purchase_price),
+      purchasePrice: Number(inventoryItem.purchase_price),
+      sellingType,
+      tabletsPerPacket,
+      totalTablets: isMedicine && sellingType === 'per_packet' ? tabletsPerPacket : 1,
+      totalPackets: isMedicine && sellingType === 'per_packet' ? 1 : 0,
+    };
+
+    // Find empty row or add new
+    const emptyIndex = saleItems.findIndex(item => !item.itemId);
+    if (emptyIndex !== -1) {
+      const newItems = [...saleItems];
+      newItems[emptyIndex] = newItem;
+      newItems.push(createEmptyRow());
+      setSaleItems(newItems);
+    } else {
+      setSaleItems([...saleItems, newItem, createEmptyRow()]);
+    }
+    toast.success(`Added: ${historyItem.item_name}`);
+  }, [saleItems, medicines, cosmetics]);
+
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>, rowIndex: number, colIndex: number) => {
     const item = saleItems[rowIndex];
     
@@ -998,6 +1129,21 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   const discountAmount = (subtotal * discountPercentage) / 100;
   const total = subtotal - discountAmount + tax;
 
+  // Calculate return/remaining amount
+  const returnAmount = collectedCash - total;
+  const hasChange = collectedCash > 0 && returnAmount > 0;
+  const remainingBalance = collectedCash > 0 && returnAmount < 0 ? Math.abs(returnAmount) : 0;
+
+  // Filter available items from purchase history
+  const availableHistoryItems = useMemo(() => {
+    if (!customerPurchaseHistory) return [];
+    return customerPurchaseHistory.filter(item => {
+      const allItems = item.item_type === "medicine" ? medicines : cosmetics;
+      const inventoryItem = allItems?.find((i) => i.id === item.item_id);
+      return inventoryItem && inventoryItem.quantity > 0;
+    });
+  }, [customerPurchaseHistory, medicines, cosmetics]);
+
   if (showReceipt && completedSale) {
     return (
       <Dialog open={open} onOpenChange={() => { onClose(); resetForm(); }}>
@@ -1153,6 +1299,44 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                     >
                       <Plus className="h-2.5 w-2.5 mr-0.5" />
                       {rec.medicine_name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Customer Purchase History - Show when regular customer is selected */}
+          {customerId && customerId !== "walk-in" && availableHistoryItems.length > 0 && (
+            <div className="p-3 border rounded bg-accent/5 border-accent/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <History className="h-4 w-4 text-accent" />
+                  <span className="text-sm font-medium">Last Purchased Medicines</span>
+                  <Badge variant="secondary" className="text-xs">{availableHistoryItems.length} items</Badge>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowCustomerHistory(!showCustomerHistory)}
+                  className="h-7 text-xs"
+                >
+                  {showCustomerHistory ? "Hide" : "Show"}
+                </Button>
+              </div>
+              {showCustomerHistory && (
+                <div className="flex flex-wrap gap-1.5">
+                  {availableHistoryItems.map((item, idx) => (
+                    <Badge
+                      key={idx}
+                      variant="outline"
+                      className="cursor-pointer hover:bg-accent hover:text-accent-foreground text-xs py-1 px-2 gap-1"
+                      onClick={() => addFromHistory(item)}
+                    >
+                      <Plus className="h-3 w-3" />
+                      {item.item_name}
+                      <span className="text-muted-foreground ml-1">×{item.purchase_count}</span>
                     </Badge>
                   ))}
                 </div>
@@ -1367,36 +1551,146 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
         </div>
 
         {/* Footer - Fixed */}
-        <div className="border-t bg-muted/30 px-4 py-3 space-y-2">
+        <div className="border-t bg-muted/30 px-4 py-3 space-y-3">
+          {/* Summary Row */}
           <div className="flex items-center justify-between text-sm">
             <div className="flex gap-4">
               <span>Items: <strong>{validItems.length}</strong></span>
               <span>Subtotal: <strong>{formatCurrency(subtotal)}</strong></span>
               {discountPercentage > 0 && (
-                <span className="text-green-600">Discount: <strong>-{formatCurrency(discountAmount)}</strong></span>
+                <span className="text-success">Discount: <strong>-{formatCurrency(discountAmount)}</strong></span>
               )}
               {tax > 0 && (
                 <span>Tax: <strong>+{formatCurrency(tax)}</strong></span>
               )}
             </div>
-            <div className="text-lg font-bold text-primary">
+            <div className="text-xl font-bold text-primary">
               Total: {formatCurrency(total)}
             </div>
           </div>
           
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button 
-              type="button" 
-              size="sm"
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending || validItems.length === 0 || !salesmanId}
-            >
-              {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-              Complete Sale
-            </Button>
+          {/* Payment Section */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
+            {/* Payment Type */}
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Payment Type</Label>
+              <div className="flex gap-1">
+                <Button
+                  type="button"
+                  variant={paymentType === "cash" ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1 h-9 gap-1"
+                  onClick={() => setPaymentType("cash")}
+                >
+                  <Banknote className="h-4 w-4" />
+                  Cash
+                </Button>
+                <Button
+                  type="button"
+                  variant={paymentType === "online" ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1 h-9 gap-1"
+                  onClick={() => setPaymentType("online")}
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Online
+                </Button>
+              </div>
+            </div>
+
+            {/* Online Payment Options (conditional) */}
+            {paymentType === "online" && (
+              <>
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium">Method</Label>
+                  <Select value={onlinePaymentMethod} onValueChange={setOnlinePaymentMethod}>
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue placeholder="Select method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="easypaisa">Easypaisa</SelectItem>
+                      <SelectItem value="jazzcash">JazzCash</SelectItem>
+                      <SelectItem value="bank">Bank Transfer</SelectItem>
+                      <SelectItem value="sadapay">SadaPay</SelectItem>
+                      <SelectItem value="nayapay">NayaPay</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium">Status</Label>
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      variant={transactionStatus === "completed" ? "default" : "outline"}
+                      size="sm"
+                      className={cn("flex-1 h-9 gap-1", transactionStatus === "completed" && "bg-success hover:bg-success/90")}
+                      onClick={() => setTransactionStatus("completed")}
+                    >
+                      <Check className="h-3 w-3" />
+                      Done
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={transactionStatus === "pending" ? "secondary" : "outline"}
+                      size="sm"
+                      className="flex-1 h-9 gap-1"
+                      onClick={() => setTransactionStatus("pending")}
+                    >
+                      <Clock className="h-3 w-3" />
+                      Pending
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Collected Cash */}
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Collected Cash</Label>
+              <Input
+                type="number"
+                min="0"
+                className="h-9 text-sm font-medium"
+                placeholder="0"
+                value={collectedCash || ""}
+                onChange={(e) => setCollectedCash(Number(e.target.value) || 0)}
+              />
+            </div>
+
+            {/* Return Amount Display */}
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">
+                {hasChange ? "Return to Customer" : remainingBalance > 0 ? "Remaining Balance" : "Change"}
+              </Label>
+              <div className={cn(
+                "h-9 px-3 flex items-center border rounded-md text-sm font-bold",
+                hasChange ? "bg-success/10 text-success border-success/30" : 
+                remainingBalance > 0 ? "bg-destructive/10 text-destructive border-destructive/30" : 
+                "bg-muted/50 text-muted-foreground"
+              )}>
+                {hasChange ? formatCurrency(returnAmount) : 
+                 remainingBalance > 0 ? `-${formatCurrency(remainingBalance)}` : 
+                 formatCurrency(0)}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="outline" size="sm" className="h-9" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button 
+                type="button" 
+                size="sm"
+                className="h-9"
+                onClick={() => saveMutation.mutate()}
+                disabled={saveMutation.isPending || validItems.length === 0 || !salesmanId}
+              >
+                {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                Complete Sale
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
