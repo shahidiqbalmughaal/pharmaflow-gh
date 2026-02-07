@@ -382,6 +382,17 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
     }
   }, [open]);
 
+  // Auto-scroll cart to latest added item
+  useEffect(() => {
+    if (saleItems.length > 1 && tableContainerRef.current) {
+      setTimeout(() => {
+        if (tableContainerRef.current) {
+          tableContainerRef.current.scrollTop = tableContainerRef.current.scrollHeight;
+        }
+      }, 50);
+    }
+  }, [saleItems.length]);
+
   // Apply customer discount when customer is selected
   useEffect(() => {
     if (customerId && customerId !== "walk-in") {
@@ -1345,17 +1356,32 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
           )}
 
           {/* Items Table */}
-          {/* NOTE: Outer wrapper must NOT be overflow-hidden, otherwise the item search dropdown gets clipped */}
-          <div ref={tableContainerRef} className="border rounded overflow-visible bg-background">
+          <div className="border rounded bg-background flex flex-col">
+            {/* Cart Header with item count */}
+            <div className="flex items-center justify-between px-4 py-2 bg-muted/40 border-b">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-foreground">Cart</span>
+                <Badge variant={validItems.length > 0 ? "default" : "secondary"} className="text-xs px-2 py-0.5">
+                  Items: {validItems.length}
+                </Badge>
+              </div>
+              {validItems.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  Subtotal: <strong>{formatCurrency(subtotal)}</strong>
+                </span>
+              )}
+            </div>
+            {/* NOTE: Outer wrapper must NOT be overflow-hidden on x, otherwise the item search dropdown gets clipped */}
+            <div ref={tableContainerRef} className="overflow-y-auto overflow-x-visible" style={{ maxHeight: '340px' }}>
             <table className="w-full text-base">
-              <thead className="bg-muted/50">
+              <thead className="bg-muted/50 sticky top-0 z-10">
                 <tr className="border-b">
-                  <th className="text-center px-3 py-3 font-semibold text-sm w-14">S.No</th>
-                  <th className="text-left px-3 py-3 font-semibold text-sm">Item Name</th>
-                  <th className="text-left px-3 py-3 font-semibold text-sm w-24">Qty</th>
-                  <th className="text-left px-3 py-3 font-semibold text-sm w-28">Rate</th>
-                  <th className="text-left px-3 py-3 font-semibold text-sm w-28">Total</th>
-                  <th className="text-center px-3 py-3 font-semibold text-sm w-12"></th>
+                  <th className="text-center px-3 py-3 font-bold text-sm w-14 text-foreground">S.No</th>
+                  <th className="text-left px-3 py-3 font-bold text-sm text-foreground">Item Name</th>
+                  <th className="text-center px-3 py-3 font-bold text-sm w-24 text-foreground">Qty</th>
+                  <th className="text-left px-3 py-3 font-bold text-sm w-28 text-foreground">Rate</th>
+                  <th className="text-left px-3 py-3 font-bold text-sm w-28 text-foreground">Total</th>
+                  <th className="text-center px-3 py-3 font-bold text-sm w-12"></th>
                 </tr>
               </thead>
               <tbody>
@@ -1364,10 +1390,12 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                     key={rowIndex} 
                     className={cn(
                       "border-b last:border-b-0 transition-colors",
-                      item.itemId ? "bg-background" : "bg-muted/10"
+                      activeCell.row === rowIndex 
+                        ? "bg-primary/5 ring-1 ring-inset ring-primary/20" 
+                        : item.itemId ? "bg-background" : "bg-muted/10"
                     )}
                   >
-                    <td className="px-3 py-2 text-center">
+                    <td className="px-3 py-3 text-center">
                       <span className="text-base text-muted-foreground font-medium">
                         {rowIndex + 1}
                       </span>
@@ -1539,6 +1567,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Keyboard Shortcuts Hint */}
