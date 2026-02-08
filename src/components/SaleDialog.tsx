@@ -354,20 +354,21 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
     return combined;
   }, [medicines, cosmetics]);
 
-  // Filter products based on search query - show all items when query is empty on focus
+  // Filter products based on search query - search across name, batch, company, barcode
   const filteredProducts = useMemo(() => {
     if (searchQuery.length === 0) {
-      // Show first 15 items when no search query (for immediate dropdown)
-      return allProducts.slice(0, 15);
+      return allProducts.slice(0, 20);
     }
     const lowerQuery = searchQuery.toLowerCase();
     return allProducts
       .filter((p: any) => {
         const name = String(p.displayName ?? "").toLowerCase();
         const batchNo = String(p.batch_no ?? "").toLowerCase();
-        return name.includes(lowerQuery) || batchNo.includes(lowerQuery);
+        const company = String(p.company_name ?? p.brand ?? "").toLowerCase();
+        const barcode = String(p.barcode ?? "").toLowerCase();
+        return name.includes(lowerQuery) || batchNo.includes(lowerQuery) || company.includes(lowerQuery) || barcode.includes(lowerQuery);
       })
-      .slice(0, 15);
+      .slice(0, 30);
   }, [searchQuery, allProducts]);
 
   // Auto-focus on first item input when dialog opens
@@ -1155,24 +1156,38 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
     });
   }, [customerPurchaseHistory, medicines, cosmetics]);
 
+  // Ctrl+P keyboard shortcut for printing
+  useEffect(() => {
+    if (!showReceipt || !completedSale) return;
+    const handler = (e: globalThis.KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        handlePrint();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showReceipt, completedSale, handlePrint]);
+
   if (showReceipt && completedSale) {
     return (
       <Dialog open={open} onOpenChange={() => { onClose(); resetForm(); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[95vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="px-6 py-4 border-b bg-muted/30 shrink-0">
             <DialogTitle>Sale Completed</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4">
             <SaleReceipt ref={receiptRef} {...completedSale} pharmacyInfo={pharmacySettings} />
-            <div className="flex gap-2">
-              <Button onClick={handlePrint} className="flex-1 gap-2">
-                <Printer className="h-4 w-4" />
-                Print Receipt
-              </Button>
-              <Button variant="outline" onClick={() => { onClose(); resetForm(); }} className="flex-1">
-                Close
-              </Button>
-            </div>
+          </div>
+          <div className="shrink-0 border-t bg-muted/30 px-6 py-3 flex gap-2">
+            <Button onClick={handlePrint} className="flex-1 gap-2">
+              <Printer className="h-4 w-4" />
+              Print Receipt
+              <kbd className="ml-2 px-1.5 py-0.5 bg-primary-foreground/20 rounded text-[10px]">Ctrl+P</kbd>
+            </Button>
+            <Button variant="outline" onClick={() => { onClose(); resetForm(); }} className="flex-1">
+              Close
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1451,21 +1466,34 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                             onKeyDown={(e) => handleKeyDown(e, rowIndex, 0)}
                           />
                           {showItemDropdown && activeCell.row === rowIndex && (
-                            <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-popover border rounded-md shadow-lg max-h-64 overflow-y-auto">
+                            <div className="absolute z-[100] left-0 right-0 top-full mt-1 bg-popover border rounded-md shadow-xl max-h-80 overflow-y-auto" style={{ minWidth: '500px' }}>
                               {(medicinesLoading || cosmeticsLoading) ? (
                                 <div className="px-4 py-4 text-base text-muted-foreground flex items-center gap-2">
                                   <Loader2 className="h-5 w-5 animate-spin" />
                                   Loading items...
                                 </div>
                               ) : filteredProducts.length > 0 ? (
-                              filteredProducts.map((product, productIndex) => (
+                              filteredProducts.map((product, productIndex) => {
+                                const isMed = product.type === 'medicine';
+                                const company = isMed ? (product as any).company_name : (product as any).brand;
+                                const expiryDate = (product as any).expiry_date;
+                                const expiryFormatted = expiryDate ? new Date(expiryDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A';
+                                const rackNo = (product as any).rack_no;
+                                const isHighlighted = highlightedIndex === productIndex;
+                                
+                                return (
                                   <button
                                     key={product.id}
+                                    ref={(el) => {
+                                      if (isHighlighted && el) {
+                                        el.scrollIntoView({ block: 'nearest' });
+                                      }
+                                    }}
                                     className={cn(
-                                      "w-full px-4 py-3 text-left flex items-center justify-between",
-                                      highlightedIndex === productIndex 
+                                      "w-full px-3 py-2.5 text-left flex items-center justify-between border-b last:border-b-0 transition-colors",
+                                      isHighlighted 
                                         ? "bg-primary text-primary-foreground" 
-                                        : "hover:bg-muted"
+                                        : "hover:bg-muted/60"
                                     )}
                                     onMouseDown={(e) => {
                                       e.preventDefault();
@@ -1473,29 +1501,47 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                                     }}
                                     onMouseEnter={() => setHighlightedIndex(productIndex)}
                                   >
-                                    <span className="truncate flex items-center">
+                                    <div className="flex items-start gap-2 flex-1 min-w-0">
                                       <span className={cn(
-                                        "text-sm font-bold mr-3 px-2 py-1 rounded",
-                                        highlightedIndex === productIndex
+                                        "text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 shrink-0",
+                                        isHighlighted
                                           ? "bg-primary-foreground/20 text-primary-foreground"
-                                          : product.type === 'medicine'
-                                            ? "bg-primary/10 text-primary"
-                                            : "bg-accent/10 text-accent"
+                                          : isMed
+                                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                                            : "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"
                                       )}>
-                                        {product.type === 'medicine' ? 'M' : 'C'}
+                                        {isMed ? 'MED' : 'COS'}
                                       </span>
-                                      <span className="text-base font-medium">{product.displayName}</span>
-                                    </span>
+                                      <div className="min-w-0 flex-1">
+                                        <div className={cn(
+                                          "font-bold text-sm leading-tight",
+                                          isHighlighted ? "text-primary-foreground" : "text-foreground"
+                                        )}>
+                                          {product.displayName}
+                                        </div>
+                                        <div className={cn(
+                                          "text-xs mt-0.5 flex flex-wrap gap-x-3 gap-y-0",
+                                          isHighlighted ? "text-primary-foreground/70" : "text-muted-foreground"
+                                        )}>
+                                          <span>Batch: <strong>{product.batch_no}</strong></span>
+                                          <span>Stock: <strong className={cn(
+                                            !isHighlighted && product.quantity <= 10 ? "text-destructive" : ""
+                                          )}>{product.quantity}</strong></span>
+                                          <span>Exp: <strong>{expiryFormatted}</strong></span>
+                                          {company && <span>{company}</span>}
+                                          {rackNo && <span>Rack: {rackNo}</span>}
+                                        </div>
+                                      </div>
+                                    </div>
                                     <span className={cn(
-                                      "text-sm ml-3 whitespace-nowrap",
-                                      highlightedIndex === productIndex 
-                                        ? "text-primary-foreground/80" 
-                                        : "text-muted-foreground"
+                                      "text-sm font-bold ml-3 whitespace-nowrap shrink-0",
+                                      isHighlighted ? "text-primary-foreground" : "text-foreground"
                                     )}>
-                                      {formatCurrency(Number(product.selling_price))} | Qty: {product.quantity}
+                                      {formatCurrency(Number(product.selling_price))}
                                     </span>
                                   </button>
-                                ))
+                                );
+                              })
                               ) : (
                                 <div className="px-4 py-4 text-base text-muted-foreground">
                                   {searchQuery ? `No items found for "${searchQuery}"` : "No items available in inventory"}
