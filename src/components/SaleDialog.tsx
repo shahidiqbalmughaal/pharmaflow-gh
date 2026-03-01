@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Printer, Sparkles, Loader2, X, QrCode, History, CreditCard, Banknote, Check, Clock } from "lucide-react";
+import { Plus, Trash2, Printer, Sparkles, Loader2, X, QrCode, History, CreditCard, Banknote, Check, Clock, Search } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { QRScanner } from "./QRScanner";
 import { SaleReceipt } from "./SaleReceipt";
@@ -1196,12 +1196,14 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="px-6 py-4 border-b bg-muted/30">
+      <DialogContent className="max-w-7xl h-[95vh] overflow-hidden flex flex-col p-0">
+        {/* FIXED: Header */}
+        <DialogHeader className="px-6 py-3 border-b bg-muted/30 shrink-0">
           <DialogTitle className="text-xl">New Sale</DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        {/* FIXED: Controls Row - never scrolls */}
+        <div className="shrink-0 px-6 py-3 border-b bg-background space-y-3 overflow-y-auto" style={{ maxHeight: '45vh' }}>
           {/* Header Controls - Compact */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-1.5">
@@ -1370,33 +1372,160 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
             </div>
           )}
 
-          {/* Items Table */}
-          <div className="border rounded bg-background flex flex-col">
-            {/* Cart Header with item count */}
-            <div className="flex items-center justify-between px-4 py-2 bg-muted/40 border-b">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-foreground">Cart</span>
-                <Badge variant={validItems.length > 0 ? "default" : "secondary"} className="text-xs px-2 py-0.5">
-                  Items: {validItems.length}
-                </Badge>
+          {/* FIXED: Large Search Bar - always visible */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              className="h-12 text-base pl-12 pr-4 border-2 border-primary/30 focus:border-primary rounded-lg"
+              placeholder="Search medicine or cosmetic by name, batch, or barcode…"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowItemDropdown(true);
+                setHighlightedIndex(-1);
+                const emptyIndex = saleItems.findIndex(i => !i.itemId);
+                if (emptyIndex !== -1) {
+                  setActiveCell({ row: emptyIndex, col: 0 });
+                }
+              }}
+              onFocus={() => {
+                setShowItemDropdown(true);
+                const emptyIndex = saleItems.findIndex(i => !i.itemId);
+                if (emptyIndex !== -1) {
+                  setActiveCell({ row: emptyIndex, col: 0 });
+                }
+              }}
+              onBlur={() => {
+                setTimeout(() => {
+                  setShowItemDropdown(false);
+                  setHighlightedIndex(-1);
+                }, 200);
+              }}
+              onKeyDown={(e) => {
+                const emptyIndex = saleItems.findIndex(i => !i.itemId);
+                const targetRow = emptyIndex !== -1 ? emptyIndex : saleItems.length - 1;
+                
+                if (showItemDropdown && filteredProducts.length > 0) {
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setHighlightedIndex(prev => prev < filteredProducts.length - 1 ? prev + 1 : 0);
+                    return;
+                  }
+                  if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setHighlightedIndex(prev => prev > 0 ? prev - 1 : filteredProducts.length - 1);
+                    return;
+                  }
+                  if (e.key === "Enter" && highlightedIndex >= 0) {
+                    e.preventDefault();
+                    selectProduct(filteredProducts[highlightedIndex], targetRow);
+                    setHighlightedIndex(-1);
+                    return;
+                  }
+                }
+                if (e.key === "Escape") {
+                  setShowItemDropdown(false);
+                  setSearchQuery("");
+                }
+              }}
+            />
+            {/* Search dropdown */}
+            {showItemDropdown && searchQuery.length > 0 && (
+              <div className="absolute z-[100] left-0 right-0 top-full mt-1 bg-popover border rounded-md shadow-xl max-h-72 overflow-y-auto">
+                {(medicinesLoading || cosmeticsLoading) ? (
+                  <div className="px-4 py-4 text-base text-muted-foreground flex items-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Loading items...
+                  </div>
+                ) : filteredProducts.length > 0 ? (
+                  filteredProducts.map((product, productIndex) => {
+                    const isMed = product.type === 'medicine';
+                    const company = isMed ? (product as any).company_name : (product as any).brand;
+                    const expiryDate = (product as any).expiry_date;
+                    const expiryFormatted = expiryDate ? new Date(expiryDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A';
+                    const rackNo = (product as any).rack_no;
+                    const isHighlighted = highlightedIndex === productIndex;
+                    
+                    return (
+                      <button
+                        key={product.id}
+                        ref={(el) => {
+                          if (isHighlighted && el) el.scrollIntoView({ block: 'nearest' });
+                        }}
+                        className={cn(
+                          "w-full px-3 py-2.5 text-left flex items-center justify-between border-b last:border-b-0 transition-colors",
+                          isHighlighted ? "bg-primary text-primary-foreground" : "hover:bg-muted/60"
+                        )}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          const emptyIndex = saleItems.findIndex(i => !i.itemId);
+                          const targetRow = emptyIndex !== -1 ? emptyIndex : saleItems.length - 1;
+                          selectProduct(product, targetRow);
+                        }}
+                        onMouseEnter={() => setHighlightedIndex(productIndex)}
+                      >
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <span className={cn(
+                            "text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 shrink-0",
+                            isHighlighted ? "bg-primary-foreground/20 text-primary-foreground"
+                              : isMed ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                              : "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"
+                          )}>
+                            {isMed ? 'MED' : 'COS'}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className={cn("font-bold text-sm leading-tight", isHighlighted ? "text-primary-foreground" : "text-foreground")}>
+                              {product.displayName}
+                            </div>
+                            <div className={cn("text-xs mt-0.5 flex flex-wrap gap-x-3", isHighlighted ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                              <span>Batch: <strong>{product.batch_no}</strong></span>
+                              <span>Stock: <strong className={cn(!isHighlighted && product.quantity <= 10 ? "text-destructive" : "")}>{product.quantity}</strong></span>
+                              <span>Exp: <strong>{expiryFormatted}</strong></span>
+                              {company && <span>{company}</span>}
+                              {rackNo && <span>Rack: {rackNo}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <span className={cn("text-sm font-bold ml-3 whitespace-nowrap shrink-0", isHighlighted ? "text-primary-foreground" : "text-foreground")}>
+                          {formatCurrency(Number(product.selling_price))}
+                        </span>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="px-4 py-4 text-base text-muted-foreground">
+                    No items found for "{searchQuery}"
+                  </div>
+                )}
               </div>
-              {validItems.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  Subtotal: <strong>{formatCurrency(subtotal)}</strong>
-                </span>
-              )}
+            )}
+          </div>
+        </div>
+
+        {/* SCROLLABLE: Cart items - only this section scrolls */}
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+          <div className="border-b bg-muted/40 px-4 py-2 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-foreground">Cart</span>
+              <Badge variant={validItems.length > 0 ? "default" : "secondary"} className="text-xs px-2 py-0.5">
+                Items: {validItems.length}
+              </Badge>
             </div>
-            {/* NOTE: Outer wrapper must NOT be overflow-hidden on x, otherwise the item search dropdown gets clipped */}
-            <div ref={tableContainerRef} className="overflow-y-auto overflow-x-visible" style={{ maxHeight: '340px' }}>
+            <p className="text-xs text-muted-foreground">
+              <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd>/<kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Tab</kbd> next • 
+              <kbd className="px-1 py-0.5 bg-muted rounded text-[10px] ml-1">Del</kbd> remove
+            </p>
+          </div>
+          <div ref={tableContainerRef} className="flex-1 overflow-y-auto">
             <table className="w-full text-base">
               <thead className="bg-muted/50 sticky top-0 z-10">
                 <tr className="border-b">
-                  <th className="text-center px-3 py-3 font-bold text-sm w-14 text-foreground">S.No</th>
-                  <th className="text-left px-3 py-3 font-bold text-sm text-foreground">Item Name</th>
-                  <th className="text-center px-3 py-3 font-bold text-sm w-24 text-foreground">Qty</th>
-                  <th className="text-left px-3 py-3 font-bold text-sm w-28 text-foreground">Rate</th>
-                  <th className="text-left px-3 py-3 font-bold text-sm w-28 text-foreground">Total</th>
-                  <th className="text-center px-3 py-3 font-bold text-sm w-12"></th>
+                  <th className="text-center px-3 py-2.5 font-bold text-sm w-14 text-foreground">S.No</th>
+                  <th className="text-left px-3 py-2.5 font-bold text-sm text-foreground">Item Name</th>
+                  <th className="text-center px-3 py-2.5 font-bold text-sm w-24 text-foreground">Qty</th>
+                  <th className="text-left px-3 py-2.5 font-bold text-sm w-28 text-foreground">Rate</th>
+                  <th className="text-left px-3 py-2.5 font-bold text-sm w-28 text-foreground">Total</th>
+                  <th className="text-center px-3 py-2.5 font-bold text-sm w-12"></th>
                 </tr>
               </thead>
               <tbody>
@@ -1410,10 +1539,8 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                         : item.itemId ? "bg-background" : "bg-muted/10"
                     )}
                   >
-                    <td className="px-3 py-3 text-center">
-                      <span className="text-base text-muted-foreground font-medium">
-                        {rowIndex + 1}
-                      </span>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className="text-base text-muted-foreground font-medium">{rowIndex + 1}</span>
                     </td>
                     <td className="px-2 py-2 relative">
                       {item.itemId ? (
@@ -1425,10 +1552,6 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                               const newItems = [...saleItems];
                               newItems[rowIndex] = { ...createEmptyRow(), itemType: item.itemType };
                               setSaleItems(newItems);
-                              setTimeout(() => {
-                                const input = itemInputRefs.current[rowIndex]?.[0];
-                                if (input) input.focus();
-                              }, 50);
                             }}
                             className="text-muted-foreground hover:text-foreground ml-1"
                           >
@@ -1436,128 +1559,23 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                           </button>
                         </div>
                       ) : (
-                        <div className="relative">
-                          <Input
+                        <div className="h-10 flex items-center px-3 text-muted-foreground text-sm italic">
+                          Use search bar above to add items
+                          <input
                             ref={(el) => {
-                              if (!itemInputRefs.current[rowIndex]) {
-                                itemInputRefs.current[rowIndex] = [];
-                              }
-                              itemInputRefs.current[rowIndex][0] = el;
+                              if (!itemInputRefs.current[rowIndex]) itemInputRefs.current[rowIndex] = [];
+                              itemInputRefs.current[rowIndex][0] = el as any;
                             }}
-                            className="h-10 text-base border-0 shadow-none focus:ring-1"
-                            placeholder="Search item..."
-                            value={activeCell.row === rowIndex ? searchQuery : ""}
-                            onChange={(e) => {
-                              setSearchQuery(e.target.value);
-                              setShowItemDropdown(true);
-                              setHighlightedIndex(-1); // Reset highlight on search change
-                            }}
-                            onFocus={() => {
-                              setActiveCell({ row: rowIndex, col: 0 });
-                              setShowItemDropdown(true); // Show dropdown immediately on focus
-                              setHighlightedIndex(-1); // Reset highlight
-                            }}
-                            onBlur={() => {
-                              setTimeout(() => {
-                                setShowItemDropdown(false);
-                                setHighlightedIndex(-1);
-                              }, 200);
-                            }}
-                            onKeyDown={(e) => handleKeyDown(e, rowIndex, 0)}
+                            className="sr-only"
+                            tabIndex={-1}
                           />
-                          {showItemDropdown && activeCell.row === rowIndex && (
-                            <div className="absolute z-[100] left-0 right-0 top-full mt-1 bg-popover border rounded-md shadow-xl max-h-80 overflow-y-auto" style={{ minWidth: '500px' }}>
-                              {(medicinesLoading || cosmeticsLoading) ? (
-                                <div className="px-4 py-4 text-base text-muted-foreground flex items-center gap-2">
-                                  <Loader2 className="h-5 w-5 animate-spin" />
-                                  Loading items...
-                                </div>
-                              ) : filteredProducts.length > 0 ? (
-                              filteredProducts.map((product, productIndex) => {
-                                const isMed = product.type === 'medicine';
-                                const company = isMed ? (product as any).company_name : (product as any).brand;
-                                const expiryDate = (product as any).expiry_date;
-                                const expiryFormatted = expiryDate ? new Date(expiryDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A';
-                                const rackNo = (product as any).rack_no;
-                                const isHighlighted = highlightedIndex === productIndex;
-                                
-                                return (
-                                  <button
-                                    key={product.id}
-                                    ref={(el) => {
-                                      if (isHighlighted && el) {
-                                        el.scrollIntoView({ block: 'nearest' });
-                                      }
-                                    }}
-                                    className={cn(
-                                      "w-full px-3 py-2.5 text-left flex items-center justify-between border-b last:border-b-0 transition-colors",
-                                      isHighlighted 
-                                        ? "bg-primary text-primary-foreground" 
-                                        : "hover:bg-muted/60"
-                                    )}
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      selectProduct(product, rowIndex);
-                                    }}
-                                    onMouseEnter={() => setHighlightedIndex(productIndex)}
-                                  >
-                                    <div className="flex items-start gap-2 flex-1 min-w-0">
-                                      <span className={cn(
-                                        "text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 shrink-0",
-                                        isHighlighted
-                                          ? "bg-primary-foreground/20 text-primary-foreground"
-                                          : isMed
-                                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                                            : "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"
-                                      )}>
-                                        {isMed ? 'MED' : 'COS'}
-                                      </span>
-                                      <div className="min-w-0 flex-1">
-                                        <div className={cn(
-                                          "font-bold text-sm leading-tight",
-                                          isHighlighted ? "text-primary-foreground" : "text-foreground"
-                                        )}>
-                                          {product.displayName}
-                                        </div>
-                                        <div className={cn(
-                                          "text-xs mt-0.5 flex flex-wrap gap-x-3 gap-y-0",
-                                          isHighlighted ? "text-primary-foreground/70" : "text-muted-foreground"
-                                        )}>
-                                          <span>Batch: <strong>{product.batch_no}</strong></span>
-                                          <span>Stock: <strong className={cn(
-                                            !isHighlighted && product.quantity <= 10 ? "text-destructive" : ""
-                                          )}>{product.quantity}</strong></span>
-                                          <span>Exp: <strong>{expiryFormatted}</strong></span>
-                                          {company && <span>{company}</span>}
-                                          {rackNo && <span>Rack: {rackNo}</span>}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <span className={cn(
-                                      "text-sm font-bold ml-3 whitespace-nowrap shrink-0",
-                                      isHighlighted ? "text-primary-foreground" : "text-foreground"
-                                    )}>
-                                      {formatCurrency(Number(product.selling_price))}
-                                    </span>
-                                  </button>
-                                );
-                              })
-                              ) : (
-                                <div className="px-4 py-4 text-base text-muted-foreground">
-                                  {searchQuery ? `No items found for "${searchQuery}"` : "No items available in inventory"}
-                                </div>
-                              )}
-                            </div>
-                          )}
                         </div>
                       )}
                     </td>
                     <td className="px-2 py-2">
                       <Input
                         ref={(el) => {
-                          if (!itemInputRefs.current[rowIndex]) {
-                            itemInputRefs.current[rowIndex] = [];
-                          }
+                          if (!itemInputRefs.current[rowIndex]) itemInputRefs.current[rowIndex] = [];
                           itemInputRefs.current[rowIndex][1] = el;
                         }}
                         type="number"
@@ -1573,9 +1591,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                     <td className="px-2 py-2">
                       <Input
                         ref={(el) => {
-                          if (!itemInputRefs.current[rowIndex]) {
-                            itemInputRefs.current[rowIndex] = [];
-                          }
+                          if (!itemInputRefs.current[rowIndex]) itemInputRefs.current[rowIndex] = [];
                           itemInputRefs.current[rowIndex][2] = el;
                         }}
                         type="number"
@@ -1590,19 +1606,12 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <span className={cn(
-                        "font-semibold text-base",
-                        item.itemId ? "text-foreground" : "text-muted-foreground"
-                      )}>
+                      <span className={cn("font-semibold text-base", item.itemId ? "text-foreground" : "text-muted-foreground")}>
                         {item.itemId ? formatCurrency(item.totalPrice) : "-"}
                       </span>
                     </td>
                     <td className="px-2 py-2 text-center">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8"
                         onClick={() => removeItem(rowIndex)}
                         disabled={saleItems.length === 1 && !item.itemId}
                       >
@@ -1611,18 +1620,20 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                     </td>
                   </tr>
                 ))}
+                {validItems.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="text-center py-12 text-muted-foreground">
+                      <div className="flex flex-col items-center gap-2">
+                        <Search className="h-8 w-8 text-muted-foreground/40" />
+                        <span>Cart is empty</span>
+                        <span className="text-xs">Search and add items above</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
-            </div>
           </div>
-
-          {/* Keyboard Shortcuts Hint */}
-          <p className="text-sm text-muted-foreground">
-            <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">Enter</kbd>/<kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">Tab</kbd> next field • 
-            <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs ml-1">↑↓</kbd> navigate dropdown/rows • 
-            <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs ml-1">Del</kbd> remove row • 
-            <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs ml-1">Esc</kbd> close/clear
-          </p>
         </div>
 
         {/* Footer - Fixed */}
