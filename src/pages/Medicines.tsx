@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Plus, Search, Pencil, Trash2, AlertTriangle, Camera, FileText, 
-  Download, Printer, ChevronDown, ChevronUp, MoreVertical, X
+  Download, Printer, ChevronDown, ChevronUp, MoreVertical, X, Filter, Replace, RotateCcw
 } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { getSellingTypeLabel, getQuantityUnit } from "@/lib/medicineTypes";
@@ -21,11 +21,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { MedicineDialog } from "@/components/MedicineDialog";
 import { ImageInventoryDialog } from "@/components/ImageInventoryDialog";
 import { InvoiceInventoryDialog } from "@/components/InvoiceInventoryDialog";
 import { BulkActionsDialog } from "@/components/BulkActionsDialog";
+import { FindReplaceDialog } from "@/components/FindReplaceDialog";
 import { MedicineCard } from "@/components/MedicineCard";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -55,7 +63,15 @@ const Medicines = () => {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [bulkActionType, setBulkActionType] = useState<"delete" | "selling_price" | "rack_no" | "expiry_date" | null>(null);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [findReplaceOpen, setFindReplaceOpen] = useState(false);
   
+  // Filter state
+  const [filterCompany, setFilterCompany] = useState("all");
+  const [filterSupplier, setFilterSupplier] = useState("all");
+  const [filterRack, setFilterRack] = useState("all");
+  const [filterSellingType, setFilterSellingType] = useState("all");
+  const [filterStockStatus, setFilterStockStatus] = useState("all");
   const queryClient = useQueryClient();
   const { settings: pharmacySettings } = usePharmacySettings();
   const isMobile = useIsMobile();
@@ -153,13 +169,45 @@ const Medicines = () => {
     return groupMedicinesByName(medicines);
   }, [medicines]);
 
-  // Use global search results when searching, otherwise use paginated medicines
+  // Extract unique filter values from all medicines
+  const filterOptions = useMemo(() => {
+    const allMeds = medicines ?? [];
+    const companies = [...new Set(allMeds.map(m => m.company_name).filter(Boolean))].sort();
+    const suppliers = [...new Set(allMeds.map(m => m.supplier).filter(Boolean))].sort();
+    const racks = [...new Set(allMeds.map(m => m.rack_no).filter(Boolean))].sort();
+    const types = [...new Set(allMeds.map(m => (m as any).selling_type || "per_tablet").filter(Boolean))].sort();
+    return { companies, suppliers, racks, types };
+  }, [medicines]);
+
+  const hasActiveFilters = filterCompany !== "all" || filterSupplier !== "all" || filterRack !== "all" || filterSellingType !== "all" || filterStockStatus !== "all";
+
+  const resetFilters = () => {
+    setFilterCompany("all");
+    setFilterSupplier("all");
+    setFilterRack("all");
+    setFilterSellingType("all");
+    setFilterStockStatus("all");
+  };
+
+  // Use global search results when searching, otherwise use paginated medicines, then apply filters
   const displayMedicines = useMemo(() => {
-    if (isSearching && searchResults.length > 0) {
-      return searchResults;
+    let result = isSearching && searchResults.length > 0 ? searchResults : (medicines ?? []);
+    
+    if (filterCompany !== "all") result = result.filter(m => m.company_name === filterCompany);
+    if (filterSupplier !== "all") result = result.filter(m => m.supplier === filterSupplier);
+    if (filterRack !== "all") result = result.filter(m => m.rack_no === filterRack);
+    if (filterSellingType !== "all") result = result.filter(m => ((m as any).selling_type || "per_tablet") === filterSellingType);
+    if (filterStockStatus !== "all") {
+      result = result.filter(m => {
+        if (filterStockStatus === "low") return m.quantity > 0 && m.quantity <= LOW_STOCK_THRESHOLD;
+        if (filterStockStatus === "out") return m.quantity === 0;
+        if (filterStockStatus === "expiring") return !isExpired(m.expiry_date) && isExpiringWithinDays(m.expiry_date, 60);
+        return true;
+      });
     }
-    return medicines ?? [];
-  }, [isSearching, searchResults, medicines]);
+    
+    return result;
+  }, [isSearching, searchResults, medicines, filterCompany, filterSupplier, filterRack, filterSellingType, filterStockStatus]);
 
   // Get unique medicine names from displayed results
   const uniqueFilteredNames = useMemo(() => {
@@ -476,7 +524,7 @@ const Medicines = () => {
       </div>
 
       <div className="flex items-center gap-4 flex-wrap">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search all inventory..."
@@ -496,6 +544,27 @@ const Medicines = () => {
           )}
         </div>
         
+        <Button
+          variant={showFilters ? "secondary" : "outline"}
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+          className="gap-2"
+        >
+          <Filter className="h-4 w-4" />
+          Filters
+          {hasActiveFilters && <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4">{[filterCompany, filterSupplier, filterRack, filterSellingType, filterStockStatus].filter(v => v !== "all").length}</Badge>}
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setFindReplaceOpen(true)}
+          className="gap-2"
+        >
+          <Replace className="h-4 w-4" />
+          Find & Replace
+        </Button>
+
         {isSearching && (
           <Badge variant="secondary" className="text-sm">
             {isSearchLoading ? "Searching..." : `${resultCount} results`}
@@ -530,6 +599,95 @@ const Medicines = () => {
           </div>
         )}
       </div>
+
+      {/* Filter Panel */}
+      {showFilters && (
+        <div className="bg-card rounded-lg border p-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Company</span>
+              <Select value={filterCompany} onValueChange={setFilterCompany}>
+                <SelectTrigger className="h-9 w-[180px] text-sm">
+                  <SelectValue placeholder="All Companies" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Companies</SelectItem>
+                  {filterOptions.companies.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Supplier</span>
+              <Select value={filterSupplier} onValueChange={setFilterSupplier}>
+                <SelectTrigger className="h-9 w-[180px] text-sm">
+                  <SelectValue placeholder="All Suppliers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Suppliers</SelectItem>
+                  {filterOptions.suppliers.map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Rack</span>
+              <Select value={filterRack} onValueChange={setFilterRack}>
+                <SelectTrigger className="h-9 w-[120px] text-sm">
+                  <SelectValue placeholder="All Racks" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Racks</SelectItem>
+                  {filterOptions.racks.map(r => (
+                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Selling Type</span>
+              <Select value={filterSellingType} onValueChange={setFilterSellingType}>
+                <SelectTrigger className="h-9 w-[140px] text-sm">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {filterOptions.types.map(t => (
+                    <SelectItem key={t} value={t}>{getSellingTypeLabel(t)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Stock Status</span>
+              <Select value={filterStockStatus} onValueChange={setFilterStockStatus}>
+                <SelectTrigger className="h-9 w-[140px] text-sm">
+                  <SelectValue placeholder="All Stock" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Stock</SelectItem>
+                  <SelectItem value="low">Low Stock</SelectItem>
+                  <SelectItem value="out">Out of Stock</SelectItem>
+                  <SelectItem value="expiring">Expiring Soon</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={resetFilters} className="gap-1.5 text-destructive hover:text-destructive">
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reset
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="bg-card rounded-lg border">
         <div className="overflow-auto max-h-[calc(100vh-280px)]">
@@ -750,6 +908,11 @@ const Medicines = () => {
         selectedCount={selectedIds.size}
         onConfirm={handleBulkAction}
         isLoading={bulkActionLoading}
+      />
+
+      <FindReplaceDialog
+        open={findReplaceOpen}
+        onClose={() => setFindReplaceOpen(false)}
       />
     </div>
   );
