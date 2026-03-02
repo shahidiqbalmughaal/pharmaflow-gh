@@ -1,0 +1,1 @@
+CREATE POLICY "Allow public read access to medicines" ON public.medicines FOR SELECT USING (true);
