@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ export const PharmacySettingsCard = () => {
   const { settings, isLoading, saveSettings, isSaving } = usePharmacySettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [logoDisplayUrl, setLogoDisplayUrl] = useState<string>("");
   
   const [formData, setFormData] = useState({
     pharmacy_name: "",
@@ -32,6 +33,30 @@ export const PharmacySettingsCard = () => {
       });
     }
   }, [settings]);
+
+  // Generate a display URL for the logo (signed URL for file paths, direct for full URLs)
+  useEffect(() => {
+    const generateDisplayUrl = async () => {
+      const logoValue = formData.pharmacy_logo_url;
+      if (!logoValue) {
+        setLogoDisplayUrl("");
+        return;
+      }
+      // If it's already a signed/full URL, use directly
+      if (logoValue.startsWith('http')) {
+        setLogoDisplayUrl(logoValue);
+        return;
+      }
+      // It's a file path - generate signed URL
+      const { data } = await supabase.storage
+        .from('pharmacy-logos')
+        .createSignedUrl(logoValue, 3600);
+      if (data?.signedUrl) {
+        setLogoDisplayUrl(data.signedUrl);
+      }
+    };
+    generateDisplayUrl();
+  }, [formData.pharmacy_logo_url]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,12 +104,8 @@ export const PharmacySettingsCard = () => {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('pharmacy-logos')
-        .getPublicUrl(fileName);
-
-      setFormData(prev => ({ ...prev, pharmacy_logo_url: publicUrl }));
+      // Store the file path (not public URL) - signed URLs will be generated on display
+      setFormData(prev => ({ ...prev, pharmacy_logo_url: fileName }));
       toast.success("Logo uploaded successfully");
     } catch (error) {
       console.error("Error uploading logo:", error);
@@ -135,10 +156,10 @@ export const PharmacySettingsCard = () => {
           <div className="space-y-2">
             <Label>Pharmacy Logo</Label>
             <div className="flex items-center gap-4">
-              {formData.pharmacy_logo_url ? (
+              {logoDisplayUrl ? (
                 <div className="relative">
                   <img
-                    src={formData.pharmacy_logo_url}
+                    src={logoDisplayUrl}
                     alt="Pharmacy Logo"
                     className="h-20 w-20 object-contain border rounded-lg p-1 bg-white"
                   />
@@ -236,9 +257,9 @@ export const PharmacySettingsCard = () => {
           <div className="mt-6 p-4 bg-muted rounded-lg">
             <p className="text-xs text-muted-foreground mb-2 font-medium">Receipt Preview:</p>
             <div className="text-center bg-white p-3 rounded border">
-              {formData.pharmacy_logo_url && (
+              {logoDisplayUrl && (
                 <img
-                  src={formData.pharmacy_logo_url}
+                  src={logoDisplayUrl}
                   alt="Logo Preview"
                   className="h-12 w-auto mx-auto mb-2"
                 />
