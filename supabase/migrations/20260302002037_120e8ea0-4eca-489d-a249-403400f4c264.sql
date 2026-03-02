@@ -1,0 +1,1 @@
+CREATE POLICY "Allow public read access to cosmetics" ON public.cosmetics FOR SELECT USING (true);
