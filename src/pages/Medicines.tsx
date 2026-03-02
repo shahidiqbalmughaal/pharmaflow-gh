@@ -286,33 +286,85 @@ const Medicines = () => {
     }
   };
 
-  const handleExportExcel = () => {
-    if (!displayMedicines.length) return;
-    // Use enhanced medicine inventory export with professional formatting
-    exportMedicineInventoryToExcel(displayMedicines, "medicines-inventory", LOW_STOCK_THRESHOLD);
-    toast.success("Excel export started");
+  const fetchAllMedicines = async () => {
+    const allMedicines: any[] = [];
+    const batchSize = 1000;
+    let from = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from("medicines")
+        .select("*")
+        .order("medicine_name")
+        .range(from, from + batchSize - 1);
+      if (error) throw error;
+      if (data && data.length > 0) {
+        allMedicines.push(...data);
+        from += batchSize;
+        hasMore = data.length === batchSize;
+      } else {
+        hasMore = false;
+      }
+    }
+    return allMedicines;
   };
 
-  const handleExportPDF = () => {
-    if (!displayMedicines.length) return;
-    const exportData = displayMedicines.map(m => ({
-      "Name": m.medicine_name,
-      "Batch": m.batch_no,
-      "Qty": m.quantity,
-      "Rack": m.rack_no,
-      "Price": formatCurrency(Number(m.selling_price)),
-      "Expiry": m.expiry_date ? format(new Date(m.expiry_date), "MMM dd, yyyy") : "N/A",
-    }));
-    exportToPDF(exportData, "Medicines Inventory", "medicines-inventory");
+  const handleExportExcel = async () => {
+    toast.info("Fetching complete inventory...");
+    try {
+      const allMedicines = await fetchAllMedicines();
+      if (!allMedicines.length) {
+        toast.error("No medicines found to export");
+        return;
+      }
+      await exportMedicineInventoryToExcel(allMedicines, "medicines-complete-inventory", LOW_STOCK_THRESHOLD);
+      toast.success(`Exported ${allMedicines.length} medicines successfully`);
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.error("Failed to export inventory");
+    }
   };
 
-  const handlePrintStockList = () => {
-    if (!displayMedicines.length) return;
-    printStockList(
-      displayMedicines,
-      pharmacySettings?.pharmacy_name || "Pharmacy",
-      "Stock List"
-    );
+  const handleExportPDF = async () => {
+    toast.info("Fetching complete inventory...");
+    try {
+      const allMedicines = await fetchAllMedicines();
+      if (!allMedicines.length) {
+        toast.error("No medicines found to export");
+        return;
+      }
+      const exportData = allMedicines.map(m => ({
+        "Name": m.medicine_name,
+        "Batch": m.batch_no,
+        "Qty": m.quantity,
+        "Rack": m.rack_no,
+        "Price": formatCurrency(Number(m.selling_price)),
+        "Expiry": m.expiry_date ? format(new Date(m.expiry_date), "MMM dd, yyyy") : "N/A",
+      }));
+      exportToPDF(exportData, "Medicines Inventory", "medicines-complete-inventory");
+    } catch (error) {
+      console.error("PDF export failed:", error);
+      toast.error("Failed to export inventory");
+    }
+  };
+
+  const handlePrintStockList = async () => {
+    toast.info("Fetching complete inventory...");
+    try {
+      const allMedicines = await fetchAllMedicines();
+      if (!allMedicines.length) {
+        toast.error("No medicines found to print");
+        return;
+      }
+      printStockList(
+        allMedicines,
+        pharmacySettings?.pharmacy_name || "Pharmacy",
+        "Stock List"
+      );
+    } catch (error) {
+      console.error("Print failed:", error);
+      toast.error("Failed to print stock list");
+    }
   };
 
   const getRowClassName = (medicine: any) => {
