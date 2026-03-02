@@ -48,7 +48,30 @@ export const usePharmacySettings = () => {
         return DEFAULT_SETTINGS;
       }
 
-      return data || DEFAULT_SETTINGS;
+      if (!data) return DEFAULT_SETTINGS;
+
+      // Generate signed URL for logo if it's a file path (not already a full URL)
+      if (data.pharmacy_logo_url && !data.pharmacy_logo_url.startsWith('http')) {
+        const { data: signedUrlData } = await supabase.storage
+          .from('pharmacy-logos')
+          .createSignedUrl(data.pharmacy_logo_url, 3600); // 1 hour expiry
+        if (signedUrlData?.signedUrl) {
+          data.pharmacy_logo_url = signedUrlData.signedUrl;
+        }
+      } else if (data.pharmacy_logo_url && data.pharmacy_logo_url.includes('/pharmacy-logos/')) {
+        // Legacy: extract path from old public URL and generate signed URL
+        const pathMatch = data.pharmacy_logo_url.match(/\/pharmacy-logos\/(.+)$/);
+        if (pathMatch) {
+          const { data: signedUrlData } = await supabase.storage
+            .from('pharmacy-logos')
+            .createSignedUrl(pathMatch[1], 3600);
+          if (signedUrlData?.signedUrl) {
+            data.pharmacy_logo_url = signedUrlData.signedUrl;
+          }
+        }
+      }
+
+      return data;
     },
   });
 
