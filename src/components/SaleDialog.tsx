@@ -1196,14 +1196,14 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl h-[95vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="max-w-7xl h-[95vh] flex flex-col p-0" style={{ overflow: 'visible' }}>
         {/* FIXED: Header */}
         <DialogHeader className="px-6 py-3 border-b bg-muted/30 shrink-0">
           <DialogTitle className="text-xl">New Sale</DialogTitle>
         </DialogHeader>
         
         {/* FIXED: Controls Row - never scrolls */}
-        <div className="shrink-0 px-6 py-3 border-b bg-background space-y-3 overflow-y-auto" style={{ maxHeight: '45vh' }}>
+        <div className="shrink-0 px-6 py-3 border-b bg-background space-y-3 overflow-visible" style={{ maxHeight: '45vh' }}>
           {/* Header Controls - Compact */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
