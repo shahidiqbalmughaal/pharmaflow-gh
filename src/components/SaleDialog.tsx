@@ -1205,7 +1205,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
         {/* FIXED: Controls Row - never scrolls */}
         <div className="shrink-0 px-6 py-3 border-b bg-background space-y-3 overflow-y-auto" style={{ maxHeight: '45vh' }}>
           {/* Header Controls - Compact */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">Salesman *</Label>
               {autoSelectedSalesman ? (
@@ -1239,29 +1239,6 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Discount %</Label>
-              <Input
-                type="number"
-                className="h-9 text-sm"
-                min="0"
-                max="100"
-                value={discountPercentage}
-                onChange={(e) => setDiscountPercentage(Math.min(100, Math.max(0, Number(e.target.value))))}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Tax</Label>
-              <Input
-                type="number"
-                className="h-9 text-sm"
-                min="0"
-                value={tax}
-                onChange={(e) => setTax(Number(e.target.value))}
-              />
             </div>
           </div>
 
@@ -1381,7 +1358,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
-                setShowItemDropdown(true);
+              setShowItemDropdown(searchQuery.length > 0 || e.target.value.length > 0);
                 setHighlightedIndex(-1);
                 const emptyIndex = saleItems.findIndex(i => !i.itemId);
                 if (emptyIndex !== -1) {
@@ -1430,7 +1407,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
               }}
             />
             {/* Search dropdown */}
-            {showItemDropdown && searchQuery.length > 0 && (
+            {showItemDropdown && (
               <div className="absolute z-[100] left-0 right-0 top-full mt-1 bg-popover border rounded-md shadow-xl max-h-72 overflow-y-auto">
                 {(medicinesLoading || cosmeticsLoading) ? (
                   <div className="px-4 py-4 text-base text-muted-foreground flex items-center gap-2">
@@ -1517,15 +1494,15 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
             </p>
           </div>
           <div ref={tableContainerRef} className="flex-1 overflow-y-auto">
-            <table className="w-full text-base">
-              <thead className="bg-muted/50 sticky top-0 z-10">
-                <tr className="border-b">
-                  <th className="text-center px-3 py-2.5 font-bold text-sm w-14 text-foreground">S.No</th>
-                  <th className="text-left px-3 py-2.5 font-bold text-sm text-foreground">Item Name</th>
-                  <th className="text-center px-3 py-2.5 font-bold text-sm w-24 text-foreground">Qty</th>
-                  <th className="text-left px-3 py-2.5 font-bold text-sm w-28 text-foreground">Rate</th>
-                  <th className="text-left px-3 py-2.5 font-bold text-sm w-28 text-foreground">Total</th>
-                  <th className="text-center px-3 py-2.5 font-bold text-sm w-12"></th>
+            <table className="w-full text-base border-separate border-spacing-0">
+              <thead className="bg-muted/60 sticky top-0 z-10">
+                <tr className="border-b-2 border-border">
+                  <th className="text-center px-3 py-3 font-bold text-sm w-14 text-foreground">S.No</th>
+                  <th className="text-left px-3 py-3 font-bold text-sm text-foreground">Item Name</th>
+                  <th className="text-center px-3 py-3 font-bold text-sm w-24 text-foreground">Qty</th>
+                  <th className="text-left px-3 py-3 font-bold text-sm w-28 text-foreground">Rate</th>
+                  <th className="text-right px-3 py-3 font-bold text-sm w-32 text-foreground">Total</th>
+                  <th className="text-center px-3 py-3 font-bold text-sm w-12"></th>
                 </tr>
               </thead>
               <tbody>
@@ -1535,18 +1512,18 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                     className={cn(
                       "border-b last:border-b-0 transition-colors",
                       activeCell.row === rowIndex 
-                        ? "bg-primary/5 ring-1 ring-inset ring-primary/20" 
-                        : item.itemId ? "bg-background" : "bg-muted/10"
+                        ? "bg-primary/10 ring-2 ring-inset ring-primary/30" 
+                        : item.itemId ? "bg-background hover:bg-muted/20" : "bg-muted/10"
                     )}
                   >
-                    <td className="px-3 py-2.5 text-center">
-                      <span className="text-base text-muted-foreground font-medium">{rowIndex + 1}</span>
+                    <td className="px-3 py-3 text-center">
+                      <span className="text-base text-foreground font-bold">{rowIndex + 1}</span>
                     </td>
-                    <td className="px-2 py-2 relative">
+                    <td className="px-2 py-2.5 relative">
                       {item.itemId ? (
-                        <div className="flex items-center gap-2 px-3 h-10 bg-muted/30 rounded">
-                          <span className="truncate flex-1 text-base font-medium">{item.itemName}</span>
-                          <span className="text-sm text-muted-foreground">({item.batchNo})</span>
+                        <div className="flex items-center gap-2 px-3 h-11 bg-accent/10 border border-accent/20 rounded-md">
+                          <span className="truncate flex-1 text-base font-semibold text-foreground">{item.itemName}</span>
+                          <span className="text-xs text-muted-foreground font-medium">({item.batchNo})</span>
                           <button
                             onClick={() => {
                               const newItems = [...saleItems];
@@ -1572,7 +1549,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                         </div>
                       )}
                     </td>
-                    <td className="px-2 py-2">
+                    <td className="px-2 py-2.5">
                       <Input
                         ref={(el) => {
                           if (!itemInputRefs.current[rowIndex]) itemInputRefs.current[rowIndex] = [];
@@ -1580,7 +1557,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                         }}
                         type="number"
                         min="1"
-                        className="h-10 text-base border-0 shadow-none focus:ring-1 text-center font-medium"
+                        className="h-11 text-base border-0 shadow-none focus:ring-2 focus:ring-primary/30 text-center font-semibold"
                         value={item.quantity}
                         onChange={(e) => updateItemField(rowIndex, "quantity", e.target.value)}
                         onFocus={() => setActiveCell({ row: rowIndex, col: 1 })}
@@ -1588,7 +1565,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                         disabled={!item.itemId}
                       />
                     </td>
-                    <td className="px-2 py-2">
+                    <td className="px-2 py-2.5">
                       <Input
                         ref={(el) => {
                           if (!itemInputRefs.current[rowIndex]) itemInputRefs.current[rowIndex] = [];
@@ -1597,7 +1574,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                         type="number"
                         min="0"
                         step="0.01"
-                        className="h-10 text-base border-0 shadow-none focus:ring-1 font-medium"
+                        className="h-11 text-base border-0 shadow-none focus:ring-2 focus:ring-primary/30 font-semibold"
                         value={item.unitPrice || ""}
                         onChange={(e) => updateItemField(rowIndex, "unitPrice", e.target.value)}
                         onFocus={() => setActiveCell({ row: rowIndex, col: 2 })}
@@ -1605,12 +1582,12 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                         disabled={!item.itemId}
                       />
                     </td>
-                    <td className="px-3 py-2">
-                      <span className={cn("font-semibold text-base", item.itemId ? "text-foreground" : "text-muted-foreground")}>
+                    <td className="px-3 py-2.5 text-right">
+                      <span className={cn("font-bold text-base", item.itemId ? "text-foreground" : "text-muted-foreground")}>
                         {item.itemId ? formatCurrency(item.totalPrice) : "-"}
                       </span>
                     </td>
-                    <td className="px-2 py-2 text-center">
+                    <td className="px-2 py-2.5 text-center">
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8"
                         onClick={() => removeItem(rowIndex)}
                         disabled={saleItems.length === 1 && !item.itemId}
@@ -1656,7 +1633,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
           </div>
           
           {/* Payment Section */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
+          <div className="grid grid-cols-2 md:grid-cols-8 gap-3 items-end">
             {/* Payment Type */}
             <div className="space-y-1">
               <Label className="text-xs font-medium">Payment Type</Label>
@@ -1730,6 +1707,31 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                 </div>
               </>
             )}
+
+            {/* Discount % */}
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Discount %</Label>
+              <Input
+                type="number"
+                className="h-9 text-sm font-medium"
+                min="0"
+                max="100"
+                value={discountPercentage}
+                onChange={(e) => setDiscountPercentage(Math.min(100, Math.max(0, Number(e.target.value))))}
+              />
+            </div>
+
+            {/* Tax */}
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Tax</Label>
+              <Input
+                type="number"
+                className="h-9 text-sm font-medium"
+                min="0"
+                value={tax}
+                onChange={(e) => setTax(Number(e.target.value))}
+              />
+            </div>
 
             {/* Collected Cash */}
             <div className="space-y-1">
