@@ -338,19 +338,32 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
   });
 
   // Combine all products for search - memoized to prevent unnecessary recalculations
+  // Filter out expired items dynamically based on today's date
   const allProducts = useMemo(() => {
-    const medicineProducts = (medicines || []).map(m => ({ 
-      ...m, 
-      type: 'medicine' as const, 
-      displayName: m.medicine_name 
-    }));
-    const cosmeticProducts = (cosmetics || []).map(c => ({ 
-      ...c, 
-      type: 'cosmetic' as const, 
-      displayName: c.product_name 
-    }));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const isNotExpired = (expiryDate: string | null) => {
+      if (!expiryDate) return true; // No expiry = always valid
+      return new Date(expiryDate) >= today;
+    };
+    
+    const medicineProducts = (medicines || [])
+      .filter(m => isNotExpired(m.expiry_date))
+      .map(m => ({ 
+        ...m, 
+        type: 'medicine' as const, 
+        displayName: m.medicine_name 
+      }));
+    const cosmeticProducts = (cosmetics || [])
+      .filter(c => isNotExpired(c.expiry_date))
+      .map(c => ({ 
+        ...c, 
+        type: 'cosmetic' as const, 
+        displayName: c.product_name 
+      }));
     const combined = [...medicineProducts, ...cosmeticProducts];
-    console.log("All products available for search:", combined.length);
+    console.log("All products available for search (excluding expired):", combined.length);
     return combined;
   }, [medicines, cosmetics]);
 

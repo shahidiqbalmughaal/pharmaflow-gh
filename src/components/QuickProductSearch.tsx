@@ -53,13 +53,16 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
       
       const results: Product[] = [];
 
-      // Search medicines
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+      // Search medicines - exclude expired items
       if (searchType === 'all' || searchType === 'medicine') {
         const { data: medicines, error: medError } = await supabase
           .from('medicines')
           .select('id, medicine_name, batch_no, company_name, quantity, selling_price, purchase_price, rack_no, expiry_date, selling_type, tablets_per_packet, price_per_packet')
           .or(`medicine_name.ilike.%${searchTerm}%,batch_no.ilike.%${searchTerm}%`)
           .gt('quantity', 0)
+          .or(`expiry_date.gte.${today},expiry_date.is.null`)
           .order('medicine_name')
           .limit(searchType === 'all' ? 5 : 8);
         
@@ -68,13 +71,14 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
         }
       }
 
-      // Search cosmetics
+      // Search cosmetics - exclude expired items
       if (searchType === 'all' || searchType === 'cosmetic') {
         const { data: cosmetics, error: cosError } = await supabase
           .from('cosmetics')
           .select('id, product_name, batch_no, brand, quantity, selling_price, purchase_price, rack_no, expiry_date')
           .or(`product_name.ilike.%${searchTerm}%,batch_no.ilike.%${searchTerm}%`)
           .gt('quantity', 0)
+          .gte('expiry_date', today)
           .order('product_name')
           .limit(searchType === 'all' ? 5 : 8);
         
