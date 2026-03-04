@@ -57,17 +57,23 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
 
       // Search medicines - exclude expired items
       if (searchType === 'all' || searchType === 'medicine') {
-        const { data: medicines, error: medError } = await supabase
+        let query = supabase
           .from('medicines')
           .select('id, medicine_name, batch_no, company_name, quantity, selling_price, purchase_price, rack_no, expiry_date, selling_type, tablets_per_packet, price_per_packet')
           .or(`medicine_name.ilike.%${searchTerm}%,batch_no.ilike.%${searchTerm}%`)
           .gt('quantity', 0)
-          .or(`expiry_date.gte.${today},expiry_date.is.null`)
           .order('medicine_name')
           .limit(searchType === 'all' ? 5 : 8);
         
+        const { data: medicines, error: medError } = await query;
+        
         if (!medError && medicines) {
-          results.push(...medicines.map(m => ({ ...m, type: 'medicine' as const })));
+          // Filter out expired items client-side to avoid conflicting .or() calls
+          const validMedicines = medicines.filter(m => {
+            if (!m.expiry_date) return true;
+            return m.expiry_date >= today;
+          });
+          results.push(...validMedicines.map(m => ({ ...m, type: 'medicine' as const })));
         }
       }
 
@@ -78,12 +84,13 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
           .select('id, product_name, batch_no, brand, quantity, selling_price, purchase_price, rack_no, expiry_date')
           .or(`product_name.ilike.%${searchTerm}%,batch_no.ilike.%${searchTerm}%`)
           .gt('quantity', 0)
-          .gte('expiry_date', today)
           .order('product_name')
           .limit(searchType === 'all' ? 5 : 8);
         
         if (!cosError && cosmetics) {
-          results.push(...cosmetics.map(c => ({ ...c, type: 'cosmetic' as const })));
+          // Filter out expired items client-side
+          const validCosmetics = cosmetics.filter(c => c.expiry_date >= today);
+          results.push(...validCosmetics.map(c => ({ ...c, type: 'cosmetic' as const })));
         }
       }
 
