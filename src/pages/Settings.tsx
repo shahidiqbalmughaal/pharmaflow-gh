@@ -49,6 +49,8 @@ const Settings = () => {
 
       {isAdmin ? (
         <>
+          <CosmeticCategoryManagement />
+
           <Alert>
             <Shield className="h-4 w-4" />
             <AlertDescription>
