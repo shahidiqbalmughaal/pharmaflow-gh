@@ -115,6 +115,10 @@ export const medicineSchema = z.object({
 
 // Cosmetic validation schema
 export const cosmeticSchema = z.object({
+  category_id: z.string()
+    .min(1, "Category is required"),
+  subcategory_id: z.string()
+    .min(1, "Sub category is required"),
   product_name: z.string()
     .trim()
     .min(1, "Product name is required")
