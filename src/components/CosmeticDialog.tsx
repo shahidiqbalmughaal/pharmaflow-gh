@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cosmeticSchema } from "@/lib/validations";
 import { useShop } from "@/hooks/useShop";
+import { useCosmeticCategories } from "@/hooks/useCosmeticCategories";
 import type { z } from "zod";
 import {
   Dialog,
@@ -15,6 +16,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 
 interface CosmeticDialogProps {
@@ -28,18 +36,33 @@ type CosmeticFormData = z.infer<typeof cosmeticSchema>;
 export function CosmeticDialog({ open, onClose, cosmetic }: CosmeticDialogProps) {
   const queryClient = useQueryClient();
   const { currentShop } = useShop();
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<CosmeticFormData>({
+  const { categories, getSubcategories } = useCosmeticCategories();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<CosmeticFormData>({
     resolver: zodResolver(cosmeticSchema),
     defaultValues: cosmetic || {},
   });
 
+  const watchedCategoryId = watch("category_id");
+
   useEffect(() => {
     if (cosmetic) {
       reset(cosmetic);
+      setSelectedCategoryId(cosmetic.category_id || "");
     } else {
       reset({});
+      setSelectedCategoryId("");
     }
   }, [cosmetic, reset]);
+
+  useEffect(() => {
+    if (watchedCategoryId && watchedCategoryId !== selectedCategoryId) {
+      setSelectedCategoryId(watchedCategoryId);
+    }
+  }, [watchedCategoryId]);
+
+  const filteredSubcategories = selectedCategoryId ? getSubcategories(selectedCategoryId) : [];
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -50,7 +73,6 @@ export function CosmeticDialog({ open, onClose, cosmetic }: CosmeticDialogProps)
           .eq("id", cosmetic.id);
         if (error) throw error;
       } else {
-        // Add shop_id for new cosmetics
         const insertData = {
           ...data,
           shop_id: currentShop?.shop_id || null,
@@ -83,6 +105,49 @@ export function CosmeticDialog({ open, onClose, cosmetic }: CosmeticDialogProps)
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="category_id">Main Category *</Label>
+              <Select
+                value={selectedCategoryId}
+                onValueChange={(val) => {
+                  setSelectedCategoryId(val);
+                  setValue("category_id", val);
+                  setValue("subcategory_id", "");
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.category_id && (
+                <p className="text-sm text-destructive">{errors.category_id.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="subcategory_id">Sub Category *</Label>
+              <Select
+                value={watch("subcategory_id") || ""}
+                onValueChange={(val) => setValue("subcategory_id", val)}
+                disabled={!selectedCategoryId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={selectedCategoryId ? "Select sub category" : "Select category first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredSubcategories.map((sub) => (
+                    <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.subcategory_id && (
+                <p className="text-sm text-destructive">{errors.subcategory_id.message}</p>
+              )}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="product_name">Product Name *</Label>
               <Input id="product_name" {...register("product_name")} />

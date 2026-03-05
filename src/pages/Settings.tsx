@@ -3,6 +3,7 @@ import { ApiSettingsDialog } from "@/components/ApiSettingsDialog";
 import { AlertSettingsDialog } from "@/components/AlertSettingsDialog";
 import { AlertHistory } from "@/components/AlertHistory";
 import { PharmacySettingsCard } from "@/components/PharmacySettingsCard";
+import { CosmeticCategoryManagement } from "@/components/CosmeticCategoryManagement";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -48,6 +49,8 @@ const Settings = () => {
 
       {isAdmin ? (
         <>
+          <CosmeticCategoryManagement />
+
           <Alert>
             <Shield className="h-4 w-4" />
             <AlertDescription>

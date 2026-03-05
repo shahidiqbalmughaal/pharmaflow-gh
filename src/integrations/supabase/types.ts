@@ -159,10 +159,79 @@ export type Database = {
           },
         ]
       }
+      cosmetic_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          shop_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          shop_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          shop_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cosmetic_categories_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cosmetic_subcategories: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          name: string
+          shop_id: string | null
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          name: string
+          shop_id?: string | null
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          shop_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cosmetic_subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "cosmetic_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cosmetic_subcategories_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cosmetics: {
         Row: {
           batch_no: string
           brand: string
+          category_id: string | null
           created_at: string | null
           expiry_date: string
           id: string
@@ -173,12 +242,14 @@ export type Database = {
           rack_no: string
           selling_price: number
           shop_id: string | null
+          subcategory_id: string | null
           supplier: string
           updated_at: string | null
         }
         Insert: {
           batch_no: string
           brand: string
+          category_id?: string | null
           created_at?: string | null
           expiry_date: string
           id?: string
@@ -189,12 +260,14 @@ export type Database = {
           rack_no: string
           selling_price: number
           shop_id?: string | null
+          subcategory_id?: string | null
           supplier: string
           updated_at?: string | null
         }
         Update: {
           batch_no?: string
           brand?: string
+          category_id?: string | null
           created_at?: string | null
           expiry_date?: string
           id?: string
@@ -205,15 +278,30 @@ export type Database = {
           rack_no?: string
           selling_price?: number
           shop_id?: string | null
+          subcategory_id?: string | null
           supplier?: string
           updated_at?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "cosmetics_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "cosmetic_categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cosmetics_shop_id_fkey"
             columns: ["shop_id"]
             isOneToOne: false
             referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cosmetics_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "cosmetic_subcategories"
             referencedColumns: ["id"]
           },
         ]
