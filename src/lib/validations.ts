@@ -139,6 +139,11 @@ export const cosmeticSchema = z.object({
     .int("Quantity must be a whole number")
     .min(1, "Quantity must be at least 1")
     .max(1000000, "Quantity must be less than 1,000,000"),
+  minimum_stock: z.number()
+    .int("Minimum stock must be a whole number")
+    .min(0, "Minimum stock cannot be negative")
+    .max(1000000, "Minimum stock must be less than 1,000,000")
+    .default(10),
   purchase_price: z.number()
     .positive("Purchase price must be positive")
     .min(0.01, "Purchase price must be at least 0.01")

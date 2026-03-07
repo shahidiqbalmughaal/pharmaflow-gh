@@ -7,6 +7,8 @@ import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { 
   Plus, Search, Pencil, Trash2, AlertTriangle, Camera, FileText, 
   Download, Printer, ChevronDown, ChevronUp, MoreVertical, X, Filter, Replace, RotateCcw
@@ -65,6 +67,7 @@ const Medicines = () => {
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [findReplaceOpen, setFindReplaceOpen] = useState(false);
+  const [batchWise, setBatchWise] = useState(false);
   
   // Filter state
   const [filterCompany, setFilterCompany] = useState("all");
@@ -595,6 +598,12 @@ const Medicines = () => {
             </Button>
           )}
         </div>
+
+        {/* Batch-wise toggle */}
+        <div className="flex items-center gap-2">
+          <Switch id="batch-wise-medicines" checked={batchWise} onCheckedChange={setBatchWise} />
+          <Label htmlFor="batch-wise-medicines" className="text-sm cursor-pointer">Batch-wise</Label>
+        </div>
         
         <Button
           variant={showFilters ? "secondary" : "outline"}
@@ -773,6 +782,93 @@ const Medicines = () => {
                     Loading...
                   </TableCell>
                 </TableRow>
+              ) : batchWise && displayMedicines.length > 0 ? (
+                (() => {
+                  const groups = groupMedicinesByName(displayMedicines);
+                  return Array.from(groups.entries()).map(([name, batches]) => {
+                    const isGroupExpanded = expandedGroups.has(name);
+                    const firstBatch = batches[0];
+                    const totalQty = batches.reduce((sum, b) => sum + b.quantity, 0);
+                    const hasExpiredBatch = batches.some(b => isExpired(b.expiry_date));
+                    const hasExpiringSoon = batches.some(b => !isExpired(b.expiry_date) && isExpiringWithinDays(b.expiry_date, 60));
+                    const hasLowStock = batches.some(b => b.quantity <= LOW_STOCK_THRESHOLD);
+
+                    return (
+                      <>{/* Group header */}
+                        <TableRow
+                          key={`group-${name}`}
+                          className="cursor-pointer hover:bg-muted/50 bg-muted/20 font-medium"
+                          onClick={() => toggleGroup(name)}
+                        >
+                          <TableCell><Checkbox disabled /></TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {isGroupExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                              <span className="font-semibold">{firstBatch.medicine_name}</span>
+                              <Badge variant="secondary" className="text-xs">{batches.length} batch{batches.length > 1 ? "es" : ""}</Badge>
+                              {hasExpiredBatch && <Badge variant="destructive" className="text-xs">Expired</Badge>}
+                              {hasExpiringSoon && <Badge variant="outline" className="text-xs border-orange-500 text-orange-600">Expiring Soon</Badge>}
+                              {hasLowStock && !hasExpiredBatch && <Badge variant="outline" className="text-xs border-red-500 text-red-600">Low Stock</Badge>}
+                            </div>
+                          </TableCell>
+                          <TableCell>—</TableCell>
+                          <TableCell>{(firstBatch as any).company_name}</TableCell>
+                          <TableCell colSpan={2}>—</TableCell>
+                          <TableCell className="font-bold">{totalQty}</TableCell>
+                          <TableCell colSpan={6}>—</TableCell>
+                        </TableRow>
+                        {isGroupExpanded && batches.map((medicine) => {
+                          const md = medicine as any;
+                          const st = md.selling_type || "per_tablet";
+                          const tpp = md.tablets_per_packet || 1;
+                          const ppp = md.price_per_packet;
+                          const narcotic = md.is_narcotic || false;
+                          const qu = getQuantityUnit(st);
+                          const exp = isExpired(medicine.expiry_date);
+                          const es = !exp && isExpiringWithinDays(medicine.expiry_date, 60);
+                          const ls = medicine.quantity <= LOW_STOCK_THRESHOLD;
+                          return (
+                            <TableRow key={medicine.id} className={cn("transition-colors hover:bg-muted/50", getRowClassName(medicine))}>
+                              <TableCell><Checkbox checked={selectedIds.has(medicine.id)} onCheckedChange={() => toggleSelect(medicine.id)} disabled={exp} /></TableCell>
+                              <TableCell className="pl-10 font-medium">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {medicine.medicine_name}
+                                  {narcotic && <Badge variant="destructive" className="text-xs"><AlertTriangle className="h-3 w-3 mr-1" />Narcotic</Badge>}
+                                  {exp && <Badge variant="destructive" className="text-xs">Expired</Badge>}
+                                  {es && <Badge variant="outline" className="text-xs border-orange-500 text-orange-600">Expiring Soon</Badge>}
+                                  {ls && !exp && <Badge variant="outline" className="text-xs border-red-500 text-red-600">Low Stock</Badge>}
+                                </div>
+                              </TableCell>
+                              <TableCell>{medicine.batch_no}</TableCell>
+                              <TableCell>{md.company_name}</TableCell>
+                              <TableCell>{(medicine as any).rack_no || "—"}</TableCell>
+                              <TableCell><span className="text-sm">{getSellingTypeLabel(st)}</span></TableCell>
+                              <TableCell>
+                                <span className={cn(ls && "text-destructive font-bold")}>{medicine.quantity} {qu !== "Units" ? qu : ""}</span>
+                                {st === "per_packet" && tpp > 0 && <span className="text-xs text-muted-foreground block">≈ {Math.floor(medicine.quantity / tpp)} packets</span>}
+                              </TableCell>
+                              <TableCell>{formatCurrency(Number(medicine.purchase_price))}</TableCell>
+                              <TableCell>
+                                {st === "per_packet" && ppp ? (<><div>{formatCurrency(Number(ppp))}/pack</div><div className="text-xs text-muted-foreground">{formatCurrency(Number(medicine.selling_price))}/tab</div></>) : formatCurrency(Number(medicine.selling_price))}
+                              </TableCell>
+                              <TableCell>
+                                {medicine.expiry_date ? (<span className={cn(exp && "text-destructive font-bold", es && "text-orange-600 font-semibold")}>{format(new Date(medicine.expiry_date), "MMM dd, yyyy")}</span>) : <span className="text-muted-foreground text-sm">N/A</span>}
+                              </TableCell>
+                              <TableCell><span className="text-sm">{md.supplier || "—"}</span></TableCell>
+                              <TableCell>{md.updated_at ? <span className="text-xs text-muted-foreground">{format(new Date(md.updated_at), "MMM dd, HH:mm")}</span> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="icon" onClick={() => handleEdit(medicine)} disabled={exp}><Pencil className="h-4 w-4" /></Button>
+                                  <Button variant="ghost" size="icon" onClick={() => handleDelete(medicine.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </>
+                    );
+                  });
+                })()
               ) : displayMedicines && displayMedicines.length > 0 ? (
                 displayMedicines.map((medicine) => {
                   const medicineData = medicine as any;

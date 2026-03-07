@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Plus, Search, Pencil, Trash2, Download, Filter, Replace, RotateCcw, X, Upload,
-  ChevronDown
+  ChevronDown, ChevronUp, AlertTriangle
 } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import {
@@ -27,8 +29,7 @@ import { format } from "date-fns";
 import { useRealtimeInventory } from "@/hooks/useRealtimeInventory";
 import { cn } from "@/lib/utils";
 import { exportToCSV } from "@/lib/exportUtils";
-
-const LOW_STOCK_THRESHOLD = 10;
+import { isExpired, isExpiringWithinDays } from "@/hooks/useFEFOSelection";
 
 const Cosmetics = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,6 +38,8 @@ const Cosmetics = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [findReplaceOpen, setFindReplaceOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [batchWise, setBatchWise] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   
   // Filters
   const [filterCategory, setFilterCategory] = useState("all");
@@ -91,7 +94,6 @@ const Cosmetics = () => {
     };
   }, [cosmetics]);
 
-  // Filter subcategories based on selected category
   const filteredSubcategoryOptions = useMemo(() => {
     if (filterCategory === "all") return subcategories;
     return getSubcategories(filterCategory);
@@ -128,19 +130,41 @@ const Cosmetics = () => {
     if (filterRack !== "all") result = result.filter(c => c.rack_no === filterRack);
     if (filterStockStatus !== "all") {
       result = result.filter(c => {
-        if (filterStockStatus === "low") return c.quantity > 0 && c.quantity <= LOW_STOCK_THRESHOLD;
+        const minStock = (c as any).minimum_stock ?? 10;
+        if (filterStockStatus === "low") return c.quantity > 0 && c.quantity <= minStock;
         if (filterStockStatus === "out") return c.quantity === 0;
-        if (filterStockStatus === "expiring") {
-          const exp = new Date(c.expiry_date);
-          const soon = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
-          return exp > new Date() && exp <= soon;
-        }
+        if (filterStockStatus === "expiring") return !isExpired(c.expiry_date) && isExpiringWithinDays(c.expiry_date, 30);
+        if (filterStockStatus === "expired") return isExpired(c.expiry_date);
+        if (filterStockStatus === "warning") return !isExpired(c.expiry_date) && !isExpiringWithinDays(c.expiry_date, 30) && isExpiringWithinDays(c.expiry_date, 90);
         return true;
       });
     }
 
     return result;
   }, [cosmetics, searchQuery, filterCategory, filterSubcategory, filterBrand, filterSupplier, filterRack, filterStockStatus]);
+
+  // Group cosmetics by product name for batch-wise view
+  const groupedCosmetics = useMemo(() => {
+    const groups = new Map<string, any[]>();
+    for (const c of displayCosmetics) {
+      const name = c.product_name.toLowerCase();
+      const existing = groups.get(name) || [];
+      existing.push(c);
+      groups.set(name, existing);
+    }
+    // Sort batches within each group by expiry date
+    groups.forEach((batches) => {
+      batches.sort((a: any, b: any) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime());
+    });
+    return groups;
+  }, [displayCosmetics]);
+
+  const toggleGroup = (name: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(name)) newExpanded.delete(name);
+    else newExpanded.add(name);
+    setExpandedGroups(newExpanded);
+  };
 
   const handleEdit = (cosmetic: any) => {
     setEditingCosmetic(cosmetic);
@@ -199,19 +223,29 @@ const Cosmetics = () => {
         { header: "Batch No", key: "batch_no", width: 15 },
         { header: "Rack No", key: "rack_no", width: 10 },
         { header: "Quantity", key: "quantity", width: 10 },
+        { header: "Minimum Stock", key: "minimum_stock", width: 14 },
         { header: "Purchase Price", key: "purchase_price", width: 15 },
         { header: "Selling Price", key: "selling_price", width: 15 },
         { header: "Manufacturing Date", key: "manufacturing_date", width: 18 },
         { header: "Expiry Date", key: "expiry_date", width: 18 },
         { header: "Supplier", key: "supplier", width: 20 },
+        { header: "Status", key: "status", width: 15 },
       ];
 
-      // Style header
       worksheet.getRow(1).font = { bold: true };
       worksheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4472C4" } };
       worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
 
       allCosmetics.forEach((c) => {
+        const minStock = (c as any).minimum_stock ?? 10;
+        const expired = isExpired(c.expiry_date);
+        const expSoon = !expired && isExpiringWithinDays(c.expiry_date, 30);
+        const lowStock = c.quantity <= minStock;
+        let status = "OK";
+        if (expired) status = "Expired";
+        else if (expSoon) status = "Expiring Soon";
+        else if (lowStock) status = "Low Stock";
+
         worksheet.addRow({
           product_name: c.product_name,
           category: getCategoryName((c as any).category_id || ""),
@@ -220,11 +254,13 @@ const Cosmetics = () => {
           batch_no: c.batch_no,
           rack_no: c.rack_no,
           quantity: c.quantity,
+          minimum_stock: minStock,
           purchase_price: Number(c.purchase_price),
           selling_price: Number(c.selling_price),
           manufacturing_date: c.manufacturing_date,
           expiry_date: c.expiry_date,
           supplier: c.supplier,
+          status,
         });
       });
 
@@ -248,20 +284,33 @@ const Cosmetics = () => {
     try {
       const allCosmetics = await fetchAllCosmetics();
       if (!allCosmetics.length) { toast.error("No cosmetics found"); return; }
-      const data = allCosmetics.map((c) => ({
-        "Product Name": c.product_name,
-        "Category": getCategoryName((c as any).category_id || ""),
-        "Sub Category": getSubcategoryName((c as any).subcategory_id || ""),
-        "Brand": c.brand,
-        "Batch No": c.batch_no,
-        "Rack No": c.rack_no,
-        "Quantity": c.quantity,
-        "Purchase Price": Number(c.purchase_price),
-        "Selling Price": Number(c.selling_price),
-        "Manufacturing Date": c.manufacturing_date,
-        "Expiry Date": c.expiry_date,
-        "Supplier": c.supplier,
-      }));
+      const data = allCosmetics.map((c) => {
+        const minStock = (c as any).minimum_stock ?? 10;
+        const expired = isExpired(c.expiry_date);
+        const expSoon = !expired && isExpiringWithinDays(c.expiry_date, 30);
+        const lowStock = c.quantity <= minStock;
+        let status = "OK";
+        if (expired) status = "Expired";
+        else if (expSoon) status = "Expiring Soon";
+        else if (lowStock) status = "Low Stock";
+
+        return {
+          "Product Name": c.product_name,
+          "Category": getCategoryName((c as any).category_id || ""),
+          "Sub Category": getSubcategoryName((c as any).subcategory_id || ""),
+          "Brand": c.brand,
+          "Batch No": c.batch_no,
+          "Rack No": c.rack_no,
+          "Quantity": c.quantity,
+          "Minimum Stock": minStock,
+          "Purchase Price": Number(c.purchase_price),
+          "Selling Price": Number(c.selling_price),
+          "Manufacturing Date": c.manufacturing_date,
+          "Expiry Date": c.expiry_date,
+          "Supplier": c.supplier,
+          "Status": status,
+        };
+      });
       exportToCSV(data, "cosmetics-inventory");
       toast.success(`Exported ${allCosmetics.length} cosmetics`);
     } catch (e) {
@@ -269,22 +318,103 @@ const Cosmetics = () => {
     }
   };
 
-  const isExpired = (date: string) => new Date(date) < new Date();
-  const isExpiringSoon = (date: string) => {
-    const exp = new Date(date);
-    const soon = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
-    return exp > new Date() && exp <= soon;
-  };
-
   const getRowClassName = (cosmetic: any) => {
+    const minStock = (cosmetic as any).minimum_stock ?? 10;
     const expired = isExpired(cosmetic.expiry_date);
-    const expSoon = isExpiringSoon(cosmetic.expiry_date);
-    const lowStock = cosmetic.quantity <= LOW_STOCK_THRESHOLD;
+    const expSoon = !expired && isExpiringWithinDays(cosmetic.expiry_date, 30);
+    const warning = !expired && !expSoon && isExpiringWithinDays(cosmetic.expiry_date, 90);
+    const lowStock = cosmetic.quantity <= minStock;
     if (expired) return "bg-destructive/20 opacity-75";
     if (lowStock) return "bg-red-50 dark:bg-red-950/30";
     if (expSoon) return "bg-orange-50 dark:bg-orange-950/30";
+    if (warning) return "bg-yellow-50 dark:bg-yellow-950/20";
     return "";
   };
+
+  const getStatusBadges = (cosmetic: any) => {
+    const minStock = (cosmetic as any).minimum_stock ?? 10;
+    const expired = isExpired(cosmetic.expiry_date);
+    const expSoon = !expired && isExpiringWithinDays(cosmetic.expiry_date, 30);
+    const warning = !expired && !expSoon && isExpiringWithinDays(cosmetic.expiry_date, 90);
+    const lowStock = cosmetic.quantity <= minStock;
+
+    return (
+      <>
+        {expired && <Badge variant="destructive" className="text-xs">Expired</Badge>}
+        {expSoon && <Badge variant="outline" className="text-xs border-orange-500 text-orange-600">Expiring Soon</Badge>}
+        {warning && <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-600">Warning</Badge>}
+        {lowStock && !expired && <Badge variant="outline" className="text-xs border-red-500 text-red-600">Low Stock</Badge>}
+      </>
+    );
+  };
+
+  const renderCosmeticRow = (cosmetic: any) => {
+    const minStock = (cosmetic as any).minimum_stock ?? 10;
+    const expired = isExpired(cosmetic.expiry_date);
+    const expSoon = !expired && isExpiringWithinDays(cosmetic.expiry_date, 30);
+    const lowStock = cosmetic.quantity <= minStock;
+
+    return (
+      <TableRow key={cosmetic.id} className={cn("transition-colors hover:bg-muted/50", getRowClassName(cosmetic))}>
+        <TableCell className="font-medium">
+          <div className="flex items-center gap-2 flex-wrap">
+            {cosmetic.product_name}
+            {getStatusBadges(cosmetic)}
+          </div>
+        </TableCell>
+        <TableCell>{getCategoryName((cosmetic as any).category_id || "")}</TableCell>
+        <TableCell>{getSubcategoryName((cosmetic as any).subcategory_id || "")}</TableCell>
+        <TableCell>{cosmetic.brand}</TableCell>
+        <TableCell>{cosmetic.batch_no}</TableCell>
+        <TableCell>{cosmetic.rack_no}</TableCell>
+        <TableCell>
+          <span className={cn(lowStock && "text-destructive font-bold")}>
+            {cosmetic.quantity}
+          </span>
+        </TableCell>
+        <TableCell>{minStock}</TableCell>
+        <TableCell>{formatCurrency(Number(cosmetic.purchase_price))}</TableCell>
+        <TableCell>{formatCurrency(Number(cosmetic.selling_price))}</TableCell>
+        <TableCell>
+          <span className={cn(
+            expired && "text-destructive font-bold",
+            expSoon && "text-orange-600 font-semibold"
+          )}>
+            {format(new Date(cosmetic.expiry_date), "MMM dd, yyyy")}
+          </span>
+        </TableCell>
+        <TableCell><span className="text-sm">{cosmetic.supplier || "—"}</span></TableCell>
+        <TableCell>
+          <div className="flex gap-1">
+            <Button variant="ghost" size="icon" onClick={() => handleEdit(cosmetic)}>
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => handleDelete(cosmetic.id)}>
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  const tableHeaders = (
+    <TableRow>
+      <TableHead>Product Name</TableHead>
+      <TableHead>Category</TableHead>
+      <TableHead>Sub Category</TableHead>
+      <TableHead>Brand</TableHead>
+      <TableHead>Batch No</TableHead>
+      <TableHead>Rack No</TableHead>
+      <TableHead>Quantity</TableHead>
+      <TableHead>Min Stock</TableHead>
+      <TableHead>Purchase Price</TableHead>
+      <TableHead>Selling Price</TableHead>
+      <TableHead>Expiry Date</TableHead>
+      <TableHead>Supplier</TableHead>
+      <TableHead>Actions</TableHead>
+    </TableRow>
+  );
 
   return (
     <div className="space-y-4">
@@ -327,6 +457,12 @@ const Cosmetics = () => {
           )}
         </div>
 
+        {/* Batch-wise toggle */}
+        <div className="flex items-center gap-2">
+          <Switch id="batch-wise-cosmetics" checked={batchWise} onCheckedChange={setBatchWise} />
+          <Label htmlFor="batch-wise-cosmetics" className="text-sm cursor-pointer">Batch-wise</Label>
+        </div>
+
         <Button
           variant={showFilters ? "secondary" : "outline"}
           size="sm"
@@ -367,7 +503,6 @@ const Cosmetics = () => {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground whitespace-nowrap">Sub Category</span>
               <Select value={filterSubcategory} onValueChange={setFilterSubcategory}>
@@ -378,7 +513,6 @@ const Cosmetics = () => {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground whitespace-nowrap">Brand</span>
               <Select value={filterBrand} onValueChange={setFilterBrand}>
@@ -389,7 +523,6 @@ const Cosmetics = () => {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground whitespace-nowrap">Supplier</span>
               <Select value={filterSupplier} onValueChange={setFilterSupplier}>
@@ -400,7 +533,6 @@ const Cosmetics = () => {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground whitespace-nowrap">Rack</span>
               <Select value={filterRack} onValueChange={setFilterRack}>
@@ -411,20 +543,20 @@ const Cosmetics = () => {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground whitespace-nowrap">Stock</span>
               <Select value={filterStockStatus} onValueChange={setFilterStockStatus}>
-                <SelectTrigger className="h-9 w-[140px] text-sm"><SelectValue placeholder="All" /></SelectTrigger>
+                <SelectTrigger className="h-9 w-[160px] text-sm"><SelectValue placeholder="All" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Stock</SelectItem>
                   <SelectItem value="low">Low Stock</SelectItem>
                   <SelectItem value="out">Out of Stock</SelectItem>
-                  <SelectItem value="expiring">Expiring Soon</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                  <SelectItem value="expiring">Expiring Soon (30d)</SelectItem>
+                  <SelectItem value="warning">Warning (90d)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
             {hasActiveFilters && (
               <Button variant="ghost" size="sm" onClick={resetFilters} className="gap-1.5 text-destructive hover:text-destructive">
                 <RotateCcw className="h-3.5 w-3.5" /> Reset
@@ -438,79 +570,64 @@ const Cosmetics = () => {
         <div className="overflow-auto max-h-[calc(100vh-280px)]">
           <Table>
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
-              <TableRow>
-                <TableHead>Product Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Sub Category</TableHead>
-                <TableHead>Brand</TableHead>
-                <TableHead>Batch No</TableHead>
-                <TableHead>Rack No</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Purchase Price</TableHead>
-                <TableHead>Selling Price</TableHead>
-                <TableHead>Expiry Date</TableHead>
-                <TableHead>Supplier</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
+              {tableHeaders}
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={13} className="text-center">Loading...</TableCell>
                 </TableRow>
+              ) : batchWise ? (
+                // Batch-wise grouped view
+                groupedCosmetics.size > 0 ? (
+                  Array.from(groupedCosmetics.entries()).map(([name, batches]) => {
+                    const isExpanded = expandedGroups.has(name);
+                    const firstBatch = batches[0];
+                    const totalQty = batches.reduce((sum: number, b: any) => sum + b.quantity, 0);
+                    const hasLowStock = batches.some((b: any) => b.quantity <= ((b as any).minimum_stock ?? 10));
+                    const hasExpired = batches.some((b: any) => isExpired(b.expiry_date));
+                    const hasExpiringSoon = batches.some((b: any) => !isExpired(b.expiry_date) && isExpiringWithinDays(b.expiry_date, 30));
+
+                    return (
+                      <>{/* Group header row */}
+                        <TableRow
+                          key={`group-${name}`}
+                          className={cn("cursor-pointer hover:bg-muted/50 bg-muted/20 font-medium")}
+                          onClick={() => toggleGroup(name)}
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                              <span className="font-semibold">{firstBatch.product_name}</span>
+                              <Badge variant="secondary" className="text-xs">{batches.length} batch{batches.length > 1 ? "es" : ""}</Badge>
+                              {hasExpired && <Badge variant="destructive" className="text-xs">Expired</Badge>}
+                              {hasExpiringSoon && <Badge variant="outline" className="text-xs border-orange-500 text-orange-600">Expiring Soon</Badge>}
+                              {hasLowStock && !hasExpired && <Badge variant="outline" className="text-xs border-red-500 text-red-600">Low Stock</Badge>}
+                            </div>
+                          </TableCell>
+                          <TableCell>{getCategoryName((firstBatch as any).category_id || "")}</TableCell>
+                          <TableCell>{getSubcategoryName((firstBatch as any).subcategory_id || "")}</TableCell>
+                          <TableCell>{firstBatch.brand}</TableCell>
+                          <TableCell colSpan={2}>—</TableCell>
+                          <TableCell className="font-bold">{totalQty}</TableCell>
+                          <TableCell>—</TableCell>
+                          <TableCell colSpan={5}>—</TableCell>
+                        </TableRow>
+                        {/* Expanded batch rows */}
+                        {isExpanded && batches.map((cosmetic: any) => renderCosmeticRow(cosmetic))}
+                      </>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={13} className="text-center text-muted-foreground">No cosmetics found</TableCell>
+                  </TableRow>
+                )
               ) : displayCosmetics.length > 0 ? (
-                displayCosmetics.map((cosmetic) => {
-                  const expired = isExpired(cosmetic.expiry_date);
-                  const expSoon = isExpiringSoon(cosmetic.expiry_date);
-                  const lowStock = cosmetic.quantity <= LOW_STOCK_THRESHOLD;
-                  
-                  return (
-                    <TableRow key={cosmetic.id} className={cn("transition-colors hover:bg-muted/50", getRowClassName(cosmetic))}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {cosmetic.product_name}
-                          {expired && <Badge variant="destructive" className="text-xs">Expired</Badge>}
-                          {expSoon && <Badge variant="outline" className="text-xs border-orange-500 text-orange-600">Expiring Soon</Badge>}
-                          {lowStock && !expired && <Badge variant="outline" className="text-xs border-red-500 text-red-600">Low Stock</Badge>}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getCategoryName((cosmetic as any).category_id || "")}</TableCell>
-                      <TableCell>{getSubcategoryName((cosmetic as any).subcategory_id || "")}</TableCell>
-                      <TableCell>{cosmetic.brand}</TableCell>
-                      <TableCell>{cosmetic.batch_no}</TableCell>
-                      <TableCell>{cosmetic.rack_no}</TableCell>
-                      <TableCell>
-                        <span className={cn(lowStock && "text-destructive font-bold")}>
-                          {cosmetic.quantity}
-                        </span>
-                      </TableCell>
-                      <TableCell>{formatCurrency(Number(cosmetic.purchase_price))}</TableCell>
-                      <TableCell>{formatCurrency(Number(cosmetic.selling_price))}</TableCell>
-                      <TableCell>
-                        <span className={cn(
-                          expired && "text-destructive font-bold",
-                          expSoon && "text-orange-600 font-semibold"
-                        )}>
-                          {format(new Date(cosmetic.expiry_date), "MMM dd, yyyy")}
-                        </span>
-                      </TableCell>
-                      <TableCell><span className="text-sm">{cosmetic.supplier || "—"}</span></TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(cosmetic)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(cosmetic.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                displayCosmetics.map((cosmetic) => renderCosmeticRow(cosmetic))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center text-muted-foreground">
+                  <TableCell colSpan={13} className="text-center text-muted-foreground">
                     No cosmetics found
                   </TableCell>
                 </TableRow>

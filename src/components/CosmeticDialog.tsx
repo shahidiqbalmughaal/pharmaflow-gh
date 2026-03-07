@@ -188,6 +188,18 @@ export function CosmeticDialog({ open, onClose, cosmetic }: CosmeticDialogProps)
               )}
             </div>
             <div className="space-y-2">
+              <Label htmlFor="minimum_stock">Minimum Stock Level *</Label>
+              <Input
+                id="minimum_stock"
+                type="number"
+                {...register("minimum_stock", { valueAsNumber: true })}
+                defaultValue={10}
+              />
+              {errors.minimum_stock && (
+                <p className="text-sm text-destructive">{errors.minimum_stock.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="purchase_price">Purchase Price *</Label>
               <Input
                 id="purchase_price"
