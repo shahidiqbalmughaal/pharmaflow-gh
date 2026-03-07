@@ -7,6 +7,8 @@ import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { 
   Plus, Search, Pencil, Trash2, AlertTriangle, Camera, FileText, 
   Download, Printer, ChevronDown, ChevronUp, MoreVertical, X, Filter, Replace, RotateCcw
@@ -65,6 +67,7 @@ const Medicines = () => {
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [findReplaceOpen, setFindReplaceOpen] = useState(false);
+  const [batchWise, setBatchWise] = useState(false);
   
   // Filter state
   const [filterCompany, setFilterCompany] = useState("all");
