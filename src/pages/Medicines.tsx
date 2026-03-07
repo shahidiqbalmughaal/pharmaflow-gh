@@ -598,6 +598,12 @@ const Medicines = () => {
             </Button>
           )}
         </div>
+
+        {/* Batch-wise toggle */}
+        <div className="flex items-center gap-2">
+          <Switch id="batch-wise-medicines" checked={batchWise} onCheckedChange={setBatchWise} />
+          <Label htmlFor="batch-wise-medicines" className="text-sm cursor-pointer">Batch-wise</Label>
+        </div>
         
         <Button
           variant={showFilters ? "secondary" : "outline"}
