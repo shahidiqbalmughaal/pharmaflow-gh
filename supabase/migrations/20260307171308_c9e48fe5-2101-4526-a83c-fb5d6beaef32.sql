@@ -1,0 +1,1 @@
+ALTER TABLE public.cosmetics ADD COLUMN minimum_stock integer NOT NULL DEFAULT 10;

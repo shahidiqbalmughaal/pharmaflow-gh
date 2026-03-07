@@ -236,6 +236,7 @@ export type Database = {
           expiry_date: string
           id: string
           manufacturing_date: string
+          minimum_stock: number
           product_name: string
           purchase_price: number
           quantity: number
@@ -254,6 +255,7 @@ export type Database = {
           expiry_date: string
           id?: string
           manufacturing_date: string
+          minimum_stock?: number
           product_name: string
           purchase_price: number
           quantity?: number
@@ -272,6 +274,7 @@ export type Database = {
           expiry_date?: string
           id?: string
           manufacturing_date?: string
+          minimum_stock?: number
           product_name?: string
           purchase_price?: number
           quantity?: number
