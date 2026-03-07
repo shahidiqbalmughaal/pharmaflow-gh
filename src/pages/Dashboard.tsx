@@ -638,10 +638,10 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-warning">
-                  {lowStockMedicines?.length || 0}
+                  {totalLowStockCount}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Items below 10 units
+                  Items below threshold
                 </p>
               </CardContent>
             </Card>
@@ -666,7 +666,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-destructive">
-                  {expiryAlerts?.length || 0}
+                  {totalExpiryCount}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Expiring within 6 months
@@ -716,12 +716,24 @@ const Dashboard = () => {
                   <div key={item.id} className="flex justify-between items-center p-2 bg-accent rounded" role="listitem">
                     <div>
                       <p className="font-medium text-sm">{item.medicine_name}</p>
-                      <p className="text-xs text-muted-foreground">Batch: {item.batch_no}</p>
+                      <p className="text-xs text-muted-foreground">Batch: {item.batch_no} · Medicine</p>
                     </div>
                     <span className="text-warning font-bold">{item.quantity} units</span>
                   </div>
                 ))
-              ) : (
+              ) : null}
+              {lowStockCosmetics && lowStockCosmetics.length > 0 ? (
+                lowStockCosmetics.map((item: any) => (
+                  <div key={item.id} className="flex justify-between items-center p-2 bg-accent rounded" role="listitem">
+                    <div>
+                      <p className="font-medium text-sm">{item.product_name}</p>
+                      <p className="text-xs text-muted-foreground">Batch: {item.batch_no} · Cosmetic</p>
+                    </div>
+                    <span className="text-warning font-bold">{item.quantity} units</span>
+                  </div>
+                ))
+              ) : null}
+              {(!lowStockMedicines || lowStockMedicines.length === 0) && (!lowStockCosmetics || lowStockCosmetics.length === 0) && (
                 <p className="text-sm text-muted-foreground">No low stock items</p>
               )}
               <p className="text-xs text-muted-foreground text-center pt-2 border-t">
@@ -751,14 +763,28 @@ const Dashboard = () => {
                   <div key={item.id} className="flex justify-between items-center p-2 bg-accent rounded" role="listitem">
                     <div>
                       <p className="font-medium text-sm">{item.medicine_name}</p>
-                      <p className="text-xs text-muted-foreground">Batch: {item.batch_no}</p>
+                      <p className="text-xs text-muted-foreground">Batch: {item.batch_no} · Medicine</p>
                     </div>
                     <span className="text-destructive font-bold text-sm">
                       {format(new Date(item.expiry_date), "MMM dd, yyyy")}
                     </span>
                   </div>
                 ))
-              ) : (
+              ) : null}
+              {expiryAlertsCosmetics && expiryAlertsCosmetics.length > 0 ? (
+                expiryAlertsCosmetics.map((item: any) => (
+                  <div key={item.id} className="flex justify-between items-center p-2 bg-accent rounded" role="listitem">
+                    <div>
+                      <p className="font-medium text-sm">{item.product_name}</p>
+                      <p className="text-xs text-muted-foreground">Batch: {item.batch_no} · Cosmetic</p>
+                    </div>
+                    <span className="text-destructive font-bold text-sm">
+                      {format(new Date(item.expiry_date), "MMM dd, yyyy")}
+                    </span>
+                  </div>
+                ))
+              ) : null}
+              {(!expiryAlerts || expiryAlerts.length === 0) && (!expiryAlertsCosmetics || expiryAlertsCosmetics.length === 0) && (
                 <p className="text-sm text-muted-foreground">No expiry alerts</p>
               )}
               <p className="text-xs text-muted-foreground text-center pt-2 border-t">
