@@ -283,7 +283,7 @@ const Dashboard = () => {
     refetchInterval: 30000,
   });
 
-  // Fetch low stock alerts
+  // Fetch low stock alerts (medicines + cosmetics)
   const { data: lowStockMedicines } = useQuery({
     queryKey: ["lowStockMedicines"],
     queryFn: async () => {
@@ -300,7 +300,22 @@ const Dashboard = () => {
     refetchInterval: 30000,
   });
 
-  // Fetch expiry alerts
+  const { data: lowStockCosmetics } = useQuery({
+    queryKey: ["lowStockCosmeticsDashboard"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cosmetics")
+        .select("*")
+        .order("quantity", { ascending: true });
+      
+      if (error) throw error;
+      // Filter where quantity <= minimum_stock
+      return (data || []).filter((c: any) => c.quantity <= (c.minimum_stock ?? 10)).slice(0, 5);
+    },
+    refetchInterval: 30000,
+  });
+
+  // Fetch expiry alerts (medicines + cosmetics)
   const { data: expiryAlerts } = useQuery({
     queryKey: ["expiryAlerts"],
     queryFn: async () => {
@@ -319,6 +334,28 @@ const Dashboard = () => {
     },
     refetchInterval: 30000,
   });
+
+  const { data: expiryAlertsCosmetics } = useQuery({
+    queryKey: ["expiryAlertsCosmeticsDashboard"],
+    queryFn: async () => {
+      const sixMonthsFromNow = new Date();
+      sixMonthsFromNow.setDate(sixMonthsFromNow.getDate() + 180);
+      
+      const { data, error } = await supabase
+        .from("cosmetics")
+        .select("*")
+        .lte("expiry_date", sixMonthsFromNow.toISOString().split('T')[0])
+        .order("expiry_date", { ascending: true })
+        .limit(5);
+      
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 30000,
+  });
+
+  const totalLowStockCount = (lowStockMedicines?.length || 0) + (lowStockCosmetics?.length || 0);
+  const totalExpiryCount = (expiryAlerts?.length || 0) + (expiryAlertsCosmetics?.length || 0);
 
   // Role-based view control
   const canProcessSales = userRole === "admin" || userRole === "manager" || userRole === "salesman";
