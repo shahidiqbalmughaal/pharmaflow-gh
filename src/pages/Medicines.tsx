@@ -841,7 +841,7 @@ const Medicines = () => {
                               </TableCell>
                               <TableCell>{medicine.batch_no}</TableCell>
                               <TableCell>{md.company_name}</TableCell>
-                              <TableCell>{medicine.rack_no || "—"}</TableCell>
+                              <TableCell>{(medicine as any).rack_no || "—"}</TableCell>
                               <TableCell><span className="text-sm">{getSellingTypeLabel(st)}</span></TableCell>
                               <TableCell>
                                 <span className={cn(ls && "text-destructive font-bold")}>{medicine.quantity} {qu !== "Units" ? qu : ""}</span>
