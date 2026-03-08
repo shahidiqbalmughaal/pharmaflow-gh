@@ -114,7 +114,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`User ${user.id} authorized with role:`, userRoles?.map(r => r.role));
+    console.log(`User ${userId} authorized with role:`, userRoles?.map(r => r.role));
 
     // Now process the image
     const { image_base64, image_url, mode = "auto" } = await req.json();
