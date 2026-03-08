@@ -31,26 +31,28 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
 
-    if (authError || !user) {
-      console.error('Invalid token:', authError?.message);
+    if (claimsError || !claimsData?.claims) {
+      console.error('Invalid token:', claimsError?.message);
       return new Response(
         JSON.stringify({ error: 'Unauthorized - Invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    const userId = claimsData.claims.sub;
+
     // Verify admin role
     const { data: userRole } = await supabaseClient
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('role', 'admin')
       .single();
 
     if (!userRole) {
-      console.error('User does not have admin role:', user.id);
+      console.error('User does not have admin role:', userId);
       return new Response(
         JSON.stringify({ error: 'Forbidden - Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
