@@ -68,6 +68,24 @@ serve(async (req) => {
 
     console.log('Authenticated user:', userId, 'with roles:', userRoles?.map(r => r.role));
 
+    // Get the user's current shop_id for multi-tenant isolation
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('current_shop_id')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || !profileData?.current_shop_id) {
+      console.error('Failed to get user shop:', profileError?.message);
+      return new Response(
+        JSON.stringify({ error: 'User is not assigned to a shop' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userShopId = profileData.current_shop_id;
+    console.log('User shop_id:', userShopId);
+
     const { symptoms, currentMedicineId } = await req.json();
     
     console.log('Received request with symptoms:', symptoms);
@@ -80,11 +98,12 @@ serve(async (req) => {
       );
     }
 
-    // Fetch available medicines (in stock and not expired)
+    // Fetch available medicines scoped to user's shop (in stock and not expired)
     const today = new Date().toISOString().split('T')[0];
     const { data: medicines, error: medicinesError } = await supabase
       .from('medicines')
       .select('id, medicine_name, company_name, quantity, selling_price, expiry_date, rack_no, batch_no')
+      .eq('shop_id', userShopId)
       .gt('quantity', 0)
       .gte('expiry_date', today)
       .order('medicine_name');
