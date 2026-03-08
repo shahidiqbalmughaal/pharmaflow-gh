@@ -76,23 +76,24 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     
-    if (authError || !user) {
-      console.error("Authentication failed:", authError?.message);
+    if (claimsError || !claimsData?.claims) {
+      console.error("Authentication failed:", claimsError?.message);
       return new Response(
         JSON.stringify({ error: 'Invalid authentication token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`OCR request from authenticated user: ${user.id}`);
+    const userId = claimsData.claims.sub;
+    console.log(`OCR request from authenticated user: ${userId}`);
 
     // Verify user has appropriate role (admin or manager can use OCR for inventory)
     const { data: userRoles, error: rolesError } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
 
     if (rolesError) {
       console.error("Failed to fetch user roles:", rolesError.message);
