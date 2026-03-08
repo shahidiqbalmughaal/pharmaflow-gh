@@ -132,7 +132,7 @@ serve(async (req) => {
     
     const hasAccess = userRoles?.some(r => r.role === 'admin' || r.role === 'manager');
     if (!hasAccess) {
-      console.error(`User ${user.id} attempted API access without proper role`);
+      console.error(`User ${userId} attempted API access without proper role`);
       return new Response(JSON.stringify({ error: 'Forbidden - Insufficient permissions' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
