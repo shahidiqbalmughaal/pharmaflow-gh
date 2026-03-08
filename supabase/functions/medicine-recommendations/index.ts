@@ -66,7 +66,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Authenticated user:', user.id, 'with roles:', userRoles?.map(r => r.role));
+    console.log('Authenticated user:', userId, 'with roles:', userRoles?.map(r => r.role));
 
     const { symptoms, currentMedicineId } = await req.json();
     

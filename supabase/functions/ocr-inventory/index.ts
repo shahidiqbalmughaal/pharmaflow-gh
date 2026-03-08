@@ -295,7 +295,7 @@ serve(async (req) => {
 
     singleData.warnings = warnings;
 
-    console.log(`Single product OCR completed successfully for user ${user.id}`);
+    console.log(`Single product OCR completed successfully for user ${userId}`);
 
     return new Response(
       JSON.stringify({ 

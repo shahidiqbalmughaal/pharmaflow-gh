@@ -183,7 +183,7 @@ serve(async (req) => {
       url.searchParams.append(key, value);
     }
 
-    console.log(`Calling external API: ${url.toString()} for user: ${user.id}`);
+    console.log(`Calling external API: ${url.toString()} for user: ${userId}`);
 
     // Make API call
     const apiResponse = await fetch(url.toString(), {

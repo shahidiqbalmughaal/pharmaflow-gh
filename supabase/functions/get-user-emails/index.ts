@@ -46,23 +46,25 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Get the current user
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
-      console.log('get-user-emails: User authentication failed', userError);
+    // Get the current user via JWT claims
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      console.log('get-user-emails: User authentication failed', claimsError);
       return new Response(
         JSON.stringify({ error: 'Authentication failed' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('get-user-emails: User authenticated', user.id);
+    const userId = claimsData.claims.sub;
+    console.log('get-user-emails: User authenticated', userId);
 
     // Check if the user has admin role
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('role', 'admin')
       .single();
 

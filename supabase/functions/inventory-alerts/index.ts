@@ -59,7 +59,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Starting inventory alerts check for admin user:', user.id);
+    console.log('Starting inventory alerts check for admin user:', userId);
 
     // Get alert settings
     const { data: settings, error: settingsError } = await supabaseClient
