@@ -54,23 +54,25 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Get the current user
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
-      console.log('create-staff-user: User authentication failed', userError);
+    // Get the current user via JWT claims
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      console.log('create-staff-user: User authentication failed', claimsError);
       return new Response(
         JSON.stringify({ error: 'Authentication failed' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('create-staff-user: User authenticated', user.id);
+    const userId = claimsData.claims.sub;
+    console.log('create-staff-user: User authenticated', userId);
 
     // Check if the user is an admin (super admin)
     const { data: roleData } = await supabaseAdmin
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('role', 'admin')
       .maybeSingle();
 
@@ -78,7 +80,7 @@ Deno.serve(async (req) => {
     const { data: ownerData } = await supabaseAdmin
       .from('shop_staff')
       .select('shop_id, role')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('role', 'owner')
       .eq('is_active', true);
 

@@ -112,25 +112,27 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
 
-    if (authError || !user) {
-      console.error('Invalid token:', authError?.message);
+    if (claimsError || !claimsData?.claims) {
+      console.error('Invalid token:', claimsError?.message);
       return new Response(JSON.stringify({ error: 'Unauthorized - Invalid token' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    const userId = claimsData.claims.sub;
+
     // SECURITY: Verify user has appropriate role (admin or manager only)
     const { data: userRoles } = await supabaseClient
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
     
     const hasAccess = userRoles?.some(r => r.role === 'admin' || r.role === 'manager');
     if (!hasAccess) {
-      console.error(`User ${user.id} attempted API access without proper role`);
+      console.error(`User ${userId} attempted API access without proper role`);
       return new Response(JSON.stringify({ error: 'Forbidden - Insufficient permissions' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -157,7 +159,7 @@ serve(async (req) => {
 
     // SECURITY: Validate endpoint is in whitelist
     if (!isValidEndpoint(endpoint)) {
-      console.error(`Rejected invalid endpoint: ${endpoint} for user: ${user.id}`);
+      console.error(`Rejected invalid endpoint: ${endpoint} for user: ${userId}`);
       return new Response(JSON.stringify({ 
         error: 'Invalid endpoint',
         message: 'The requested endpoint is not allowed'
@@ -181,7 +183,7 @@ serve(async (req) => {
       url.searchParams.append(key, value);
     }
 
-    console.log(`Calling external API: ${url.toString()} for user: ${user.id}`);
+    console.log(`Calling external API: ${url.toString()} for user: ${userId}`);
 
     // Make API call
     const apiResponse = await fetch(url.toString(), {

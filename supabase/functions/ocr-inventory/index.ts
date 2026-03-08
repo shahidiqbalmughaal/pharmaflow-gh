@@ -76,23 +76,24 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     
-    if (authError || !user) {
-      console.error("Authentication failed:", authError?.message);
+    if (claimsError || !claimsData?.claims) {
+      console.error("Authentication failed:", claimsError?.message);
       return new Response(
         JSON.stringify({ error: 'Invalid authentication token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`OCR request from authenticated user: ${user.id}`);
+    const userId = claimsData.claims.sub;
+    console.log(`OCR request from authenticated user: ${userId}`);
 
     // Verify user has appropriate role (admin or manager can use OCR for inventory)
     const { data: userRoles, error: rolesError } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
 
     if (rolesError) {
       console.error("Failed to fetch user roles:", rolesError.message);
@@ -106,14 +107,14 @@ serve(async (req) => {
     const hasValidRole = userRoles?.some(r => validRoles.includes(r.role));
     
     if (!hasValidRole) {
-      console.error(`User ${user.id} lacks required role. Has roles:`, userRoles?.map(r => r.role));
+      console.error(`User ${userId} lacks required role. Has roles:`, userRoles?.map(r => r.role));
       return new Response(
         JSON.stringify({ error: 'Insufficient permissions - Admin or Manager role required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`User ${user.id} authorized with role:`, userRoles?.map(r => r.role));
+    console.log(`User ${userId} authorized with role:`, userRoles?.map(r => r.role));
 
     // Now process the image
     const { image_base64, image_url, mode = "auto" } = await req.json();
@@ -263,7 +264,7 @@ serve(async (req) => {
       invoiceData.warnings = warnings;
       invoiceData.total_items_detected = invoiceData.items.length;
 
-      console.log(`Invoice OCR completed: ${invoiceData.items.length} items extracted for user ${user.id}`);
+      console.log(`Invoice OCR completed: ${invoiceData.items.length} items extracted for user ${userId}`);
 
       return new Response(
         JSON.stringify({ 
@@ -294,7 +295,7 @@ serve(async (req) => {
 
     singleData.warnings = warnings;
 
-    console.log(`Single product OCR completed successfully for user ${user.id}`);
+    console.log(`Single product OCR completed successfully for user ${userId}`);
 
     return new Response(
       JSON.stringify({ 

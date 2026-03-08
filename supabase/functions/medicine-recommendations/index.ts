@@ -29,21 +29,23 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     
-    if (authError || !user) {
-      console.error('Invalid token or user not found:', authError?.message);
+    if (claimsError || !claimsData?.claims) {
+      console.error('Invalid token:', claimsError?.message);
       return new Response(
         JSON.stringify({ error: 'Invalid authentication token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    const userId = claimsData.claims.sub;
+
     // Verify user has appropriate role (admin, manager, or salesman)
     const { data: userRoles, error: rolesError } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
 
     if (rolesError) {
       console.error('Error fetching user roles:', rolesError);
@@ -57,14 +59,14 @@ serve(async (req) => {
     const hasValidRole = userRoles?.some(r => validRoles.includes(r.role));
     
     if (!hasValidRole) {
-      console.error('User lacks required role:', user.id);
+      console.error('User lacks required role:', userId);
       return new Response(
         JSON.stringify({ error: 'Insufficient permissions' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Authenticated user:', user.id, 'with roles:', userRoles?.map(r => r.role));
+    console.log('Authenticated user:', userId, 'with roles:', userRoles?.map(r => r.role));
 
     const { symptoms, currentMedicineId } = await req.json();
     
