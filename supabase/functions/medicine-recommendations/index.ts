@@ -59,7 +59,7 @@ serve(async (req) => {
     const hasValidRole = userRoles?.some(r => validRoles.includes(r.role));
     
     if (!hasValidRole) {
-      console.error('User lacks required role:', user.id);
+      console.error('User lacks required role:', userId);
       return new Response(
         JSON.stringify({ error: 'Insufficient permissions' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
