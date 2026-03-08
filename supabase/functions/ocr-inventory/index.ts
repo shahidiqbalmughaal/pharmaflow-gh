@@ -264,7 +264,7 @@ serve(async (req) => {
       invoiceData.warnings = warnings;
       invoiceData.total_items_detected = invoiceData.items.length;
 
-      console.log(`Invoice OCR completed: ${invoiceData.items.length} items extracted for user ${user.id}`);
+      console.log(`Invoice OCR completed: ${invoiceData.items.length} items extracted for user ${userId}`);
 
       return new Response(
         JSON.stringify({ 
