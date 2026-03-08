@@ -107,7 +107,7 @@ serve(async (req) => {
     const hasValidRole = userRoles?.some(r => validRoles.includes(r.role));
     
     if (!hasValidRole) {
-      console.error(`User ${user.id} lacks required role. Has roles:`, userRoles?.map(r => r.role));
+      console.error(`User ${userId} lacks required role. Has roles:`, userRoles?.map(r => r.role));
       return new Response(
         JSON.stringify({ error: 'Insufficient permissions - Admin or Manager role required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
