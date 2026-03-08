@@ -159,7 +159,7 @@ serve(async (req) => {
 
     // SECURITY: Validate endpoint is in whitelist
     if (!isValidEndpoint(endpoint)) {
-      console.error(`Rejected invalid endpoint: ${endpoint} for user: ${user.id}`);
+      console.error(`Rejected invalid endpoint: ${endpoint} for user: ${userId}`);
       return new Response(JSON.stringify({ 
         error: 'Invalid endpoint',
         message: 'The requested endpoint is not allowed'
