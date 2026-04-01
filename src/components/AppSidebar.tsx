@@ -1,7 +1,6 @@
 import { 
   LayoutDashboard, 
-  Pill, 
-  Sparkles, 
+  Package, 
   ShoppingCart, 
   FileText, 
   Users, 
