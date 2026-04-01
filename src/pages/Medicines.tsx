@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePaginatedMedicines } from "@/hooks/usePaginatedMedicines";
 import { useGlobalMedicineSearch } from "@/hooks/useGlobalMedicineSearch";
@@ -172,15 +172,26 @@ const Medicines = () => {
     return groupMedicinesByName(medicines);
   }, [medicines]);
 
-  // Extract unique filter values from all medicines
-  const filterOptions = useMemo(() => {
-    const allMeds = medicines ?? [];
-    const companies = [...new Set(allMeds.map(m => m.company_name).filter(Boolean))].sort();
-    const suppliers = [...new Set(allMeds.map(m => m.supplier).filter(Boolean))].sort();
-    const racks = [...new Set(allMeds.map(m => m.rack_no).filter(Boolean))].sort();
-    const types = [...new Set(allMeds.map(m => (m as any).selling_type || "per_tablet").filter(Boolean))].sort();
-    return { companies, suppliers, racks, types };
-  }, [medicines]);
+  // Fetch ALL unique filter values from the entire database (not just current page)
+  const { data: filterOptions } = useQuery({
+    queryKey: ['medicines-filter-options'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .select('company_name, supplier, rack_no, selling_type');
+      
+      if (error) throw error;
+      const allMeds = data ?? [];
+      const companies = [...new Set(allMeds.map(m => m.company_name).filter(Boolean))].sort();
+      const suppliers = [...new Set(allMeds.map(m => m.supplier).filter(Boolean))].sort();
+      const racks = [...new Set(allMeds.map(m => m.rack_no).filter(Boolean))].sort();
+      const types = [...new Set(allMeds.map(m => (m as any).selling_type || "per_tablet").filter(Boolean))].sort();
+      return { companies, suppliers, racks, types };
+    },
+    staleTime: 60000, // Cache for 1 minute
+  });
+
+  const safeFilterOptions = filterOptions ?? { companies: [], suppliers: [], racks: [], types: [] };
 
   const hasActiveFilters = filterCompany !== "all" || filterSupplier !== "all" || filterRack !== "all" || filterSellingType !== "all" || filterStockStatus !== "all";
 
@@ -673,7 +684,7 @@ const Medicines = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Companies</SelectItem>
-                  {filterOptions.companies.map(c => (
+                  {safeFilterOptions.companies.map(c => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
@@ -688,7 +699,7 @@ const Medicines = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Suppliers</SelectItem>
-                  {filterOptions.suppliers.map(s => (
+                  {safeFilterOptions.suppliers.map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
                 </SelectContent>
@@ -703,7 +714,7 @@ const Medicines = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Racks</SelectItem>
-                  {filterOptions.racks.map(r => (
+                  {safeFilterOptions.racks.map(r => (
                     <SelectItem key={r} value={r}>{r}</SelectItem>
                   ))}
                 </SelectContent>
@@ -718,7 +729,7 @@ const Medicines = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  {filterOptions.types.map(t => (
+                  {safeFilterOptions.types.map(t => (
                     <SelectItem key={t} value={t}>{getSellingTypeLabel(t)}</SelectItem>
                   ))}
                 </SelectContent>
