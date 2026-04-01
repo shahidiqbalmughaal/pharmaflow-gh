@@ -172,15 +172,26 @@ const Medicines = () => {
     return groupMedicinesByName(medicines);
   }, [medicines]);
 
-  // Extract unique filter values from all medicines
-  const filterOptions = useMemo(() => {
-    const allMeds = medicines ?? [];
-    const companies = [...new Set(allMeds.map(m => m.company_name).filter(Boolean))].sort();
-    const suppliers = [...new Set(allMeds.map(m => m.supplier).filter(Boolean))].sort();
-    const racks = [...new Set(allMeds.map(m => m.rack_no).filter(Boolean))].sort();
-    const types = [...new Set(allMeds.map(m => (m as any).selling_type || "per_tablet").filter(Boolean))].sort();
-    return { companies, suppliers, racks, types };
-  }, [medicines]);
+  // Fetch ALL unique filter values from the entire database (not just current page)
+  const { data: filterOptions } = useQuery({
+    queryKey: ['medicines-filter-options'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .select('company_name, supplier, rack_no, selling_type');
+      
+      if (error) throw error;
+      const allMeds = data ?? [];
+      const companies = [...new Set(allMeds.map(m => m.company_name).filter(Boolean))].sort();
+      const suppliers = [...new Set(allMeds.map(m => m.supplier).filter(Boolean))].sort();
+      const racks = [...new Set(allMeds.map(m => m.rack_no).filter(Boolean))].sort();
+      const types = [...new Set(allMeds.map(m => (m as any).selling_type || "per_tablet").filter(Boolean))].sort();
+      return { companies, suppliers, racks, types };
+    },
+    staleTime: 60000, // Cache for 1 minute
+  });
+
+  const safeFilterOptions = filterOptions ?? { companies: [], suppliers: [], racks: [], types: [] };
 
   const hasActiveFilters = filterCompany !== "all" || filterSupplier !== "all" || filterRack !== "all" || filterSellingType !== "all" || filterStockStatus !== "all";
 
