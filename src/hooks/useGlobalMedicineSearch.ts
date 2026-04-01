@@ -1,38 +1,49 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UseGlobalMedicineSearchOptions {
   enabled?: boolean;
+  debounceMs?: number;
 }
 
-export function useGlobalMedicineSearch({ enabled = false }: UseGlobalMedicineSearchOptions = {}) {
+export function useGlobalMedicineSearch({ enabled = false, debounceMs = 350 }: UseGlobalMedicineSearchOptions = {}) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Debounce the search query
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, debounceMs);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [searchQuery, debounceMs]);
 
   // Only query when search is active and has content
-  const shouldSearch = enabled && searchQuery.trim().length > 0;
+  const shouldSearch = enabled && debouncedQuery.trim().length > 0;
 
   const { data: searchResults, isLoading: isSearchLoading, error } = useQuery({
-    queryKey: ['medicines-global-search', searchQuery],
+    queryKey: ['medicines-global-search', debouncedQuery],
     queryFn: async () => {
-      if (!searchQuery.trim()) return [];
+      if (!debouncedQuery.trim()) return [];
       
-      const query = searchQuery.toLowerCase();
+      const query = debouncedQuery.toLowerCase();
       
-      // Search across all medicines without pagination limit
       const { data, error } = await supabase
         .from('medicines')
         .select('*')
         .or(`medicine_name.ilike.%${query}%,batch_no.ilike.%${query}%,company_name.ilike.%${query}%,barcode.ilike.%${query}%`)
         .order('medicine_name')
-        .limit(500); // Return up to 500 search results
+        .limit(500);
       
       if (error) throw error;
       return data || [];
     },
     enabled: shouldSearch,
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 30000,
   });
 
   const handleSearchChange = useCallback((value: string) => {
@@ -42,6 +53,7 @@ export function useGlobalMedicineSearch({ enabled = false }: UseGlobalMedicineSe
 
   const clearSearch = useCallback(() => {
     setSearchQuery("");
+    setDebouncedQuery("");
     setIsSearching(false);
   }, []);
 
@@ -51,7 +63,7 @@ export function useGlobalMedicineSearch({ enabled = false }: UseGlobalMedicineSe
     clearSearch,
     isSearching,
     searchResults: searchResults ?? [],
-    isSearchLoading: shouldSearch && isSearchLoading,
+    isSearchLoading: (isSearching && debouncedQuery !== searchQuery) || (shouldSearch && isSearchLoading),
     searchError: error,
     hasResults: shouldSearch && (searchResults?.length ?? 0) > 0,
     resultCount: searchResults?.length ?? 0,
