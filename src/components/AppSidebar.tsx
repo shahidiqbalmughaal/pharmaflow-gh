@@ -37,8 +37,7 @@ const getMenuItems = (userRole: string | null, shopRole: string | null) => {
   // Base items available to all staff
   const baseItems = [
     { title: "Dashboard", url: "/", icon: LayoutDashboard, visible: true },
-    { title: "Medicines", url: "/medicines", icon: Pill, visible: true },
-    { title: "Cosmetics", url: "/cosmetics", icon: Sparkles, visible: true },
+    { title: "Products", url: "/products", icon: Package, visible: true },
     { title: "Sales", url: "/sales", icon: ShoppingCart, visible: true },
   ];
 
