@@ -684,7 +684,7 @@ const Medicines = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Companies</SelectItem>
-                  {filterOptions.companies.map(c => (
+                  {safeFilterOptions.companies.map(c => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
@@ -699,7 +699,7 @@ const Medicines = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Suppliers</SelectItem>
-                  {filterOptions.suppliers.map(s => (
+                  {safeFilterOptions.suppliers.map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
                 </SelectContent>
@@ -714,7 +714,7 @@ const Medicines = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Racks</SelectItem>
-                  {filterOptions.racks.map(r => (
+                  {safeFilterOptions.racks.map(r => (
                     <SelectItem key={r} value={r}>{r}</SelectItem>
                   ))}
                 </SelectContent>
@@ -729,7 +729,7 @@ const Medicines = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  {filterOptions.types.map(t => (
+                  {safeFilterOptions.types.map(t => (
                     <SelectItem key={t} value={t}>{getSellingTypeLabel(t)}</SelectItem>
                   ))}
                 </SelectContent>
