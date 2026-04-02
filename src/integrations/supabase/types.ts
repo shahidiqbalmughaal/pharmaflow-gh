@@ -237,6 +237,7 @@ export type Database = {
           id: string
           manufacturing_date: string
           minimum_stock: number
+          product_category: string | null
           product_name: string
           purchase_price: number
           quantity: number
@@ -256,6 +257,7 @@ export type Database = {
           id?: string
           manufacturing_date: string
           minimum_stock?: number
+          product_category?: string | null
           product_name: string
           purchase_price: number
           quantity?: number
@@ -275,6 +277,7 @@ export type Database = {
           id?: string
           manufacturing_date?: string
           minimum_stock?: number
+          product_category?: string | null
           product_name?: string
           purchase_price?: number
           quantity?: number
@@ -519,6 +522,7 @@ export type Database = {
           manufacturing_date: string
           medicine_name: string
           price_per_packet: number | null
+          product_category: string | null
           purchase_price: number
           quantity: number
           rack_no: string
@@ -540,6 +544,7 @@ export type Database = {
           manufacturing_date: string
           medicine_name: string
           price_per_packet?: number | null
+          product_category?: string | null
           purchase_price: number
           quantity?: number
           rack_no: string
@@ -561,6 +566,7 @@ export type Database = {
           manufacturing_date?: string
           medicine_name?: string
           price_per_packet?: number | null
+          product_category?: string | null
           purchase_price?: number
           quantity?: number
           rack_no?: string
