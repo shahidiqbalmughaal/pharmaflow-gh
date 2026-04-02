@@ -348,9 +348,9 @@ const Products = () => {
     setEditingProduct(null);
   };
 
-  const handleAddNew = (type?: 'medicine' | 'cosmetic') => {
+  const handleAddNew = (type?: ProductType) => {
     setEditingProduct(null);
-    setDialogDefaultType(type || (activeTab === 'cosmetic' ? 'cosmetic' : 'medicine'));
+    setDialogDefaultType(type || (activeTab === 'cosmetic' ? 'cosmetic' : activeTab === 'herbal_medicine' ? 'herbal_medicine' : 'medicine'));
     setDialogOpen(true);
   };
 
