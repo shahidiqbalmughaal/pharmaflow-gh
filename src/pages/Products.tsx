@@ -794,8 +794,8 @@ const Products = () => {
                         </TableCell>
                         <TableCell>
                           {mixedTypes ? <Badge variant="outline" className="text-xs">Mixed</Badge> :
-                            <Badge variant={first.product_type === 'medicine' ? 'default' : 'secondary'} className="text-xs">
-                              {first.product_type === 'medicine' ? 'Medicine' : 'Cosmetic'}
+                            <Badge variant={first.product_type === 'cosmetic' ? 'secondary' : first.product_type === 'herbal_medicine' ? 'outline' : 'default'} className="text-xs">
+                              {getProductTypeLabel(first.product_type)}
                             </Badge>
                           }
                         </TableCell>
