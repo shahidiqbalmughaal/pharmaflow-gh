@@ -638,7 +638,7 @@ const Products = () => {
       {showFilters && (
         <div className="bg-card rounded-lg border p-4">
           <div className="flex items-center gap-4 flex-wrap">
-            {(activeTab === 'all' || activeTab === 'medicine') && (
+            {(activeTab === 'all' || activeTab === 'medicine' || activeTab === 'herbal_medicine') && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground whitespace-nowrap">Company</span>
                 <Select value={filterCompany} onValueChange={setFilterCompany}>
