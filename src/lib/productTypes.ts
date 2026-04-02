@@ -1,7 +1,7 @@
 // Unified product type for combining medicines and cosmetics
 export interface UnifiedProduct {
   id: string;
-  product_type: 'medicine' | 'cosmetic';
+  product_type: 'medicine' | 'cosmetic' | 'herbal_medicine';
   name: string;
   batch_no: string;
   rack_no: string;
