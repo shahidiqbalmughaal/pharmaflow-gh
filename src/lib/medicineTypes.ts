@@ -77,6 +77,13 @@ export const SELLING_TYPES = [
   { value: "sugar_strip", label: "Sugar Strip", unit: "Pieces", priceUnit: "Per Piece" },
   { value: "supplement", label: "Supplement", unit: "Units", priceUnit: "Per Unit" },
   { value: "narcotic", label: "Narcotic", unit: "Units", priceUnit: "Per Unit" },
+  
+  // Medicated Products
+  { value: "medicated_shampoo", label: "Medicated Shampoo", unit: "Units", priceUnit: "Per Unit" },
+  { value: "medicated_sunblock", label: "Medicated Sunblock", unit: "Units", priceUnit: "Per Unit" },
+  { value: "medicated_facewash", label: "Medicated Facewash", unit: "Units", priceUnit: "Per Unit" },
+  { value: "medicated_lotion", label: "Medicated Lotion", unit: "Units", priceUnit: "Per Unit" },
+  { value: "medicated_solution", label: "Medicated Solution", unit: "Units", priceUnit: "Per Unit" },
 ] as const;
 
 export type SellingType = typeof SELLING_TYPES[number]["value"];
@@ -129,6 +136,11 @@ export const EXPIRY_REQUIRED_TYPES: SellingType[] = [
   "shampoo",
   "mouthwash",
   "gargle",
+  "medicated_shampoo",
+  "medicated_sunblock",
+  "medicated_facewash",
+  "medicated_lotion",
+  "medicated_solution",
 ];
 
 // Non-drug items where expiry is optional
