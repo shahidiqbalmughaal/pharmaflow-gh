@@ -556,6 +556,7 @@ const Products = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem onClick={() => handleAddNew('medicine')}>Add Medicine</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddNew('herbal_medicine')}>Add Herbal Medicine</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddNew('cosmetic')}>Add Cosmetic</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
