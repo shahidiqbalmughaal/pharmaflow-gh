@@ -42,10 +42,11 @@ import { isExpired, isExpiringWithinDays } from "@/hooks/useFEFOSelection";
 import { exportToCSV, exportMedicineInventoryToExcel, exportToPDF, printStockList } from "@/lib/exportUtils";
 import { cn } from "@/lib/utils";
 import { normalizeMedicine, normalizeCosmetic, type UnifiedProduct } from "@/lib/productTypes";
+import { getProductTypeLabel, type ProductType } from "@/lib/productCategories";
 
 const LOW_STOCK_THRESHOLD = 10;
 
-type ProductTab = 'all' | 'medicine' | 'cosmetic';
+type ProductTab = 'all' | 'medicine' | 'cosmetic' | 'herbal_medicine';
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -53,7 +54,7 @@ const Products = () => {
   
   const [activeTab, setActiveTab] = useState<ProductTab>(initialTab);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogDefaultType, setDialogDefaultType] = useState<'medicine' | 'cosmetic'>('medicine');
+  const [dialogDefaultType, setDialogDefaultType] = useState<ProductType>('medicine');
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -196,7 +197,8 @@ const Products = () => {
     const normalizedCos = filteredCos.map(normalizeCosmetic);
 
     let result: UnifiedProduct[] = [];
-    if (activeTab === 'medicine') result = normalizedMeds;
+    if (activeTab === 'medicine') result = normalizedMeds.filter(m => m.product_type === 'medicine');
+    else if (activeTab === 'herbal_medicine') result = normalizedMeds.filter(m => m.product_type === 'herbal_medicine');
     else if (activeTab === 'cosmetic') result = normalizedCos;
     else result = [...normalizedMeds, ...normalizedCos];
 
@@ -312,12 +314,11 @@ const Products = () => {
   };
 
   const handleEdit = (product: UnifiedProduct) => {
-    // Find the original record
-    if (product.product_type === 'medicine') {
+    if (product.product_type === 'medicine' || product.product_type === 'herbal_medicine') {
       const original = (isSearching ? medSearchResults : medicines)?.find(m => m.id === product.id);
       if (original) {
-        setEditingProduct({ ...original, _product_type: 'medicine' });
-        setDialogDefaultType('medicine');
+        setEditingProduct({ ...original, _product_type: product.product_type === 'herbal_medicine' ? 'herbal_medicine' : 'medicine' });
+        setDialogDefaultType(product.product_type);
         setDialogOpen(true);
       }
     } else {
@@ -331,9 +332,9 @@ const Products = () => {
   };
 
   const handleDelete = (product: UnifiedProduct) => {
-    const label = product.product_type === 'medicine' ? 'medicine' : 'cosmetic';
+    const label = getProductTypeLabel(product.product_type);
     if (confirm(`Are you sure you want to delete this ${label}?`)) {
-      if (product.product_type === 'medicine') {
+      if (product.product_type === 'medicine' || product.product_type === 'herbal_medicine') {
         deleteMedMutation.mutate(product.id);
       } else {
         deleteCosMutation.mutate(product.id);
@@ -346,9 +347,9 @@ const Products = () => {
     setEditingProduct(null);
   };
 
-  const handleAddNew = (type?: 'medicine' | 'cosmetic') => {
+  const handleAddNew = (type?: ProductType) => {
     setEditingProduct(null);
-    setDialogDefaultType(type || (activeTab === 'cosmetic' ? 'cosmetic' : 'medicine'));
+    setDialogDefaultType(type || (activeTab === 'cosmetic' ? 'cosmetic' : activeTab === 'herbal_medicine' ? 'herbal_medicine' : 'medicine'));
     setDialogOpen(true);
   };
 
@@ -485,8 +486,8 @@ const Products = () => {
           </div>
         </TableCell>
         <TableCell>
-          <Badge variant={p.product_type === 'medicine' ? 'default' : 'secondary'} className="text-xs">
-            {p.product_type === 'medicine' ? 'Medicine' : 'Cosmetic'}
+          <Badge variant={p.product_type === 'cosmetic' ? 'secondary' : p.product_type === 'herbal_medicine' ? 'outline' : 'default'} className="text-xs">
+            {getProductTypeLabel(p.product_type)}
           </Badge>
         </TableCell>
         <TableCell>{p.batch_no}</TableCell>
@@ -555,6 +556,7 @@ const Products = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem onClick={() => handleAddNew('medicine')}>Add Medicine</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddNew('herbal_medicine')}>Add Herbal Medicine</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddNew('cosmetic')}>Add Cosmetic</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -566,6 +568,7 @@ const Products = () => {
         <TabsList>
           <TabsTrigger value="all">All Products</TabsTrigger>
           <TabsTrigger value="medicine">Medicines</TabsTrigger>
+          <TabsTrigger value="herbal_medicine">Herbal Medicines</TabsTrigger>
           <TabsTrigger value="cosmetic">Cosmetics</TabsTrigger>
         </TabsList>
       </Tabs>
@@ -597,7 +600,7 @@ const Products = () => {
           {hasActiveFilters && <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4">{[filterCompany, filterSupplier, filterRack, filterSellingType, filterCategory, filterBrand, filterStockStatus].filter(v => v !== "all").length}</Badge>}
         </Button>
 
-        {(activeTab === 'all' || activeTab === 'medicine') && (
+        {(activeTab === 'all' || activeTab === 'medicine' || activeTab === 'herbal_medicine') && (
           <Button variant="outline" size="sm" onClick={() => setFindReplaceOpen(true)} className="gap-2">
             <Replace className="h-4 w-4" /> Find & Replace (Med)
           </Button>
@@ -635,7 +638,7 @@ const Products = () => {
       {showFilters && (
         <div className="bg-card rounded-lg border p-4">
           <div className="flex items-center gap-4 flex-wrap">
-            {(activeTab === 'all' || activeTab === 'medicine') && (
+            {(activeTab === 'all' || activeTab === 'medicine' || activeTab === 'herbal_medicine') && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground whitespace-nowrap">Company</span>
                 <Select value={filterCompany} onValueChange={setFilterCompany}>
@@ -670,7 +673,7 @@ const Products = () => {
               </Select>
             </div>
 
-            {(activeTab === 'all' || activeTab === 'medicine') && (
+            {(activeTab === 'all' || activeTab === 'medicine' || activeTab === 'herbal_medicine') && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground whitespace-nowrap">Selling Type</span>
                 <Select value={filterSellingType} onValueChange={setFilterSellingType}>
@@ -791,8 +794,8 @@ const Products = () => {
                         </TableCell>
                         <TableCell>
                           {mixedTypes ? <Badge variant="outline" className="text-xs">Mixed</Badge> :
-                            <Badge variant={first.product_type === 'medicine' ? 'default' : 'secondary'} className="text-xs">
-                              {first.product_type === 'medicine' ? 'Medicine' : 'Cosmetic'}
+                            <Badge variant={first.product_type === 'cosmetic' ? 'secondary' : first.product_type === 'herbal_medicine' ? 'outline' : 'default'} className="text-xs">
+                              {getProductTypeLabel(first.product_type)}
                             </Badge>
                           }
                         </TableCell>

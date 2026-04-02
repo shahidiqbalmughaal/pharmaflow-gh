@@ -1,7 +1,9 @@
+import { PRODUCT_CATEGORIES } from '@/lib/productCategories';
+
 // Unified product type for combining medicines and cosmetics
 export interface UnifiedProduct {
   id: string;
-  product_type: 'medicine' | 'cosmetic';
+  product_type: 'medicine' | 'cosmetic' | 'herbal_medicine';
   name: string;
   batch_no: string;
   rack_no: string;
@@ -26,12 +28,15 @@ export interface UnifiedProduct {
   subcategory_id?: string;
   brand?: string;
   minimum_stock?: number;
+  product_category?: string;
 }
 
 export function normalizeMedicine(m: any): UnifiedProduct {
+  // Detect herbal_medicine from product_category
+  const isHerbal = m.product_category && PRODUCT_CATEGORIES.herbal_medicine?.includes(m.product_category);
   return {
     id: m.id,
-    product_type: 'medicine',
+    product_type: isHerbal ? 'herbal_medicine' : 'medicine',
     name: m.medicine_name,
     batch_no: m.batch_no,
     rack_no: m.rack_no,
@@ -50,6 +55,7 @@ export function normalizeMedicine(m: any): UnifiedProduct {
     barcode: m.barcode,
     tablets_per_packet: m.tablets_per_packet,
     price_per_packet: m.price_per_packet ? Number(m.price_per_packet) : undefined,
+    product_category: m.product_category || undefined,
   };
 }
 
@@ -73,6 +79,7 @@ export function normalizeCosmetic(c: any): UnifiedProduct {
     subcategory_id: c.subcategory_id,
     brand: c.brand,
     minimum_stock: c.minimum_stock ?? 10,
+    product_category: c.product_category || undefined,
   };
 }
 
@@ -94,6 +101,7 @@ export function toMedicineRecord(p: Partial<UnifiedProduct> & { name: string }) 
     barcode: p.barcode || null,
     tablets_per_packet: p.tablets_per_packet || 1,
     price_per_packet: p.price_per_packet || null,
+    product_category: p.product_category || null,
   };
 }
 
@@ -112,5 +120,6 @@ export function toCosmeticRecord(p: Partial<UnifiedProduct> & { name: string }) 
     subcategory_id: p.subcategory_id || null,
     brand: p.brand,
     minimum_stock: p.minimum_stock ?? 10,
+    product_category: p.product_category || null,
   };
 }
