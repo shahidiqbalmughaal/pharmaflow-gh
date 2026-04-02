@@ -486,8 +486,8 @@ const Products = () => {
           </div>
         </TableCell>
         <TableCell>
-          <Badge variant={p.product_type === 'medicine' ? 'default' : 'secondary'} className="text-xs">
-            {p.product_type === 'medicine' ? 'Medicine' : 'Cosmetic'}
+          <Badge variant={p.product_type === 'cosmetic' ? 'secondary' : p.product_type === 'herbal_medicine' ? 'outline' : 'default'} className="text-xs">
+            {getProductTypeLabel(p.product_type)}
           </Badge>
         </TableCell>
         <TableCell>{p.batch_no}</TableCell>
