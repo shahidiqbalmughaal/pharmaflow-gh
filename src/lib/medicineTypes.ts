@@ -136,6 +136,11 @@ export const EXPIRY_REQUIRED_TYPES: SellingType[] = [
   "shampoo",
   "mouthwash",
   "gargle",
+  "medicated_shampoo",
+  "medicated_sunblock",
+  "medicated_facewash",
+  "medicated_lotion",
+  "medicated_solution",
 ];
 
 // Non-drug items where expiry is optional
