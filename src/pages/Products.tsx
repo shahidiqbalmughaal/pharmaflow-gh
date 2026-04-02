@@ -568,6 +568,7 @@ const Products = () => {
         <TabsList>
           <TabsTrigger value="all">All Products</TabsTrigger>
           <TabsTrigger value="medicine">Medicines</TabsTrigger>
+          <TabsTrigger value="herbal_medicine">Herbal Medicines</TabsTrigger>
           <TabsTrigger value="cosmetic">Cosmetics</TabsTrigger>
         </TabsList>
       </Tabs>
