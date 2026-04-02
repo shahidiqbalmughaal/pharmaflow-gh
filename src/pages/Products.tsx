@@ -673,7 +673,7 @@ const Products = () => {
               </Select>
             </div>
 
-            {(activeTab === 'all' || activeTab === 'medicine') && (
+            {(activeTab === 'all' || activeTab === 'medicine' || activeTab === 'herbal_medicine') && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground whitespace-nowrap">Selling Type</span>
                 <Select value={filterSellingType} onValueChange={setFilterSellingType}>
