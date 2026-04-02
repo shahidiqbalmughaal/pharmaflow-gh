@@ -30,9 +30,12 @@ export interface UnifiedProduct {
 }
 
 export function normalizeMedicine(m: any): UnifiedProduct {
+  // Detect herbal_medicine from product_category
+  const { PRODUCT_CATEGORIES } = require('@/lib/productCategories');
+  const isHerbal = m.product_category && PRODUCT_CATEGORIES.herbal_medicine?.includes(m.product_category);
   return {
     id: m.id,
-    product_type: 'medicine',
+    product_type: isHerbal ? 'herbal_medicine' : 'medicine',
     name: m.medicine_name,
     batch_no: m.batch_no,
     rack_no: m.rack_no,
@@ -51,6 +54,7 @@ export function normalizeMedicine(m: any): UnifiedProduct {
     barcode: m.barcode,
     tablets_per_packet: m.tablets_per_packet,
     price_per_packet: m.price_per_packet ? Number(m.price_per_packet) : undefined,
+    product_category: m.product_category || undefined,
   };
 }
 
