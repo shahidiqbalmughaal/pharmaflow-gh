@@ -78,6 +78,7 @@ export function normalizeCosmetic(c: any): UnifiedProduct {
     subcategory_id: c.subcategory_id,
     brand: c.brand,
     minimum_stock: c.minimum_stock ?? 10,
+    product_category: c.product_category || undefined,
   };
 }
 
