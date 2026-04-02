@@ -26,6 +26,7 @@ export interface UnifiedProduct {
   subcategory_id?: string;
   brand?: string;
   minimum_stock?: number;
+  product_category?: string;
 }
 
 export function normalizeMedicine(m: any): UnifiedProduct {
