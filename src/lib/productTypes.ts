@@ -1,3 +1,5 @@
+import { PRODUCT_CATEGORIES } from '@/lib/productCategories';
+
 // Unified product type for combining medicines and cosmetics
 export interface UnifiedProduct {
   id: string;
