@@ -314,12 +314,11 @@ const Products = () => {
   };
 
   const handleEdit = (product: UnifiedProduct) => {
-    // Find the original record
-    if (product.product_type === 'medicine') {
+    if (product.product_type === 'medicine' || product.product_type === 'herbal_medicine') {
       const original = (isSearching ? medSearchResults : medicines)?.find(m => m.id === product.id);
       if (original) {
-        setEditingProduct({ ...original, _product_type: 'medicine' });
-        setDialogDefaultType('medicine');
+        setEditingProduct({ ...original, _product_type: product.product_type === 'herbal_medicine' ? 'herbal_medicine' : 'medicine' });
+        setDialogDefaultType(product.product_type);
         setDialogOpen(true);
       }
     } else {
