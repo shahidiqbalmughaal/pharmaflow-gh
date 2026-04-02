@@ -600,7 +600,7 @@ const Products = () => {
           {hasActiveFilters && <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4">{[filterCompany, filterSupplier, filterRack, filterSellingType, filterCategory, filterBrand, filterStockStatus].filter(v => v !== "all").length}</Badge>}
         </Button>
 
-        {(activeTab === 'all' || activeTab === 'medicine') && (
+        {(activeTab === 'all' || activeTab === 'medicine' || activeTab === 'herbal_medicine') && (
           <Button variant="outline" size="sm" onClick={() => setFindReplaceOpen(true)} className="gap-2">
             <Replace className="h-4 w-4" /> Find & Replace (Med)
           </Button>
