@@ -42,10 +42,11 @@ import { isExpired, isExpiringWithinDays } from "@/hooks/useFEFOSelection";
 import { exportToCSV, exportMedicineInventoryToExcel, exportToPDF, printStockList } from "@/lib/exportUtils";
 import { cn } from "@/lib/utils";
 import { normalizeMedicine, normalizeCosmetic, type UnifiedProduct } from "@/lib/productTypes";
+import { getProductTypeLabel, type ProductType } from "@/lib/productCategories";
 
 const LOW_STOCK_THRESHOLD = 10;
 
-type ProductTab = 'all' | 'medicine' | 'cosmetic';
+type ProductTab = 'all' | 'medicine' | 'cosmetic' | 'herbal_medicine';
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
