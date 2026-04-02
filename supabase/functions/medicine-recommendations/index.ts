@@ -7,21 +7,18 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Initialize Supabase client with service role for database operations
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Validate user authentication
+    // Validate authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('No authorization header provided');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -32,7 +29,6 @@ serve(async (req) => {
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     
     if (claimsError || !claimsData?.claims) {
-      console.error('Invalid token:', claimsError?.message);
       return new Response(
         JSON.stringify({ error: 'Invalid authentication token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -41,34 +37,28 @@ serve(async (req) => {
 
     const userId = claimsData.claims.sub;
 
-    // Verify user has appropriate role (admin, manager, or salesman)
+    // Verify role
     const { data: userRoles, error: rolesError } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId);
 
     if (rolesError) {
-      console.error('Error fetching user roles:', rolesError);
       return new Response(
-        JSON.stringify({ error: 'Failed to verify user permissions' }),
+        JSON.stringify({ error: 'Failed to verify permissions' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const validRoles = ['admin', 'manager', 'salesman'];
-    const hasValidRole = userRoles?.some(r => validRoles.includes(r.role));
-    
-    if (!hasValidRole) {
-      console.error('User lacks required role:', userId);
+    if (!userRoles?.some(r => validRoles.includes(r.role))) {
       return new Response(
         JSON.stringify({ error: 'Insufficient permissions' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Authenticated user:', userId, 'with roles:', userRoles?.map(r => r.role));
-
-    // Get the user's current shop_id for multi-tenant isolation
+    // Get user's shop
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('current_shop_id')
@@ -76,7 +66,6 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profileData?.current_shop_id) {
-      console.error('Failed to get user shop:', profileError?.message);
       return new Response(
         JSON.stringify({ error: 'User is not assigned to a shop' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -84,13 +73,9 @@ serve(async (req) => {
     }
 
     const userShopId = profileData.current_shop_id;
-    console.log('User shop_id:', userShopId);
 
-    const { symptoms, currentMedicineId } = await req.json();
+    const { symptoms } = await req.json();
     
-    console.log('Received request with symptoms:', symptoms);
-    console.log('Current medicine ID:', currentMedicineId);
-
     if (!symptoms || symptoms.trim().length === 0) {
       return new Response(
         JSON.stringify({ error: 'Symptoms description is required' }),
@@ -98,63 +83,75 @@ serve(async (req) => {
       );
     }
 
-    // Fetch available medicines scoped to user's shop (in stock and not expired)
+    // Fetch available medicines - handle NULL expiry_date (items without expiry)
     const today = new Date().toISOString().split('T')[0];
     const { data: medicines, error: medicinesError } = await supabase
       .from('medicines')
-      .select('id, medicine_name, company_name, quantity, selling_price, expiry_date, rack_no, batch_no')
+      .select('id, medicine_name, company_name, quantity, selling_price, expiry_date, rack_no, batch_no, selling_type')
       .eq('shop_id', userShopId)
       .gt('quantity', 0)
-      .gte('expiry_date', today)
       .order('medicine_name');
 
     if (medicinesError) {
-      console.error('Error fetching medicines:', medicinesError);
       throw new Error('Failed to fetch medicines inventory');
     }
 
-    console.log(`Found ${medicines?.length || 0} available medicines`);
+    // Filter out expired medicines (but keep NULL expiry_date items)
+    const availableMedicines = (medicines || []).filter(m => 
+      !m.expiry_date || m.expiry_date >= today
+    );
 
-    // Format medicines list for AI context
-    const medicinesList = medicines?.map(m => 
-      `- ${m.medicine_name} (${m.company_name}) - Rs. ${m.selling_price} - ${m.quantity} in stock - Rack: ${m.rack_no}`
-    ).join('\n') || 'No medicines currently in stock';
+    console.log(`Found ${availableMedicines.length} available medicines for shop ${userShopId}`);
 
-    // Call Lovable AI for recommendations
+    if (availableMedicines.length === 0) {
+      return new Response(
+        JSON.stringify({
+          recommendations: [],
+          medical_advice: "No medicines currently available in inventory. Please check stock.",
+          consult_doctor: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Build a numbered list with IDs for the AI to reference
+    const medicinesWithIndex = availableMedicines.map((m, i) => ({
+      index: i,
+      id: m.id,
+      name: m.medicine_name,
+      company: m.company_name,
+      price: m.selling_price,
+      qty: m.quantity,
+      rack: m.rack_no,
+      batch: m.batch_no,
+      type: m.selling_type,
+    }));
+
+    const medicinesList = medicinesWithIndex.map(m => 
+      `[${m.index}] ${m.name} (${m.company}) - Rs.${m.price} - Qty:${m.qty} - Rack:${m.rack}`
+    ).join('\n');
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const systemPrompt = `You are a knowledgeable pharmacy assistant for Al-Rehman Pharmacy. Your role is to suggest appropriate medicines based on symptoms described by the customer.
+    const systemPrompt = `You are a knowledgeable pharmacy assistant. Suggest appropriate medicines from the inventory based on customer symptoms.
 
-IMPORTANT GUIDELINES:
-1. Only recommend medicines from the available inventory list provided
-2. For each recommendation, explain briefly why it might help with the described symptoms
-3. Always advise customers to consult a doctor for proper diagnosis and prescription
-4. If symptoms seem serious or require immediate medical attention, clearly state that
-5. Never claim to diagnose conditions - only suggest over-the-counter relief options
-6. Prioritize medicines that are commonly used for the described symptoms
-7. Consider cost-effectiveness when multiple options are available
+RULES:
+1. ONLY recommend medicines from the numbered inventory list below
+2. Use the exact index number [N] to reference each medicine
+3. Explain why each medicine helps with the symptoms
+4. Suggest general OTC dosage guidance
+5. Always recommend consulting a doctor for proper diagnosis
+6. If symptoms seem serious, clearly state that
+7. Prioritize commonly used medicines for the described symptoms
+8. Recommend 3-5 medicines maximum
 
-Available Medicines Inventory:
-${medicinesList}
+AVAILABLE INVENTORY:
+${medicinesList}`;
 
-Response Format:
-Provide 3-5 medicine recommendations in JSON format with this structure:
-{
-  "recommendations": [
-    {
-      "medicine_name": "exact name from inventory",
-      "reason": "brief explanation why this helps",
-      "dosage_suggestion": "general OTC dosage guidance",
-      "priority": "high/medium/low based on relevance"
-    }
-  ],
-  "medical_advice": "important health advice or warnings",
-  "consult_doctor": true/false (true if symptoms warrant professional consultation)
-}`;
-
+    // Use tool calling for structured output
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -168,6 +165,59 @@ Provide 3-5 medicine recommendations in JSON format with this structure:
           { role: 'user', content: `Customer symptoms: ${symptoms}` }
         ],
         temperature: 0.3,
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "recommend_medicines",
+              description: "Return medicine recommendations based on symptoms. Each recommendation must use the exact index number from the inventory list.",
+              parameters: {
+                type: "object",
+                properties: {
+                  recommendations: {
+                    type: "array",
+                    description: "List of 3-5 recommended medicines",
+                    items: {
+                      type: "object",
+                      properties: {
+                        medicine_index: { 
+                          type: "integer", 
+                          description: "The index number [N] from the inventory list" 
+                        },
+                        reason: { 
+                          type: "string", 
+                          description: "Why this medicine helps with the symptoms" 
+                        },
+                        dosage_suggestion: { 
+                          type: "string", 
+                          description: "General OTC dosage guidance" 
+                        },
+                        priority: { 
+                          type: "string", 
+                          enum: ["high", "medium", "low"],
+                          description: "Relevance to the described symptoms" 
+                        }
+                      },
+                      required: ["medicine_index", "reason", "dosage_suggestion", "priority"],
+                      additionalProperties: false
+                    }
+                  },
+                  medical_advice: { 
+                    type: "string", 
+                    description: "Important health advice or warnings for the customer" 
+                  },
+                  consult_doctor: { 
+                    type: "boolean", 
+                    description: "Whether symptoms warrant professional consultation" 
+                  }
+                },
+                required: ["recommendations", "medical_advice", "consult_doctor"],
+                additionalProperties: false
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "recommend_medicines" } }
       }),
     });
 
@@ -190,56 +240,69 @@ Provide 3-5 medicine recommendations in JSON format with this structure:
     }
 
     const aiResponse = await response.json();
-    const content = aiResponse.choices?.[0]?.message?.content;
-
-    console.log('AI response received');
-
-    // Parse the AI response
-    let recommendations;
+    
+    // Extract structured data from tool call
+    let result;
     try {
-      // Extract JSON from the response (it might be wrapped in markdown code blocks)
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        recommendations = JSON.parse(jsonMatch[0]);
+      const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
+      if (toolCall?.function?.arguments) {
+        const args = typeof toolCall.function.arguments === 'string' 
+          ? JSON.parse(toolCall.function.arguments) 
+          : toolCall.function.arguments;
+        result = args;
       } else {
-        throw new Error('No JSON found in response');
+        // Fallback: try to parse content as JSON
+        const content = aiResponse.choices?.[0]?.message?.content || '';
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          result = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('No structured output from AI');
+        }
       }
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
-      console.log('Raw content:', content);
-      // Return a fallback response
-      recommendations = {
-        recommendations: [],
-        medical_advice: "Unable to process recommendations at this time. Please consult a pharmacist directly.",
-        consult_doctor: true
-      };
+      return new Response(
+        JSON.stringify({
+          recommendations: [],
+          medical_advice: "Unable to process recommendations. Please consult a pharmacist directly.",
+          consult_doctor: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Enrich recommendations with full medicine details from database
-    if (recommendations.recommendations && medicines) {
-      recommendations.recommendations = recommendations.recommendations.map((rec: any) => {
-        const medicine = medicines.find(m => 
-          m.medicine_name.toLowerCase() === rec.medicine_name.toLowerCase()
-        );
-        if (medicine) {
-          return {
-            ...rec,
-            id: medicine.id,
-            company_name: medicine.company_name,
-            selling_price: medicine.selling_price,
-            quantity: medicine.quantity,
-            rack_no: medicine.rack_no,
-            batch_no: medicine.batch_no
-          };
+    // Map index-based recommendations to full medicine details
+    const enrichedRecommendations = (result.recommendations || [])
+      .map((rec: any) => {
+        const idx = rec.medicine_index;
+        if (idx === undefined || idx === null || idx < 0 || idx >= medicinesWithIndex.length) {
+          return null;
         }
-        return rec;
-      }).filter((rec: any) => rec.id); // Only include medicines found in inventory
-    }
+        const med = medicinesWithIndex[idx];
+        return {
+          id: med.id,
+          medicine_name: med.name,
+          company_name: med.company,
+          selling_price: med.price,
+          quantity: med.qty,
+          rack_no: med.rack,
+          batch_no: med.batch,
+          reason: rec.reason,
+          dosage_suggestion: rec.dosage_suggestion,
+          priority: rec.priority || 'medium',
+        };
+      })
+      .filter(Boolean);
 
-    console.log('Returning recommendations:', recommendations.recommendations?.length || 0);
+    console.log(`Returning ${enrichedRecommendations.length} recommendations`);
 
     return new Response(
-      JSON.stringify(recommendations),
+      JSON.stringify({
+        recommendations: enrichedRecommendations,
+        medical_advice: result.medical_advice || "Please consult a doctor for proper diagnosis.",
+        consult_doctor: result.consult_doctor !== false,
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
