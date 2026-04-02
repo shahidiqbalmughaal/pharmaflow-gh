@@ -54,7 +54,7 @@ const Products = () => {
   
   const [activeTab, setActiveTab] = useState<ProductTab>(initialTab);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogDefaultType, setDialogDefaultType] = useState<'medicine' | 'cosmetic'>('medicine');
+  const [dialogDefaultType, setDialogDefaultType] = useState<ProductType>('medicine');
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
