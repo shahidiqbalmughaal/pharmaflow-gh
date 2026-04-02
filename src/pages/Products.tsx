@@ -332,9 +332,9 @@ const Products = () => {
   };
 
   const handleDelete = (product: UnifiedProduct) => {
-    const label = product.product_type === 'medicine' ? 'medicine' : 'cosmetic';
+    const label = getProductTypeLabel(product.product_type);
     if (confirm(`Are you sure you want to delete this ${label}?`)) {
-      if (product.product_type === 'medicine') {
+      if (product.product_type === 'medicine' || product.product_type === 'herbal_medicine') {
         deleteMedMutation.mutate(product.id);
       } else {
         deleteCosMutation.mutate(product.id);
