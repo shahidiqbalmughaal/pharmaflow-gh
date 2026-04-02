@@ -33,7 +33,6 @@ export interface UnifiedProduct {
 
 export function normalizeMedicine(m: any): UnifiedProduct {
   // Detect herbal_medicine from product_category
-  const { PRODUCT_CATEGORIES } = require('@/lib/productCategories');
   const isHerbal = m.product_category && PRODUCT_CATEGORIES.herbal_medicine?.includes(m.product_category);
   return {
     id: m.id,
