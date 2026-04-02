@@ -197,7 +197,8 @@ const Products = () => {
     const normalizedCos = filteredCos.map(normalizeCosmetic);
 
     let result: UnifiedProduct[] = [];
-    if (activeTab === 'medicine') result = normalizedMeds;
+    if (activeTab === 'medicine') result = normalizedMeds.filter(m => m.product_type === 'medicine');
+    else if (activeTab === 'herbal_medicine') result = normalizedMeds.filter(m => m.product_type === 'herbal_medicine');
     else if (activeTab === 'cosmetic') result = normalizedCos;
     else result = [...normalizedMeds, ...normalizedCos];
 
