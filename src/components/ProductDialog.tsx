@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useShop } from "@/hooks/useShop";
 import { useCosmeticCategories } from "@/hooks/useCosmeticCategories";
 import { SELLING_TYPES } from "@/lib/medicineTypes";
+import { PRODUCT_CATEGORIES, getCategoriesForType, PRODUCT_TYPE_LABELS, type ProductType } from "@/lib/productCategories";
 import {
   Dialog,
   DialogContent,
@@ -30,27 +31,30 @@ interface ProductDialogProps {
   open: boolean;
   onClose: () => void;
   product?: any;
-  defaultType?: 'medicine' | 'cosmetic';
+  defaultType?: ProductType;
 }
 
 export function ProductDialog({ open, onClose, product, defaultType = 'medicine' }: ProductDialogProps) {
   const queryClient = useQueryClient();
   const { currentShop } = useShop();
   const { categories, getSubcategories } = useCosmeticCategories();
-  const [productType, setProductType] = useState<'medicine' | 'cosmetic'>(defaultType);
+  const [productType, setProductType] = useState<ProductType>(defaultType);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm();
 
   const watchedSellingType = watch("selling_type");
+  const watchedProductCategory = watch("product_category");
 
   useEffect(() => {
     if (product) {
-      // Determine type from the product data
       const type = product._product_type || (product.medicine_name ? 'medicine' : 'cosmetic');
-      setProductType(type);
+      // Check if it's herbal medicine
+      const resolvedType = type === 'medicine' && product.product_category && PRODUCT_CATEGORIES.herbal_medicine?.includes(product.product_category)
+        ? 'herbal_medicine' : type;
+      setProductType(resolvedType);
       
-      if (type === 'medicine') {
+      if (resolvedType === 'medicine' || resolvedType === 'herbal_medicine') {
         reset({
           name: product.medicine_name,
           batch_no: product.batch_no,
@@ -66,6 +70,7 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
           is_narcotic: product.is_narcotic || false,
           tablets_per_packet: product.tablets_per_packet || 1,
           price_per_packet: product.price_per_packet ? Number(product.price_per_packet) : undefined,
+          product_category: product.product_category || "",
         });
       } else {
         reset({
@@ -82,6 +87,7 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
           subcategory_id: product.subcategory_id || "",
           brand: product.brand || "",
           minimum_stock: product.minimum_stock ?? 10,
+          product_category: product.product_category || "",
         });
         setSelectedCategoryId(product.category_id || "");
       }
@@ -94,25 +100,31 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
 
   const filteredSubcategories = selectedCategoryId ? getSubcategories(selectedCategoryId) : [];
 
+  // Both medicine and herbal_medicine save to the medicines table
+  const isMedicineType = productType === 'medicine' || productType === 'herbal_medicine';
+
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
-      if (productType === 'medicine') {
-        const record = toMedicineRecord({
-          name: data.name,
-          batch_no: data.batch_no,
-          rack_no: data.rack_no,
-          quantity: data.quantity,
-          purchase_price: data.purchase_price,
-          selling_price: data.selling_price,
-          manufacturing_date: data.manufacturing_date,
-          expiry_date: data.expiry_date || null,
-          supplier: data.supplier,
-          company_name: data.company_name,
-          selling_type: data.selling_type || "per_tablet",
-          is_narcotic: data.is_narcotic || false,
-          tablets_per_packet: data.tablets_per_packet || 1,
-          price_per_packet: data.price_per_packet || null,
-        });
+      if (isMedicineType) {
+        const record = {
+          ...toMedicineRecord({
+            name: data.name,
+            batch_no: data.batch_no,
+            rack_no: data.rack_no,
+            quantity: data.quantity,
+            purchase_price: data.purchase_price,
+            selling_price: data.selling_price,
+            manufacturing_date: data.manufacturing_date,
+            expiry_date: data.expiry_date || null,
+            supplier: data.supplier,
+            company_name: data.company_name,
+            selling_type: data.selling_type || "per_tablet",
+            is_narcotic: data.is_narcotic || false,
+            tablets_per_packet: data.tablets_per_packet || 1,
+            price_per_packet: data.price_per_packet || null,
+            product_category: data.product_category || null,
+          }),
+        };
 
         if (product) {
           const { error } = await supabase.from("medicines").update(record).eq("id", product.id);
@@ -122,21 +134,24 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
           if (error) throw error;
         }
       } else {
-        const record = toCosmeticRecord({
-          name: data.name,
-          batch_no: data.batch_no,
-          rack_no: data.rack_no,
-          quantity: data.quantity,
-          purchase_price: data.purchase_price,
-          selling_price: data.selling_price,
-          manufacturing_date: data.manufacturing_date,
-          expiry_date: data.expiry_date,
-          supplier: data.supplier,
-          category_id: data.category_id,
-          subcategory_id: data.subcategory_id,
-          brand: data.brand,
-          minimum_stock: data.minimum_stock ?? 10,
-        });
+        const record = {
+          ...toCosmeticRecord({
+            name: data.name,
+            batch_no: data.batch_no,
+            rack_no: data.rack_no,
+            quantity: data.quantity,
+            purchase_price: data.purchase_price,
+            selling_price: data.selling_price,
+            manufacturing_date: data.manufacturing_date,
+            expiry_date: data.expiry_date,
+            supplier: data.supplier,
+            category_id: data.category_id,
+            subcategory_id: data.subcategory_id,
+            brand: data.brand,
+            minimum_stock: data.minimum_stock ?? 10,
+            product_category: data.product_category || null,
+          }),
+        };
 
         if (product) {
           const { error } = await supabase.from("cosmetics").update(record).eq("id", product.id);
@@ -162,7 +177,6 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
   });
 
   const onSubmit = (data: any) => {
-    // Convert string numbers to numbers
     data.quantity = Number(data.quantity);
     data.purchase_price = Number(data.purchase_price);
     data.selling_price = Number(data.selling_price);
@@ -173,6 +187,7 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
   };
 
   const isEditing = !!product;
+  const availableCategories = getCategoriesForType(productType);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -188,23 +203,40 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
               <RadioGroup
                 value={productType}
                 onValueChange={(val) => {
-                  setProductType(val as 'medicine' | 'cosmetic');
+                  setProductType(val as ProductType);
                   reset({});
                   setSelectedCategoryId("");
                 }}
                 className="flex gap-6"
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="medicine" id="type-medicine" />
-                  <Label htmlFor="type-medicine" className="cursor-pointer font-normal">Medicine</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="cosmetic" id="type-cosmetic" />
-                  <Label htmlFor="type-cosmetic" className="cursor-pointer font-normal">Cosmetic</Label>
-                </div>
+                {(Object.entries(PRODUCT_TYPE_LABELS) as [ProductType, string][]).map(([value, label]) => (
+                  <div key={value} className="flex items-center space-x-2">
+                    <RadioGroupItem value={value} id={`type-${value}`} />
+                    <Label htmlFor={`type-${value}`} className="cursor-pointer font-normal">{label}</Label>
+                  </div>
+                ))}
               </RadioGroup>
             </div>
           )}
+
+          {/* Product Category */}
+          <div className="space-y-2">
+            <Label>Product Category *</Label>
+            <Select
+              value={watchedProductCategory || ""}
+              onValueChange={(val) => setValue("product_category", val)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select product category" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCategories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.product_category && <p className="text-sm text-destructive">{errors.product_category.message as string}</p>}
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             {/* Common Fields */}
@@ -247,8 +279,8 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
               <Input id="supplier" {...register("supplier", { required: "Supplier is required" })} />
             </div>
 
-            {/* Medicine-specific fields */}
-            {productType === 'medicine' && (
+            {/* Medicine/Herbal Medicine specific fields */}
+            {isMedicineType && (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="company_name">Company Name *</Label>
