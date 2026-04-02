@@ -101,6 +101,7 @@ export function toMedicineRecord(p: Partial<UnifiedProduct> & { name: string }) 
     barcode: p.barcode || null,
     tablets_per_packet: p.tablets_per_packet || 1,
     price_per_packet: p.price_per_packet || null,
+    product_category: p.product_category || null,
   };
 }
 
