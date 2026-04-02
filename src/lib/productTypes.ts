@@ -120,5 +120,6 @@ export function toCosmeticRecord(p: Partial<UnifiedProduct> & { name: string }) 
     subcategory_id: p.subcategory_id || null,
     brand: p.brand,
     minimum_stock: p.minimum_stock ?? 10,
+    product_category: p.product_category || null,
   };
 }
