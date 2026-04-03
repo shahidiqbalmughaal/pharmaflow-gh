@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useShop } from "@/hooks/useShop";
 import { useCosmeticCategories } from "@/hooks/useCosmeticCategories";
-import { SELLING_TYPES } from "@/lib/medicineTypes";
+import { SELLING_TYPES, getSellingTypesForProductType } from "@/lib/medicineTypes";
 import { PRODUCT_CATEGORIES, getCategoriesForType, PRODUCT_TYPE_LABELS, type ProductType } from "@/lib/productCategories";
 import {
   Dialog,
