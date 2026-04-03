@@ -1084,6 +1084,10 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       }
     }
     else if (e.key === "ArrowDown") {
+      // For quantity/rate columns, allow native increment/decrement
+      if (colIndex === 1 || colIndex === 2) {
+        return; // Let browser handle arrow keys on number inputs
+      }
       e.preventDefault();
       const nextRow = rowIndex + 1;
       if (nextRow < saleItems.length) {
@@ -1092,6 +1096,10 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       }
     }
     else if (e.key === "ArrowUp") {
+      // For quantity/rate columns, allow native increment/decrement
+      if (colIndex === 1 || colIndex === 2) {
+        return; // Let browser handle arrow keys on number inputs
+      }
       e.preventDefault();
       const prevRow = rowIndex - 1;
       if (prevRow >= 0) {
