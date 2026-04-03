@@ -28,7 +28,7 @@ export function Layout({ children }: LayoutProps) {
               Sign Out
             </Button>
           </header>
-          <main className="flex-1 p-6 bg-secondary/30">
+          <main className="flex-1 p-6 bg-secondary/30 overflow-x-hidden">
             {children}
           </main>
         </div>
