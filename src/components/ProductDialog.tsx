@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useShop } from "@/hooks/useShop";
 import { useCosmeticCategories } from "@/hooks/useCosmeticCategories";
-import { SELLING_TYPES } from "@/lib/medicineTypes";
+import { SELLING_TYPES, getSellingTypesForProductType } from "@/lib/medicineTypes";
 import { PRODUCT_CATEGORIES, getCategoriesForType, PRODUCT_TYPE_LABELS, type ProductType } from "@/lib/productCategories";
 import {
   Dialog,
@@ -277,7 +277,7 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
                       <SelectValue placeholder="Select selling type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {SELLING_TYPES.map((t) => (
+                      {getSellingTypesForProductType(productType).map((t) => (
                         <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                       ))}
                     </SelectContent>

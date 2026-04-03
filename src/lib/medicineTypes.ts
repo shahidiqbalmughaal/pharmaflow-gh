@@ -99,6 +99,29 @@ export const SELLING_TYPES = [
   { value: "herbal_extract", label: "Herbal Extract", unit: "Units", priceUnit: "Per Unit" },
 ] as const;
 
+// Herbal-only selling type values
+export const HERBAL_SELLING_TYPES: string[] = [
+  "herbal_syrup", "herbal_capsules", "herbal_tablets", "herbal_powder",
+  "herbal_oil", "herbal_cream", "herbal_lotion", "herbal_drops",
+  "herbal_tea", "herbal_extract",
+];
+
+// Medicated-only selling type values (medicine, not herbal)
+export const MEDICATED_SELLING_TYPES: string[] = [
+  "medicated_shampoo", "medicated_sunblock", "medicated_facewash",
+  "medicated_lotion", "medicated_solution", "medicated_cream",
+];
+
+// Get selling types filtered by product type
+export function getSellingTypesForProductType(productType: string) {
+  if (productType === 'herbal_medicine') {
+    // Exclude medicated types, include herbal + common
+    return SELLING_TYPES.filter(t => !MEDICATED_SELLING_TYPES.includes(t.value));
+  }
+  // Medicine: exclude herbal types, include medicated + common
+  return SELLING_TYPES.filter(t => !HERBAL_SELLING_TYPES.includes(t.value));
+}
+
 export type SellingType = typeof SELLING_TYPES[number]["value"];
 
 // Types that require mandatory expiry date
