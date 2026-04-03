@@ -219,25 +219,6 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
             </div>
           )}
 
-          {/* Product Category */}
-          <div className="space-y-2">
-            <Label>Product Category *</Label>
-            <Select
-              value={watchedProductCategory || ""}
-              onValueChange={(val) => setValue("product_category", val)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select product category" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableCategories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.product_category && <p className="text-sm text-destructive">{errors.product_category.message as string}</p>}
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             {/* Common Fields */}
             <div className="space-y-2">
