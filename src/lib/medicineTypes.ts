@@ -84,6 +84,19 @@ export const SELLING_TYPES = [
   { value: "medicated_facewash", label: "Medicated Facewash", unit: "Units", priceUnit: "Per Unit" },
   { value: "medicated_lotion", label: "Medicated Lotion", unit: "Units", priceUnit: "Per Unit" },
   { value: "medicated_solution", label: "Medicated Solution", unit: "Units", priceUnit: "Per Unit" },
+  { value: "medicated_cream", label: "Medicated Cream", unit: "Units", priceUnit: "Per Unit" },
+  
+  // Herbal Products
+  { value: "herbal_syrup", label: "Herbal Syrup", unit: "ml", priceUnit: "Per ml" },
+  { value: "herbal_capsules", label: "Herbal Capsules", unit: "Capsules", priceUnit: "Per Capsule" },
+  { value: "herbal_tablets", label: "Herbal Tablets", unit: "Tablets", priceUnit: "Per Tablet" },
+  { value: "herbal_powder", label: "Herbal Powder", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_oil", label: "Herbal Oil", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_cream", label: "Herbal Cream", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_lotion", label: "Herbal Lotion", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_drops", label: "Herbal Drops", unit: "ml", priceUnit: "Per ml" },
+  { value: "herbal_tea", label: "Herbal Tea", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_extract", label: "Herbal Extract", unit: "Units", priceUnit: "Per Unit" },
 ] as const;
 
 export type SellingType = typeof SELLING_TYPES[number]["value"];
