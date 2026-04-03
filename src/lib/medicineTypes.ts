@@ -115,10 +115,10 @@ export const MEDICATED_SELLING_TYPES: string[] = [
 // Get selling types filtered by product type
 export function getSellingTypesForProductType(productType: string) {
   if (productType === 'herbal_medicine') {
-    // Exclude medicated types, include herbal + common
-    return SELLING_TYPES.filter(t => !MEDICATED_SELLING_TYPES.includes(t.value));
+    // Only herbal selling types
+    return SELLING_TYPES.filter(t => HERBAL_SELLING_TYPES.includes(t.value));
   }
-  // Medicine: exclude herbal types, include medicated + common
+  // Medicine: exclude herbal types
   return SELLING_TYPES.filter(t => !HERBAL_SELLING_TYPES.includes(t.value));
 }
 
