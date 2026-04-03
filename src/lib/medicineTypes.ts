@@ -154,6 +154,17 @@ export const EXPIRY_REQUIRED_TYPES: SellingType[] = [
   "medicated_facewash",
   "medicated_lotion",
   "medicated_solution",
+  "medicated_cream",
+  "herbal_syrup",
+  "herbal_capsules",
+  "herbal_tablets",
+  "herbal_powder",
+  "herbal_oil",
+  "herbal_cream",
+  "herbal_lotion",
+  "herbal_drops",
+  "herbal_tea",
+  "herbal_extract",
 ];
 
 // Non-drug items where expiry is optional
