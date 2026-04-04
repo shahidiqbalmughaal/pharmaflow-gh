@@ -75,11 +75,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
+        .eq('user_id', userId);
 
       if (error) throw error;
-      setUserRole(data?.role || 'salesman');
+      
+      // User may have multiple roles - pick the highest privilege one
+      if (data && data.length > 0) {
+        const roles = data.map(d => d.role);
+        if (roles.includes('admin')) {
+          setUserRole('admin');
+        } else if (roles.includes('manager')) {
+          setUserRole('manager');
+        } else {
+          setUserRole(roles[0] || 'salesman');
+        }
+      } else {
+        setUserRole('salesman');
+      }
     } catch {
       // Silently fall back to default role on error
       setUserRole('salesman');
