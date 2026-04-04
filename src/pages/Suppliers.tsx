@@ -36,7 +36,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
 const Suppliers = () => {
-  const { userRole } = useAuth();
+  const { userRole, shopStaffInfo } = useAuth();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -106,7 +106,7 @@ const Suppliers = () => {
     window.open(`https://wa.me/${cleanNumber}`, "_blank");
   };
 
-  const canModify = userRole === "admin" || userRole === "manager";
+  const canModify = userRole === "admin" || userRole === "manager" || shopStaffInfo?.shop_role === "owner";
 
   return (
     <div className="space-y-6">
@@ -223,7 +223,7 @@ const Suppliers = () => {
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            {userRole === "admin" && (
+                            {(userRole === "admin" || shopStaffInfo?.shop_role === "owner") && (
                               <Button
                                 variant="ghost"
                                 size="sm"
