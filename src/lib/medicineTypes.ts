@@ -97,6 +97,26 @@ export const SELLING_TYPES = [
   { value: "herbal_drops", label: "Herbal Drops", unit: "ml", priceUnit: "Per ml" },
   { value: "herbal_tea", label: "Herbal Tea", unit: "Units", priceUnit: "Per Unit" },
   { value: "herbal_extract", label: "Herbal Extract", unit: "Units", priceUnit: "Per Unit" },
+
+  // Herbal Medicine Categories
+  { value: "herbal_digestive_care", label: "Digestive Care", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_liver_care", label: "Liver Care", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_respiratory_care", label: "Respiratory Care", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_immunity_boosters", label: "Immunity Boosters", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_general_health_tonic", label: "General Health Tonic", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_mens_health", label: "Men's Health", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_womens_health", label: "Women's Health", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_sexual_wellness", label: "Sexual Wellness", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_skin_care", label: "Skin Care", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_hair_care", label: "Hair Care", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_joint_pain_relief", label: "Joint & Pain Relief", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_diabetes_support", label: "Diabetes Support", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_heart_care", label: "Heart Care", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_weight_loss", label: "Weight Loss", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_weight_gain", label: "Weight Gain", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_brain_memory", label: "Brain & Memory", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_sleep_stress", label: "Sleep & Stress", unit: "Units", priceUnit: "Per Unit" },
+  { value: "herbal_kids_health", label: "Kids Health", unit: "Units", priceUnit: "Per Unit" },
 ] as const;
 
 // Herbal-only selling type values
@@ -104,6 +124,12 @@ export const HERBAL_SELLING_TYPES: string[] = [
   "herbal_syrup", "herbal_capsules", "herbal_tablets", "herbal_powder",
   "herbal_oil", "herbal_cream", "herbal_lotion", "herbal_drops",
   "herbal_tea", "herbal_extract",
+  "herbal_digestive_care", "herbal_liver_care", "herbal_respiratory_care",
+  "herbal_immunity_boosters", "herbal_general_health_tonic", "herbal_mens_health",
+  "herbal_womens_health", "herbal_sexual_wellness", "herbal_skin_care",
+  "herbal_hair_care", "herbal_joint_pain_relief", "herbal_diabetes_support",
+  "herbal_heart_care", "herbal_weight_loss", "herbal_weight_gain",
+  "herbal_brain_memory", "herbal_sleep_stress", "herbal_kids_health",
 ];
 
 // Medicated-only selling type values (medicine, not herbal)
