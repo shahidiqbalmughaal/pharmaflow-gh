@@ -134,13 +134,13 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
   const { data: expiryAlerts, isLoading: expiryLoading } = useQuery({
     queryKey: ["expiryAlertsDetail"],
     queryFn: async () => {
-      const sixMonthsFromNow = new Date();
-      sixMonthsFromNow.setDate(sixMonthsFromNow.getDate() + 180);
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
       
       const { data, error } = await supabase
         .from("medicines")
         .select("*")
-        .lte("expiry_date", sixMonthsFromNow.toISOString())
+        .lte("expiry_date", oneYearFromNow.toISOString())
         .order("expiry_date", { ascending: true });
       
       if (error) throw error;
