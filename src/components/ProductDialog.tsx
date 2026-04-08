@@ -246,6 +246,11 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
             <div className="space-y-2">
               <Label htmlFor="selling_price">Selling Price *</Label>
               <Input id="selling_price" type="number" step="0.01" {...register("selling_price", { required: "Required", valueAsNumber: true })} />
+              {watch("quantity") > 0 && watch("selling_price") > 0 && (
+                <p className="text-xs text-muted-foreground font-medium">
+                  Total Value: {watch("quantity")} × {watch("selling_price")} = <span className="text-primary font-semibold">PKR {(watch("quantity") * watch("selling_price")).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="manufacturing_date">Manufacturing Date *</Label>
