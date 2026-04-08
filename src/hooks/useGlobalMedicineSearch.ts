@@ -7,7 +7,7 @@ interface UseGlobalMedicineSearchOptions {
   debounceMs?: number;
 }
 
-export function useGlobalMedicineSearch({ enabled = false, debounceMs = 350 }: UseGlobalMedicineSearchOptions = {}) {
+export function useGlobalMedicineSearch({ enabled = false, debounceMs = 250 }: UseGlobalMedicineSearchOptions = {}) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
@@ -43,7 +43,8 @@ export function useGlobalMedicineSearch({ enabled = false, debounceMs = 350 }: U
       return data || [];
     },
     enabled: shouldSearch,
-    staleTime: 30000,
+    staleTime: 60000,
+    gcTime: 300000,
   });
 
   const handleSearchChange = useCallback((value: string) => {

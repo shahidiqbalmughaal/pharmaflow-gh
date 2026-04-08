@@ -23,6 +23,8 @@ export function usePaginatedMedicines({ pageSize = DEFAULT_PAGE_SIZE }: UsePagin
       if (error) throw error;
       return count || 0;
     },
+    staleTime: 120000,
+    gcTime: 300000,
   });
 
   const totalItems = countData ?? 0;
@@ -44,6 +46,8 @@ export function usePaginatedMedicines({ pageSize = DEFAULT_PAGE_SIZE }: UsePagin
       if (error) throw error;
       return data;
     },
+    staleTime: 60000,
+    gcTime: 300000,
   });
 
   const handlePageChange = useCallback((page: number) => {
