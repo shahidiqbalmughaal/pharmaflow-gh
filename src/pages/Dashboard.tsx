@@ -131,6 +131,7 @@ const Dashboard = () => {
       if (error) throw error;
       return data || [];
     },
+    staleTime: 30000,
   });
 
   // Fetch chart data (last 7 days for visualization)
@@ -147,6 +148,7 @@ const Dashboard = () => {
       if (error) throw error;
       return data || [];
     },
+    staleTime: 60000,
   });
 
   // Filter and paginate sales
@@ -297,7 +299,8 @@ const Dashboard = () => {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 30000,
+    staleTime: 60000,
+    refetchInterval: 60000,
   });
 
   const { data: lowStockCosmetics } = useQuery({
@@ -309,10 +312,10 @@ const Dashboard = () => {
         .order("quantity", { ascending: true });
       
       if (error) throw error;
-      // Filter where quantity <= minimum_stock
       return (data || []).filter((c: any) => c.quantity <= (c.minimum_stock ?? 10)).slice(0, 5);
     },
-    refetchInterval: 30000,
+    staleTime: 60000,
+    refetchInterval: 60000,
   });
 
   // Fetch expiry alerts (medicines + cosmetics)
@@ -332,7 +335,8 @@ const Dashboard = () => {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 30000,
+    staleTime: 120000,
+    refetchInterval: 120000,
   });
 
   const { data: expiryAlertsCosmetics } = useQuery({
@@ -351,7 +355,8 @@ const Dashboard = () => {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 30000,
+    staleTime: 120000,
+    refetchInterval: 120000,
   });
 
   const totalLowStockCount = (lowStockMedicines?.length || 0) + (lowStockCosmetics?.length || 0);
