@@ -134,13 +134,13 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
   const { data: expiryAlerts, isLoading: expiryLoading } = useQuery({
     queryKey: ["expiryAlertsDetail"],
     queryFn: async () => {
-      const sixMonthsFromNow = new Date();
-      sixMonthsFromNow.setDate(sixMonthsFromNow.getDate() + 180);
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
       
       const { data, error } = await supabase
         .from("medicines")
         .select("*")
-        .lte("expiry_date", sixMonthsFromNow.toISOString())
+        .lte("expiry_date", oneYearFromNow.toISOString())
         .order("expiry_date", { ascending: true });
       
       if (error) throw error;
@@ -158,9 +158,9 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
       case "medicines": return "Medicines Sold Today";
       case "cosmetics": return "Cosmetics Sold Today";
       case "lowStock": return "Low Stock Alert";
-      case "expiry": return "Expiry Alerts (Next 6 Months)";
+      case "expiry": return "Expiry Alerts (Next 12 Months)";
       case "allLowStock": return "All Low Stock Items";
-      case "allExpiry": return "All Expiring Items (Next 6 Months)";
+      case "allExpiry": return "All Expiring Items (Next 12 Months)";
       default: return "";
     }
   };
@@ -179,12 +179,16 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
     const companies = [...new Set(expiryAlerts.map((item: any) => item.company_name).filter(Boolean))].sort();
     const suppliers = [...new Set(expiryAlerts.map((item: any) => item.supplier).filter(Boolean))].sort();
     
-    // Get unique months (format: "YYYY-MM" for sorting, display as "Month YYYY")
+    // Generate 12 months from current month + include any past months from data
     const monthsSet = new Set<string>();
+    const now = new Date();
+    for (let i = -6; i <= 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      monthsSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
     expiryAlerts.forEach((item: any) => {
       const date = new Date(item.expiry_date);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      monthsSet.add(monthKey);
+      monthsSet.add(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
     });
     const months = [...monthsSet].sort();
     
