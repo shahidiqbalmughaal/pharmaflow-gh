@@ -158,9 +158,9 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
       case "medicines": return "Medicines Sold Today";
       case "cosmetics": return "Cosmetics Sold Today";
       case "lowStock": return "Low Stock Alert";
-      case "expiry": return "Expiry Alerts (Next 6 Months)";
+      case "expiry": return "Expiry Alerts (Next 12 Months)";
       case "allLowStock": return "All Low Stock Items";
-      case "allExpiry": return "All Expiring Items (Next 6 Months)";
+      case "allExpiry": return "All Expiring Items (Next 12 Months)";
       default: return "";
     }
   };
