@@ -510,6 +510,9 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
                 <TableRow>
                   <TableHead>Medicine</TableHead>
                   <TableHead>Batch No</TableHead>
+                  <TableHead>Company</TableHead>
+                  <TableHead>Supplier</TableHead>
+                  <TableHead>Rack No</TableHead>
                   <TableHead>Expiry Date</TableHead>
                   <TableHead>Quantity</TableHead>
                 </TableRow>
@@ -520,7 +523,6 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
                     (new Date(item.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
                   );
                   
-                  // Color coding: red for expired, orange for within 30 days, yellow for within 60 days
                   const isExpired = daysUntilExpiry < 0;
                   const isUrgent = daysUntilExpiry >= 0 && daysUntilExpiry <= 30;
                   const isWarning = daysUntilExpiry > 30 && daysUntilExpiry <= 60;
@@ -549,6 +551,9 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
                     <TableRow key={item.id} className={rowClass}>
                       <TableCell>{item.medicine_name}</TableCell>
                       <TableCell>{item.batch_no}</TableCell>
+                      <TableCell>{item.company_name || '-'}</TableCell>
+                      <TableCell>{item.supplier || '-'}</TableCell>
+                      <TableCell>{item.rack_no || '-'}</TableCell>
                       <TableCell className={textClass}>
                         {format(new Date(item.expiry_date), "MMM dd, yyyy")}
                         <span className={`text-xs block ${isExpired ? 'text-red-500' : 'text-muted-foreground'}`}>
