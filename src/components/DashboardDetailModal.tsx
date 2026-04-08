@@ -179,12 +179,16 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
     const companies = [...new Set(expiryAlerts.map((item: any) => item.company_name).filter(Boolean))].sort();
     const suppliers = [...new Set(expiryAlerts.map((item: any) => item.supplier).filter(Boolean))].sort();
     
-    // Get unique months (format: "YYYY-MM" for sorting, display as "Month YYYY")
+    // Generate 12 months from current month + include any past months from data
     const monthsSet = new Set<string>();
+    const now = new Date();
+    for (let i = -6; i <= 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      monthsSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
     expiryAlerts.forEach((item: any) => {
       const date = new Date(item.expiry_date);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      monthsSet.add(monthKey);
+      monthsSet.add(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
     });
     const months = [...monthsSet].sort();
     
