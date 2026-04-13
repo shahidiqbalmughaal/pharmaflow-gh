@@ -819,6 +819,11 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       tabletsPerPacket,
       totalTablets: isMedicine && sellingType === 'per_packet' ? tabletsPerPacket : 1,
       totalPackets: isMedicine && sellingType === 'per_packet' ? 1 : 0,
+      isNarcotic: isMedicine ? !!(product as any).is_narcotic : false,
+      patientName: "",
+      prescribedBy: "",
+      narcoticRemarks: "Sold",
+      supplierName: isMedicine ? ((product as any).supplier || "") : ((product as any).supplier || ""),
     };
 
     // Ensure there's always an empty row at the end for the next item
