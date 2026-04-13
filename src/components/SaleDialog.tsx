@@ -1585,8 +1585,8 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
               </thead>
               <tbody>
                 {saleItems.map((item, rowIndex) => (
+                  <React.Fragment key={rowIndex}>
                   <tr 
-                    key={rowIndex} 
                     className={cn(
                       "border-b last:border-b-0 transition-colors",
                       activeCell.row === rowIndex 
