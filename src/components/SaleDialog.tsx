@@ -662,8 +662,14 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       queryClient.invalidateQueries({ queryKey: ["cosmeticsSoldToday"] });
       
       const validItems = data.validItems;
-      const itemSubtotal = validItems.reduce((sum: number, item: SaleItem) => sum + item.totalPrice, 0);
-      const discAmount = (itemSubtotal * discountPercentage) / 100;
+      // Separate narcotic and non-narcotic items
+      const nonNarcoticItems = validItems.filter((item: SaleItem) => !item.isNarcotic);
+      const narcoticItems = validItems.filter((item: SaleItem) => item.isNarcotic);
+      
+      const itemSubtotal = nonNarcoticItems.reduce((sum: number, item: SaleItem) => sum + item.totalPrice, 0);
+      const narcoticSubtotal = narcoticItems.reduce((sum: number, item: SaleItem) => sum + item.totalPrice, 0);
+      const fullSubtotal = validItems.reduce((sum: number, item: SaleItem) => sum + item.totalPrice, 0);
+      const discAmount = (fullSubtotal * discountPercentage) / 100;
       
       setCompletedSale({
         saleId: data.sale.id,
@@ -671,12 +677,14 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
         customerName: data.sale.customer_name,
         loyaltyPointsEarned: data.sale.loyalty_points_earned,
         saleDate: new Date(data.sale.sale_date),
-        items: validItems,
-        subtotal: itemSubtotal,
+        items: nonNarcoticItems, // Only non-narcotic items on normal receipt
+        narcoticItems: narcoticItems,
+        subtotal: fullSubtotal,
         discountPercentage,
         discountAmount: discAmount,
         tax,
         total: data.sale.total_amount,
+        hasNarcotics: narcoticItems.length > 0,
       });
       setShowReceipt(true);
       toast.success("Sale completed successfully");
