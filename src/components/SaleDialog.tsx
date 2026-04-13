@@ -1674,8 +1674,60 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                       </Button>
                     </td>
                   </tr>
-                ))}
-                {validItems.length === 0 && (
+                  {/* Narcotic fields row */}
+                  {item.isNarcotic && item.itemId && (
+                    <tr className="bg-amber-50 dark:bg-amber-950/30 border-t-0">
+                      <td colSpan={6} className="px-3 py-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border-amber-300 text-xs shrink-0">
+                            ⚠ Narcotic
+                          </Badge>
+                          <div className="flex items-center gap-1">
+                            <Label className="text-xs whitespace-nowrap">Patient *</Label>
+                            <Input
+                              className="h-7 text-xs w-36"
+                              placeholder="Patient Name"
+                              value={item.patientName || ""}
+                              onChange={(e) => {
+                                const newItems = [...saleItems];
+                                newItems[rowIndex] = { ...item, patientName: e.target.value };
+                                setSaleItems(newItems);
+                              }}
+                            />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Label className="text-xs whitespace-nowrap">Doctor</Label>
+                            <Input
+                              className="h-7 text-xs w-36"
+                              placeholder="Prescribed By"
+                              value={item.prescribedBy || ""}
+                              onChange={(e) => {
+                                const newItems = [...saleItems];
+                                newItems[rowIndex] = { ...item, prescribedBy: e.target.value };
+                                setSaleItems(newItems);
+                              }}
+                            />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Label className="text-xs whitespace-nowrap">Remarks</Label>
+                            <Input
+                              className="h-7 text-xs w-24"
+                              placeholder="Sold"
+                              value={item.narcoticRemarks || "Sold"}
+                              onChange={(e) => {
+                                const newItems = [...saleItems];
+                                newItems[rowIndex] = { ...item, narcoticRemarks: e.target.value };
+                                setSaleItems(newItems);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              ))}
+              {validItems.length === 0 && (
                   <tr>
                     <td colSpan={6} className="text-center py-12 text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
