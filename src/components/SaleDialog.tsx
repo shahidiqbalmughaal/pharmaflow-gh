@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, KeyboardEvent, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback, KeyboardEvent, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useReactToPrint } from "react-to-print";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,6 +61,11 @@ interface SaleItem {
   tabletsPerPacket?: number;
   totalTablets?: number;
   totalPackets?: number;
+  isNarcotic?: boolean;
+  patientName?: string;
+  prescribedBy?: string;
+  narcoticRemarks?: string;
+  supplierName?: string;
 }
 
 // Create an empty row template
@@ -491,6 +496,11 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
         if (item.unitPrice < 0) throw new Error(`${item.itemName}: Rate must be positive`);
         if (item.totalPrice < 0) throw new Error(`${item.itemName}: Total Price must be positive`);
         
+        // Narcotic validation
+        if (item.isNarcotic && (!item.patientName || !item.patientName.trim())) {
+          throw new Error(`${item.itemName}: Patient Name is required for narcotic items`);
+        }
+        
         const calculatedTotal = item.quantity * item.unitPrice;
         const difference = Math.abs(calculatedTotal - item.totalPrice);
         if (difference >= 0.01) {
@@ -598,6 +608,48 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
         }
       }
 
+      // Save narcotic register entries
+      const narcoticItems = validItems.filter(item => item.isNarcotic);
+      if (narcoticItems.length > 0) {
+        // Get sale_items to link narcotic entries
+        const { data: savedSaleItems } = await supabase
+          .from("sale_items")
+          .select("id, item_id")
+          .eq("sale_id", sale.id);
+
+        for (const item of narcoticItems) {
+          const saleItemRecord = savedSaleItems?.find(si => si.item_id === item.itemId);
+          
+          // Get remaining quantity after sale
+          let remainingQty = 0;
+          if (item.itemType === "medicine") {
+            const { data: med } = await supabase
+              .from("medicines")
+              .select("quantity")
+              .eq("id", item.itemId)
+              .single();
+            remainingQty = med?.quantity || 0;
+          }
+
+          await supabase.from("narcotics_register").insert({
+            sale_id: sale.id,
+            sale_item_id: saleItemRecord?.id || sale.id,
+            item_id: item.itemId,
+            drug_name: item.itemName,
+            batch_no: item.batchNo,
+            supplier_name: item.supplierName || "",
+            patient_name: item.patientName || "",
+            prescribed_by: item.prescribedBy || "",
+            quantity_sold: item.quantity,
+            quantity_remaining: remainingQty,
+            remarks: item.narcoticRemarks || "Sold",
+            sale_date: sale.sale_date,
+            shop_id: currentShop.shop_id,
+            print_status: "pending",
+          });
+        }
+      }
+
       return { sale, salesman, validItems };
     },
     onSuccess: (data) => {
@@ -610,8 +662,14 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       queryClient.invalidateQueries({ queryKey: ["cosmeticsSoldToday"] });
       
       const validItems = data.validItems;
-      const itemSubtotal = validItems.reduce((sum: number, item: SaleItem) => sum + item.totalPrice, 0);
-      const discAmount = (itemSubtotal * discountPercentage) / 100;
+      // Separate narcotic and non-narcotic items
+      const nonNarcoticItems = validItems.filter((item: SaleItem) => !item.isNarcotic);
+      const narcoticItems = validItems.filter((item: SaleItem) => item.isNarcotic);
+      
+      const itemSubtotal = nonNarcoticItems.reduce((sum: number, item: SaleItem) => sum + item.totalPrice, 0);
+      const narcoticSubtotal = narcoticItems.reduce((sum: number, item: SaleItem) => sum + item.totalPrice, 0);
+      const fullSubtotal = validItems.reduce((sum: number, item: SaleItem) => sum + item.totalPrice, 0);
+      const discAmount = (fullSubtotal * discountPercentage) / 100;
       
       setCompletedSale({
         saleId: data.sale.id,
@@ -619,12 +677,14 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
         customerName: data.sale.customer_name,
         loyaltyPointsEarned: data.sale.loyalty_points_earned,
         saleDate: new Date(data.sale.sale_date),
-        items: validItems,
-        subtotal: itemSubtotal,
+        items: nonNarcoticItems, // Only non-narcotic items on normal receipt
+        narcoticItems: narcoticItems,
+        subtotal: fullSubtotal,
         discountPercentage,
         discountAmount: discAmount,
         tax,
         total: data.sale.total_amount,
+        hasNarcotics: narcoticItems.length > 0,
       });
       setShowReceipt(true);
       toast.success("Sale completed successfully");
@@ -814,6 +874,11 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
       tabletsPerPacket,
       totalTablets: isMedicine && sellingType === 'per_packet' ? tabletsPerPacket : 1,
       totalPackets: isMedicine && sellingType === 'per_packet' ? 1 : 0,
+      isNarcotic: isMedicine ? !!(product as any).is_narcotic : false,
+      patientName: "",
+      prescribedBy: "",
+      narcoticRemarks: "Sold",
+      supplierName: isMedicine ? ((product as any).supplier || "") : ((product as any).supplier || ""),
     };
 
     // Ensure there's always an empty row at the end for the next item
@@ -1198,6 +1263,16 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
             <DialogTitle>Sale Completed</DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 py-4">
+            {completedSale.hasNarcotics && (
+              <div className="mb-3 p-3 border rounded-md bg-amber-50 dark:bg-amber-950/30 text-sm">
+                <p className="font-medium text-amber-800 dark:text-amber-200">
+                  ⚠ This sale contains narcotic items ({completedSale.narcoticItems?.length}).
+                </p>
+                <p className="text-amber-700 dark:text-amber-300 text-xs mt-1">
+                  Narcotic items are excluded from the standard receipt. Use "Print Narcotics Register" from the Sales page to print them.
+                </p>
+              </div>
+            )}
             <SaleReceipt ref={receiptRef} {...completedSale} pharmacyInfo={pharmacySettings} />
           </div>
           <div className="shrink-0 border-t bg-muted/30 px-6 py-3 flex gap-2">
@@ -1528,8 +1603,8 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
               </thead>
               <tbody>
                 {saleItems.map((item, rowIndex) => (
+                  <React.Fragment key={rowIndex}>
                   <tr 
-                    key={rowIndex} 
                     className={cn(
                       "border-b last:border-b-0 transition-colors",
                       activeCell.row === rowIndex 
@@ -1617,8 +1692,60 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
                       </Button>
                     </td>
                   </tr>
+                  {/* Narcotic fields row */}
+                  {item.isNarcotic && item.itemId && (
+                    <tr className="bg-amber-50 dark:bg-amber-950/30 border-t-0">
+                      <td colSpan={6} className="px-3 py-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border-amber-300 text-xs shrink-0">
+                            ⚠ Narcotic
+                          </Badge>
+                          <div className="flex items-center gap-1">
+                            <Label className="text-xs whitespace-nowrap">Patient *</Label>
+                            <Input
+                              className="h-7 text-xs w-36"
+                              placeholder="Patient Name"
+                              value={item.patientName || ""}
+                              onChange={(e) => {
+                                const newItems = [...saleItems];
+                                newItems[rowIndex] = { ...item, patientName: e.target.value };
+                                setSaleItems(newItems);
+                              }}
+                            />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Label className="text-xs whitespace-nowrap">Doctor</Label>
+                            <Input
+                              className="h-7 text-xs w-36"
+                              placeholder="Prescribed By"
+                              value={item.prescribedBy || ""}
+                              onChange={(e) => {
+                                const newItems = [...saleItems];
+                                newItems[rowIndex] = { ...item, prescribedBy: e.target.value };
+                                setSaleItems(newItems);
+                              }}
+                            />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Label className="text-xs whitespace-nowrap">Remarks</Label>
+                            <Input
+                              className="h-7 text-xs w-24"
+                              placeholder="Sold"
+                              value={item.narcoticRemarks || "Sold"}
+                              onChange={(e) => {
+                                const newItems = [...saleItems];
+                                newItems[rowIndex] = { ...item, narcoticRemarks: e.target.value };
+                                setSaleItems(newItems);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ))}
-                {validItems.length === 0 && (
+              {validItems.length === 0 && (
                   <tr>
                     <td colSpan={6} className="text-center py-12 text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
