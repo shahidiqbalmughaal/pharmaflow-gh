@@ -1263,6 +1263,16 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
             <DialogTitle>Sale Completed</DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 py-4">
+            {completedSale.hasNarcotics && (
+              <div className="mb-3 p-3 border rounded-md bg-amber-50 dark:bg-amber-950/30 text-sm">
+                <p className="font-medium text-amber-800 dark:text-amber-200">
+                  ⚠ This sale contains narcotic items ({completedSale.narcoticItems?.length}).
+                </p>
+                <p className="text-amber-700 dark:text-amber-300 text-xs mt-1">
+                  Narcotic items are excluded from the standard receipt. Use "Print Narcotics Register" from the Sales page to print them.
+                </p>
+              </div>
+            )}
             <SaleReceipt ref={receiptRef} {...completedSale} pharmacyInfo={pharmacySettings} />
           </div>
           <div className="shrink-0 border-t bg-muted/30 px-6 py-3 flex gap-2">
