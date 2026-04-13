@@ -1793,7 +1793,7 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
 
             {/* Online Payment Options (conditional) */}
             {paymentType === "online" && (
-              </React.Fragment>
+              <>
                 <div className="space-y-1">
                   <Label className="text-xs font-medium">Method</Label>
                   <Select value={onlinePaymentMethod} onValueChange={setOnlinePaymentMethod}>
