@@ -608,6 +608,48 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
         }
       }
 
+      // Save narcotic register entries
+      const narcoticItems = validItems.filter(item => item.isNarcotic);
+      if (narcoticItems.length > 0) {
+        // Get sale_items to link narcotic entries
+        const { data: savedSaleItems } = await supabase
+          .from("sale_items")
+          .select("id, item_id")
+          .eq("sale_id", sale.id);
+
+        for (const item of narcoticItems) {
+          const saleItemRecord = savedSaleItems?.find(si => si.item_id === item.itemId);
+          
+          // Get remaining quantity after sale
+          let remainingQty = 0;
+          if (item.itemType === "medicine") {
+            const { data: med } = await supabase
+              .from("medicines")
+              .select("quantity")
+              .eq("id", item.itemId)
+              .single();
+            remainingQty = med?.quantity || 0;
+          }
+
+          await supabase.from("narcotics_register").insert({
+            sale_id: sale.id,
+            sale_item_id: saleItemRecord?.id || sale.id,
+            item_id: item.itemId,
+            drug_name: item.itemName,
+            batch_no: item.batchNo,
+            supplier_name: item.supplierName || "",
+            patient_name: item.patientName || "",
+            prescribed_by: item.prescribedBy || "",
+            quantity_sold: item.quantity,
+            quantity_remaining: remainingQty,
+            remarks: item.narcoticRemarks || "Sold",
+            sale_date: sale.sale_date,
+            shop_id: currentShop.shop_id,
+            print_status: "pending",
+          });
+        }
+      }
+
       return { sale, salesman, validItems };
     },
     onSuccess: (data) => {
