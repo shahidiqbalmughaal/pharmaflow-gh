@@ -587,6 +587,66 @@ export type Database = {
           },
         ]
       }
+      narcotics_register: {
+        Row: {
+          batch_no: string
+          created_at: string
+          drug_name: string
+          id: string
+          item_id: string
+          patient_name: string
+          prescribed_by: string
+          print_status: string
+          quantity_remaining: number
+          quantity_sold: number
+          remarks: string
+          sale_date: string
+          sale_id: string
+          sale_item_id: string
+          serial_no: number
+          shop_id: string | null
+          supplier_name: string
+        }
+        Insert: {
+          batch_no: string
+          created_at?: string
+          drug_name: string
+          id?: string
+          item_id: string
+          patient_name: string
+          prescribed_by?: string
+          print_status?: string
+          quantity_remaining?: number
+          quantity_sold: number
+          remarks?: string
+          sale_date?: string
+          sale_id: string
+          sale_item_id: string
+          serial_no?: number
+          shop_id?: string | null
+          supplier_name?: string
+        }
+        Update: {
+          batch_no?: string
+          created_at?: string
+          drug_name?: string
+          id?: string
+          item_id?: string
+          patient_name?: string
+          prescribed_by?: string
+          print_status?: string
+          quantity_remaining?: number
+          quantity_sold?: number
+          remarks?: string
+          sale_date?: string
+          sale_id?: string
+          sale_item_id?: string
+          serial_no?: number
+          shop_id?: string | null
+          supplier_name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
