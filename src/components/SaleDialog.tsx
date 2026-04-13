@@ -61,6 +61,11 @@ interface SaleItem {
   tabletsPerPacket?: number;
   totalTablets?: number;
   totalPackets?: number;
+  isNarcotic?: boolean;
+  patientName?: string;
+  prescribedBy?: string;
+  narcoticRemarks?: string;
+  supplierName?: string;
 }
 
 // Create an empty row template
