@@ -496,6 +496,11 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
         if (item.unitPrice < 0) throw new Error(`${item.itemName}: Rate must be positive`);
         if (item.totalPrice < 0) throw new Error(`${item.itemName}: Total Price must be positive`);
         
+        // Narcotic validation
+        if (item.isNarcotic && (!item.patientName || !item.patientName.trim())) {
+          throw new Error(`${item.itemName}: Patient Name is required for narcotic items`);
+        }
+        
         const calculatedTotal = item.quantity * item.unitPrice;
         const difference = Math.abs(calculatedTotal - item.totalPrice);
         if (difference >= 0.01) {
