@@ -647,6 +647,42 @@ export type Database = {
         }
         Relationships: []
       }
+      narcotics_weekly_reports: {
+        Row: {
+          entry_count: number
+          generated_at: string
+          generated_by: string
+          id: string
+          period_end: string
+          period_start: string
+          shop_id: string
+          storage_path: string
+          total_quantity: number
+        }
+        Insert: {
+          entry_count?: number
+          generated_at?: string
+          generated_by?: string
+          id?: string
+          period_end: string
+          period_start: string
+          shop_id: string
+          storage_path: string
+          total_quantity?: number
+        }
+        Update: {
+          entry_count?: number
+          generated_at?: string
+          generated_by?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          shop_id?: string
+          storage_path?: string
+          total_quantity?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
