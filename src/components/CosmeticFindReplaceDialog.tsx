@@ -28,6 +28,7 @@ interface CosmeticFindReplaceDialogProps {
 }
 
 const FIELDS = [
+  { value: "product_name", label: "Product Name" },
   { value: "brand", label: "Brand" },
   { value: "supplier", label: "Supplier" },
   { value: "rack_no", label: "Rack Number" },
