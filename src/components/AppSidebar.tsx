@@ -10,7 +10,8 @@ import {
   Shield,
   Receipt,
   RotateCcw,
-  Store
+  Store,
+  Pill
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -39,6 +40,7 @@ const getMenuItems = (userRole: string | null, shopRole: string | null) => {
     { title: "Dashboard", url: "/", icon: LayoutDashboard, visible: true },
     { title: "Products", url: "/products", icon: Package, visible: true },
     { title: "Sales", url: "/sales", icon: ShoppingCart, visible: true },
+    { title: "Narcotics Sales", url: "/narcotics-sales", icon: Pill, visible: !isCashier },
   ];
 
   // Items hidden from cashiers

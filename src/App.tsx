@@ -10,6 +10,7 @@ import { Layout } from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import Sales from "./pages/Sales";
+import NarcoticsSales from "./pages/NarcoticsSales";
 import Expenses from "./pages/Expenses";
 import Reports from "./pages/Reports";
 import ReturnsHistory from "./pages/ReturnsHistory";
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/medicines" element={<Navigate to="/products?type=medicine" replace />} />
               <Route path="/cosmetics" element={<Navigate to="/products?type=cosmetic" replace />} />
               <Route path="/sales" element={<ProtectedRoute><Layout><Sales /></Layout></ProtectedRoute>} />
+              <Route path="/narcotics-sales" element={<ProtectedRoute><Layout><NarcoticsSales /></Layout></ProtectedRoute>} />
               <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute><Layout><Reports /></Layout></ProtectedRoute>} />
               <Route path="/returns-history" element={<ProtectedRoute><Layout><ReturnsHistory /></Layout></ProtectedRoute>} />
