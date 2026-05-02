@@ -71,6 +71,25 @@ export function FindReplaceDialog({ open, onClose }: FindReplaceDialogProps) {
       const ids = matches.map(m => m.id);
       const updateValue = isNumericField ? Number(replaceValue) : replaceValue.trim();
 
+      // Prevent duplicate Product Names: ensure no OTHER medicine already uses the new name
+      if (field === "medicine_name") {
+        const newName = (updateValue as string);
+        if (newName.toLowerCase() === findValue.trim().toLowerCase()) {
+          throw new Error("Replace value is the same as Find value");
+        }
+        const { data: dupes, error: dupErr } = await supabase
+          .from("medicines")
+          .select("id, medicine_name")
+          .ilike("medicine_name", newName)
+          .not("id", "in", `(${ids.join(",")})`);
+        if (dupErr) throw dupErr;
+        if (dupes && dupes.length > 0) {
+          throw new Error(
+            `Cannot rename: ${dupes.length} other product(s) already use the name "${newName}". Duplicate product names are not allowed.`
+          );
+        }
+      }
+
       const { error: updateError } = await supabase
         .from("medicines")
         .update({ [field]: updateValue })
