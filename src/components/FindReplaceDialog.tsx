@@ -27,6 +27,7 @@ interface FindReplaceDialogProps {
 }
 
 const FIELDS = [
+  { value: "medicine_name", label: "Product Name" },
   { value: "supplier", label: "Supplier" },
   { value: "company_name", label: "Company" },
   { value: "rack_no", label: "Rack" },
