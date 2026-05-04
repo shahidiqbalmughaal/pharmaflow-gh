@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, X } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { LoadingSpinner } from "./LoadingSpinner";
 
 interface DashboardDetailModalProps {
@@ -37,6 +38,7 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
   const [companyFilter, setCompanyFilter] = useState<string>("all");
   const [supplierFilter, setSupplierFilter] = useState<string>("all");
   const [expiryStatusFilter, setExpiryStatusFilter] = useState<string>("all");
+  const [includeExpired, setIncludeExpired] = useState<boolean>(false);
 
   // Fetch today's sales
   const { data: todaySales, isLoading: salesLoading } = useQuery({
@@ -217,9 +219,10 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
     today.setHours(0, 0, 0, 0);
     
     // Determine if the user has opted in to view past/expired data via filters.
+    // - "Include expired" toggle explicitly opts in
     // - "expired" status filter explicitly requests expired items
     // - A specific past month selected in the month filter implies user wants that month
-    let allowPast = false;
+    let allowPast = includeExpired;
     if (expiryStatusFilter === "expired") allowPast = true;
     if (expiryMonthFilter !== "all") {
       const [y, m] = expiryMonthFilter.split('-').map(Number);
@@ -286,7 +289,7 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
 
   // Check if any filter is active
   const hasActiveFilters = expiryMonthFilter !== "all" || companyFilter !== "all" || 
-    supplierFilter !== "all" || expiryStatusFilter !== "all";
+    supplierFilter !== "all" || expiryStatusFilter !== "all" || includeExpired;
 
   // Clear all filters
   const clearFilters = () => {
@@ -294,6 +297,7 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
     setCompanyFilter("all");
     setSupplierFilter("all");
     setExpiryStatusFilter("all");
+    setIncludeExpired(false);
   };
 
   const isLoading = salesLoading || medicinesLoading || cosmeticsLoading || lowStockLoading || expiryLoading;
@@ -390,6 +394,21 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {/* Include Expired Toggle */}
+              <div className="flex items-center gap-2 pt-1">
+                <Switch
+                  id="include-expired"
+                  checked={includeExpired}
+                  onCheckedChange={setIncludeExpired}
+                />
+                <label
+                  htmlFor="include-expired"
+                  className="text-xs font-medium text-muted-foreground cursor-pointer select-none"
+                >
+                  Include expired items
+                </label>
               </div>
 
               {/* Clear Filters Button */}
