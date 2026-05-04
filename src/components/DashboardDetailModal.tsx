@@ -38,6 +38,7 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
   const [companyFilter, setCompanyFilter] = useState<string>("all");
   const [supplierFilter, setSupplierFilter] = useState<string>("all");
   const [expiryStatusFilter, setExpiryStatusFilter] = useState<string>("all");
+  const [includeExpired, setIncludeExpired] = useState<boolean>(false);
 
   // Fetch today's sales
   const { data: todaySales, isLoading: salesLoading } = useQuery({
