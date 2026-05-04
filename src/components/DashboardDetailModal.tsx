@@ -396,6 +396,21 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
                 </div>
               </div>
 
+              {/* Include Expired Toggle */}
+              <div className="flex items-center gap-2 pt-1">
+                <Switch
+                  id="include-expired"
+                  checked={includeExpired}
+                  onCheckedChange={setIncludeExpired}
+                />
+                <label
+                  htmlFor="include-expired"
+                  className="text-xs font-medium text-muted-foreground cursor-pointer select-none"
+                >
+                  Include expired items
+                </label>
+              </div>
+
               {/* Clear Filters Button */}
               {hasActiveFilters && (
                 <div className="flex items-center gap-2">
