@@ -219,9 +219,10 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
     today.setHours(0, 0, 0, 0);
     
     // Determine if the user has opted in to view past/expired data via filters.
+    // - "Include expired" toggle explicitly opts in
     // - "expired" status filter explicitly requests expired items
     // - A specific past month selected in the month filter implies user wants that month
-    let allowPast = false;
+    let allowPast = includeExpired;
     if (expiryStatusFilter === "expired") allowPast = true;
     if (expiryMonthFilter !== "all") {
       const [y, m] = expiryMonthFilter.split('-').map(Number);
