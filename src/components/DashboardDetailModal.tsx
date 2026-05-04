@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, X } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { LoadingSpinner } from "./LoadingSpinner";
 
 interface DashboardDetailModalProps {
