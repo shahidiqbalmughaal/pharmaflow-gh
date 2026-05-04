@@ -213,6 +213,25 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
   // Filter expiry data with all filters
   const filterExpiryData = (data: any[]) => {
     let filtered = data;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Determine if the user has opted in to view past/expired data via filters.
+    // - "expired" status filter explicitly requests expired items
+    // - A specific past month selected in the month filter implies user wants that month
+    let allowPast = false;
+    if (expiryStatusFilter === "expired") allowPast = true;
+    if (expiryMonthFilter !== "all") {
+      const [y, m] = expiryMonthFilter.split('-').map(Number);
+      const selected = new Date(y, m - 1, 1);
+      const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      if (selected < currentMonthStart) allowPast = true;
+    }
+    
+    // Default behavior: strictly forward-looking — exclude expired items.
+    if (!allowPast) {
+      filtered = filtered.filter(item => new Date(item.expiry_date) >= today);
+    }
     
     // Apply search filter
     if (searchQuery) {
