@@ -289,7 +289,7 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
 
   // Check if any filter is active
   const hasActiveFilters = expiryMonthFilter !== "all" || companyFilter !== "all" || 
-    supplierFilter !== "all" || expiryStatusFilter !== "all";
+    supplierFilter !== "all" || expiryStatusFilter !== "all" || includeExpired;
 
   // Clear all filters
   const clearFilters = () => {
@@ -297,6 +297,7 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
     setCompanyFilter("all");
     setSupplierFilter("all");
     setExpiryStatusFilter("all");
+    setIncludeExpired(false);
   };
 
   const isLoading = salesLoading || medicinesLoading || cosmeticsLoading || lowStockLoading || expiryLoading;
