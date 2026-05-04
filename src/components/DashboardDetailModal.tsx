@@ -134,12 +134,20 @@ export function DashboardDetailModal({ open, onClose, type }: DashboardDetailMod
   const { data: expiryAlerts, isLoading: expiryLoading } = useQuery({
     queryKey: ["expiryAlertsDetail"],
     queryFn: async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
       const oneYearFromNow = new Date();
       oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+      
+      // Fetch a wider range so filters can surface past/expired items on demand,
+      // but the default view will exclude expired stock below.
+      const pastWindow = new Date();
+      pastWindow.setFullYear(pastWindow.getFullYear() - 2);
       
       const { data, error } = await supabase
         .from("medicines")
         .select("*")
+        .gte("expiry_date", pastWindow.toISOString())
         .lte("expiry_date", oneYearFromNow.toISOString())
         .order("expiry_date", { ascending: true });
       
