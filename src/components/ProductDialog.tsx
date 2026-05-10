@@ -265,23 +265,6 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
               <Input id="supplier" {...register("supplier", { required: "Supplier is required" })} />
             </div>
 
-            <div className="space-y-2 col-span-2 sm:col-span-1">
-              <Label htmlFor="product_category">Category</Label>
-              <Select
-                value={watchedProductCategory || ""}
-                onValueChange={(val) => setValue("product_category", val)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent className="max-h-72">
-                  {availableCategories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Medicine/Herbal Medicine specific fields */}
             {isMedicineType && (
               <>
