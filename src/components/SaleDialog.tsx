@@ -1421,6 +1421,22 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
               AI Finder
             </Button>
             <QRScanner onScan={handleQRScan} />
+            <Input
+              type="text"
+              placeholder="Scan barcode…"
+              autoComplete="off"
+              className="h-8 w-44 text-sm"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const val = (e.target as HTMLInputElement).value.trim();
+                  if (val) {
+                    handleQRScan(val);
+                    (e.target as HTMLInputElement).value = "";
+                  }
+                }
+              }}
+            />
             <Button
               type="button"
               variant="outline"
