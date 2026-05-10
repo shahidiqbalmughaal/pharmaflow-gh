@@ -794,56 +794,126 @@ export function SaleDialog({ open, onClose, initialProduct }: SaleDialogProps) {
     },
   });
 
+  // Smart lookup: handles raw barcodes (EAN/UPC), batch numbers, UUIDs,
+  // and the legacy "type:id" QR format. Auto-fills qty=1, unit price, profit.
   const handleQRScan = (decodedText: string) => {
     try {
-      const parts = decodedText.split(":");
-      const itemType = parts.length > 1 ? (parts[0] as "medicine" | "cosmetic") : "medicine";
-      const itemId = parts.length > 1 ? parts[1] : decodedText;
+      const code = (decodedText || "").trim();
+      if (!code) return;
 
-      const allItems = itemType === "medicine" ? medicines : cosmetics;
-      const item = allItems?.find((i) => i.id === itemId);
+      let itemType: "medicine" | "cosmetic" | null = null;
+      let item: any = null;
 
-      if (item) {
-        let sellingType: "per_tablet" | "per_packet" = "per_tablet";
-        let tabletsPerPacket = 1;
-        
-        if (itemType === "medicine") {
-          sellingType = (item as any).selling_type || "per_tablet";
-          tabletsPerPacket = (item as any).tablets_per_packet || 1;
+      // 1) Legacy "type:id" QR format
+      if (code.includes(":")) {
+        const [t, id] = code.split(":");
+        const list = t === "cosmetic" ? cosmetics : medicines;
+        const found = list?.find((i: any) => i.id === id);
+        if (found) {
+          itemType = (t === "cosmetic" ? "cosmetic" : "medicine");
+          item = found;
         }
-        
-        const newItem: SaleItem = {
-          itemType,
-          itemId: item.id,
-          itemName: item[itemType === "medicine" ? "medicine_name" : "product_name"],
-          batchNo: item.batch_no,
-          quantity: 1,
-          unitPrice: Number(item.selling_price),
-          totalPrice: Number(item.selling_price),
-          profit: Number(item.selling_price) - Number(item.purchase_price),
-          purchasePrice: Number(item.purchase_price),
-          sellingType,
-          tabletsPerPacket,
-          totalTablets: sellingType === "per_packet" ? tabletsPerPacket : 1,
-          totalPackets: sellingType === "per_packet" ? 1 : 0,
-        };
-        
-        // Find empty row or add new
-        const emptyIndex = saleItems.findIndex(i => !i.itemId);
-        if (emptyIndex !== -1) {
-          const newItems = [...saleItems];
-          newItems[emptyIndex] = newItem;
-          newItems.push(createEmptyRow());
-          setSaleItems(newItems);
-        } else {
-          setSaleItems([...saleItems, newItem, createEmptyRow()]);
-        }
-        toast.success(`Added: ${newItem.itemName}`);
-      } else {
-        toast.error("Item not found");
       }
-    } catch (error) {
-      toast.error("Invalid QR code format");
+
+      const normalized = code.toLowerCase();
+
+      // 2) medicines.barcode (exact, case-insensitive)
+      if (!item) {
+        const found = medicines?.find((m: any) => String(m.barcode ?? "").toLowerCase() === normalized);
+        if (found) { itemType = "medicine"; item = found; }
+      }
+
+      // 3) medicines.batch_no
+      if (!item) {
+        const found = medicines?.find((m: any) => String(m.batch_no ?? "").toLowerCase() === normalized);
+        if (found) { itemType = "medicine"; item = found; }
+      }
+
+      // 4) cosmetics.batch_no
+      if (!item) {
+        const found = cosmetics?.find((c: any) => String(c.batch_no ?? "").toLowerCase() === normalized);
+        if (found) { itemType = "cosmetic"; item = found; }
+      }
+
+      // 5) Direct UUID match (medicines first, then cosmetics)
+      if (!item) {
+        const m = medicines?.find((i: any) => i.id === code);
+        if (m) { itemType = "medicine"; item = m; }
+        else {
+          const c = cosmetics?.find((i: any) => i.id === code);
+          if (c) { itemType = "cosmetic"; item = c; }
+        }
+      }
+
+      if (!item || !itemType) {
+        toast.error(`No product matched "${code}"`);
+        return;
+      }
+
+      if (Number(item.quantity) <= 0) {
+        toast.error(`${item.medicine_name || item.product_name} is out of stock`);
+        return;
+      }
+
+      let sellingType: "per_tablet" | "per_packet" = "per_tablet";
+      let tabletsPerPacket = 1;
+      let unitPrice = Number(item.selling_price);
+
+      if (itemType === "medicine") {
+        sellingType = (item.selling_type as any) || "per_tablet";
+        tabletsPerPacket = Number(item.tablets_per_packet) || 1;
+        if (sellingType === "per_packet") {
+          unitPrice = Number(item.price_per_packet) || (Number(item.selling_price) * tabletsPerPacket);
+        }
+      }
+
+      const itemName = item.medicine_name || item.product_name;
+
+      // If already in cart, just bump quantity
+      const existingIdx = saleItems.findIndex(
+        (i) => i.itemId === item.id && i.itemType === itemType
+      );
+      if (existingIdx !== -1) {
+        const updated = [...saleItems];
+        const newQty = (updated[existingIdx].quantity || 0) + 1;
+        updated[existingIdx] = {
+          ...updated[existingIdx],
+          quantity: newQty,
+          totalPrice: newQty * updated[existingIdx].unitPrice,
+        };
+        setSaleItems(updated);
+        toast.success(`+1 ${itemName} (qty ${newQty})`);
+        return;
+      }
+
+      const newItem: SaleItem = {
+        itemType,
+        itemId: item.id,
+        itemName,
+        batchNo: item.batch_no,
+        quantity: 1,
+        unitPrice,
+        totalPrice: unitPrice,
+        profit: unitPrice - Number(item.purchase_price),
+        purchasePrice: Number(item.purchase_price),
+        sellingType,
+        tabletsPerPacket,
+        totalTablets: sellingType === "per_packet" ? tabletsPerPacket : 1,
+        totalPackets: sellingType === "per_packet" ? 1 : 0,
+      };
+
+      const emptyIndex = saleItems.findIndex(i => !i.itemId);
+      if (emptyIndex !== -1) {
+        const newItems = [...saleItems];
+        newItems[emptyIndex] = newItem;
+        newItems.push(createEmptyRow());
+        setSaleItems(newItems);
+      } else {
+        setSaleItems([...saleItems, newItem, createEmptyRow()]);
+      }
+      toast.success(`Added: ${itemName} @ ${formatCurrency(unitPrice)}`);
+    } catch {
+      toast.error("Failed to process scan");
     }
   };
 
