@@ -302,6 +302,10 @@ export const EXPIRY_OPTIONAL_TYPES: SellingType[] = [
   "toothbrush",
   "toothpaste",
   "sugar_strip",
+  "cotton_roll",
+  "surgical_tape",
+  "gauze",
+  "gloves",
 ];
 
 // Helper functions
