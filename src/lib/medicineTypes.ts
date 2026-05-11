@@ -70,6 +70,17 @@ export const SELLING_TYPES = [
   { value: "enema", label: "Enema", unit: "Units", priceUnit: "Per Unit" },
   { value: "feminine_hygiene_wash", label: "Feminine Hygiene Wash", unit: "Units", priceUnit: "Per Unit" },
   { value: "intimate_wash", label: "Intimate Wash", unit: "Units", priceUnit: "Per Unit" },
+
+  // Baby Care
+  { value: "baby_lotion", label: "Baby Lotion", unit: "Units", priceUnit: "Per Unit" },
+  { value: "baby_powder", label: "Baby Powder", unit: "Units", priceUnit: "Per Unit" },
+  { value: "baby_oil", label: "Baby Oil", unit: "Units", priceUnit: "Per Unit" },
+  { value: "baby_shampoo", label: "Baby Shampoo", unit: "Units", priceUnit: "Per Unit" },
+  { value: "diaper_cream", label: "Diaper Cream", unit: "Units", priceUnit: "Per Unit" },
+
+  // Hair Care
+  { value: "hair_oil", label: "Hair Oil", unit: "Units", priceUnit: "Per Unit" },
+  { value: "hair_serum", label: "Hair Serum", unit: "Units", priceUnit: "Per Unit" },
   
   // Medical Supplies
   { value: "iv_set", label: "IV Set", unit: "Pieces", priceUnit: "Per Piece" },
