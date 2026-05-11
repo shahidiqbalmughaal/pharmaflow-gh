@@ -68,6 +68,8 @@ export const SELLING_TYPES = [
   { value: "suppository", label: "Suppository", unit: "Units", priceUnit: "Per Unit" },
   { value: "pessary", label: "Pessary", unit: "Units", priceUnit: "Per Unit" },
   { value: "enema", label: "Enema", unit: "Units", priceUnit: "Per Unit" },
+  { value: "feminine_hygiene_wash", label: "Feminine Hygiene Wash", unit: "Units", priceUnit: "Per Unit" },
+  { value: "intimate_wash", label: "Intimate Wash", unit: "Units", priceUnit: "Per Unit" },
   
   // Medical Supplies
   { value: "iv_set", label: "IV Set", unit: "Pieces", priceUnit: "Per Piece" },
