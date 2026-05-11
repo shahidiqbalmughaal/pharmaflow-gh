@@ -42,8 +42,17 @@ export const SELLING_TYPES = [
   { value: "foam", label: "Foam", unit: "Units", priceUnit: "Per Unit" },
   { value: "patch", label: "Patch", unit: "Units", priceUnit: "Per Unit" },
   { value: "shampoo", label: "Shampoo", unit: "Units", priceUnit: "Per Unit" },
+  { value: "conditioner", label: "Conditioner", unit: "Units", priceUnit: "Per Unit" },
   { value: "soap", label: "Soap", unit: "Pieces", priceUnit: "Per Piece" },
   { value: "bar", label: "Bar", unit: "Pieces", priceUnit: "Per Piece" },
+  { value: "face_wash", label: "Face Wash", unit: "Units", priceUnit: "Per Unit" },
+  { value: "sunscreen", label: "Sunscreen", unit: "Units", priceUnit: "Per Unit" },
+  { value: "emollient_cream", label: "Emollient Cream", unit: "Units", priceUnit: "Per Unit" },
+  { value: "moisturizing_cream", label: "Moisturizing Cream", unit: "Units", priceUnit: "Per Unit" },
+  { value: "anti_fungal_cream", label: "Anti-Fungal Cream", unit: "Units", priceUnit: "Per Unit" },
+  { value: "acne_cream", label: "Acne Cream", unit: "Units", priceUnit: "Per Unit" },
+  { value: "mouth_wash", label: "Mouth Wash", unit: "Units", priceUnit: "Per Unit" },
+  { value: "dental_gel", label: "Dental Gel", unit: "Units", priceUnit: "Per Unit" },
   
   // Injectables
   { value: "injection", label: "Injection", unit: "Units", priceUnit: "Per Unit" },
@@ -59,6 +68,19 @@ export const SELLING_TYPES = [
   { value: "suppository", label: "Suppository", unit: "Units", priceUnit: "Per Unit" },
   { value: "pessary", label: "Pessary", unit: "Units", priceUnit: "Per Unit" },
   { value: "enema", label: "Enema", unit: "Units", priceUnit: "Per Unit" },
+  { value: "feminine_hygiene_wash", label: "Feminine Hygiene Wash", unit: "Units", priceUnit: "Per Unit" },
+  { value: "intimate_wash", label: "Intimate Wash", unit: "Units", priceUnit: "Per Unit" },
+
+  // Baby Care
+  { value: "baby_lotion", label: "Baby Lotion", unit: "Units", priceUnit: "Per Unit" },
+  { value: "baby_powder", label: "Baby Powder", unit: "Units", priceUnit: "Per Unit" },
+  { value: "baby_oil", label: "Baby Oil", unit: "Units", priceUnit: "Per Unit" },
+  { value: "baby_shampoo", label: "Baby Shampoo", unit: "Units", priceUnit: "Per Unit" },
+  { value: "diaper_cream", label: "Diaper Cream", unit: "Units", priceUnit: "Per Unit" },
+
+  // Hair Care
+  { value: "hair_oil", label: "Hair Oil", unit: "Units", priceUnit: "Per Unit" },
+  { value: "hair_serum", label: "Hair Serum", unit: "Units", priceUnit: "Per Unit" },
   
   // Medical Supplies
   { value: "iv_set", label: "IV Set", unit: "Pieces", priceUnit: "Per Piece" },
@@ -70,7 +92,16 @@ export const SELLING_TYPES = [
   { value: "cotton", label: "Cotton", unit: "Pieces", priceUnit: "Per Piece" },
   { value: "plaster", label: "Plaster", unit: "Pieces", priceUnit: "Per Piece" },
   { value: "mask", label: "Mask", unit: "Pieces", priceUnit: "Per Piece" },
-  
+  { value: "cotton_roll", label: "Cotton Roll", unit: "Pieces", priceUnit: "Per Piece" },
+  { value: "surgical_tape", label: "Surgical Tape", unit: "Pieces", priceUnit: "Per Piece" },
+  { value: "gauze", label: "Gauze", unit: "Pieces", priceUnit: "Per Piece" },
+  { value: "gloves", label: "Gloves", unit: "Pieces", priceUnit: "Per Piece" },
+
+  // Nutrition / Wellness
+  { value: "protein_powder", label: "Protein Powder", unit: "Units", priceUnit: "Per Unit" },
+  { value: "energy_drink", label: "Energy Drink", unit: "Units", priceUnit: "Per Unit" },
+  { value: "vitamin_gummies", label: "Vitamin Gummies", unit: "Units", priceUnit: "Per Unit" },
+
   // Miscellaneous
   { value: "toothbrush", label: "Toothbrush", unit: "Pieces", priceUnit: "Per Piece" },
   { value: "toothpaste", label: "Toothpaste", unit: "Pieces", priceUnit: "Per Piece" },
@@ -232,6 +263,27 @@ export const EXPIRY_REQUIRED_TYPES: SellingType[] = [
   "herbal_brain_memory",
   "herbal_sleep_stress",
   "herbal_kids_health",
+  "face_wash",
+  "sunscreen",
+  "emollient_cream",
+  "moisturizing_cream",
+  "anti_fungal_cream",
+  "acne_cream",
+  "mouth_wash",
+  "dental_gel",
+  "feminine_hygiene_wash",
+  "intimate_wash",
+  "baby_lotion",
+  "baby_powder",
+  "baby_oil",
+  "baby_shampoo",
+  "diaper_cream",
+  "hair_oil",
+  "hair_serum",
+  "conditioner",
+  "protein_powder",
+  "energy_drink",
+  "vitamin_gummies",
 ];
 
 // Non-drug items where expiry is optional
@@ -250,6 +302,10 @@ export const EXPIRY_OPTIONAL_TYPES: SellingType[] = [
   "toothbrush",
   "toothpaste",
   "sugar_strip",
+  "cotton_roll",
+  "surgical_tape",
+  "gauze",
+  "gloves",
 ];
 
 // Helper functions
