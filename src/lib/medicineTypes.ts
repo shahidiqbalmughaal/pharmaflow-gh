@@ -92,7 +92,16 @@ export const SELLING_TYPES = [
   { value: "cotton", label: "Cotton", unit: "Pieces", priceUnit: "Per Piece" },
   { value: "plaster", label: "Plaster", unit: "Pieces", priceUnit: "Per Piece" },
   { value: "mask", label: "Mask", unit: "Pieces", priceUnit: "Per Piece" },
-  
+  { value: "cotton_roll", label: "Cotton Roll", unit: "Pieces", priceUnit: "Per Piece" },
+  { value: "surgical_tape", label: "Surgical Tape", unit: "Pieces", priceUnit: "Per Piece" },
+  { value: "gauze", label: "Gauze", unit: "Pieces", priceUnit: "Per Piece" },
+  { value: "gloves", label: "Gloves", unit: "Pieces", priceUnit: "Per Piece" },
+
+  // Nutrition / Wellness
+  { value: "protein_powder", label: "Protein Powder", unit: "Units", priceUnit: "Per Unit" },
+  { value: "energy_drink", label: "Energy Drink", unit: "Units", priceUnit: "Per Unit" },
+  { value: "vitamin_gummies", label: "Vitamin Gummies", unit: "Units", priceUnit: "Per Unit" },
+
   // Miscellaneous
   { value: "toothbrush", label: "Toothbrush", unit: "Pieces", priceUnit: "Per Piece" },
   { value: "toothpaste", label: "Toothpaste", unit: "Pieces", priceUnit: "Per Piece" },
