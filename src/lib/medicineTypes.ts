@@ -42,8 +42,17 @@ export const SELLING_TYPES = [
   { value: "foam", label: "Foam", unit: "Units", priceUnit: "Per Unit" },
   { value: "patch", label: "Patch", unit: "Units", priceUnit: "Per Unit" },
   { value: "shampoo", label: "Shampoo", unit: "Units", priceUnit: "Per Unit" },
+  { value: "conditioner", label: "Conditioner", unit: "Units", priceUnit: "Per Unit" },
   { value: "soap", label: "Soap", unit: "Pieces", priceUnit: "Per Piece" },
   { value: "bar", label: "Bar", unit: "Pieces", priceUnit: "Per Piece" },
+  { value: "face_wash", label: "Face Wash", unit: "Units", priceUnit: "Per Unit" },
+  { value: "sunscreen", label: "Sunscreen", unit: "Units", priceUnit: "Per Unit" },
+  { value: "emollient_cream", label: "Emollient Cream", unit: "Units", priceUnit: "Per Unit" },
+  { value: "moisturizing_cream", label: "Moisturizing Cream", unit: "Units", priceUnit: "Per Unit" },
+  { value: "anti_fungal_cream", label: "Anti-Fungal Cream", unit: "Units", priceUnit: "Per Unit" },
+  { value: "acne_cream", label: "Acne Cream", unit: "Units", priceUnit: "Per Unit" },
+  { value: "mouth_wash", label: "Mouth Wash", unit: "Units", priceUnit: "Per Unit" },
+  { value: "dental_gel", label: "Dental Gel", unit: "Units", priceUnit: "Per Unit" },
   
   // Injectables
   { value: "injection", label: "Injection", unit: "Units", priceUnit: "Per Unit" },
