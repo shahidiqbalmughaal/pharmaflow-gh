@@ -683,6 +683,24 @@ export type Database = {
         }
         Relationships: []
       }
+      product_category_catalog: {
+        Row: {
+          category: string
+          created_at: string
+          product_type: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          product_type: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          product_type?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
