@@ -312,6 +312,24 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
                     </Label>
                   </div>
                 </div>
+                {availableCategories.length > 0 && (
+                  <div className="space-y-2 col-span-2">
+                    <Label htmlFor="product_category">Product Category {productType === 'herbal_medicine' ? '*' : '(Optional)'}</Label>
+                    <Select
+                      value={watchedProductCategory || ""}
+                      onValueChange={(val) => setValue("product_category", val)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {availableCategories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </>
             )}
 
