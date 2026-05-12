@@ -40,16 +40,26 @@ interface QuickProductSearchProps {
 
 export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedTerm, setDebouncedTerm] = useState('');
   const [searchType, setSearchType] = useState<'all' | 'medicine' | 'cosmetic'>('all');
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Debounce searchTerm to avoid query on every keystroke
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedTerm(searchTerm.trim()), 120);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchTerm]);
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ['quickProductSearch', searchTerm, searchType],
+    queryKey: ['quickProductSearch', debouncedTerm, searchType],
     queryFn: async () => {
-      if (!searchTerm.trim() || searchTerm.length < 2) return [];
+      if (!debouncedTerm || debouncedTerm.length < 2) return [];
+      const searchValue = debouncedTerm;
       
       const results: Product[] = [];
 
