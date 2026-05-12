@@ -70,7 +70,7 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
         let query = supabase
           .from('medicines')
           .select('id, medicine_name, batch_no, company_name, quantity, selling_price, purchase_price, rack_no, expiry_date, selling_type, tablets_per_packet, price_per_packet')
-          .or(`medicine_name.ilike.%${searchTerm}%,batch_no.ilike.%${searchTerm}%`)
+          .or(`medicine_name.ilike.%${searchValue}%,batch_no.ilike.%${searchValue}%`)
           .gt('quantity', 0)
           .order('medicine_name')
           .limit(searchType === 'all' ? 5 : 8);
