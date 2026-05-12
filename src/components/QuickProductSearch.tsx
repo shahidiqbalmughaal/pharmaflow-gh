@@ -106,7 +106,10 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
 
       return results;
     },
-    enabled: searchTerm.length >= 2,
+    enabled: debouncedTerm.length >= 2,
+    staleTime: 30_000,
+    gcTime: 300_000,
+    placeholderData: (prev) => prev,
   });
 
   // Global keyboard shortcut (Ctrl+K or Cmd+K)
