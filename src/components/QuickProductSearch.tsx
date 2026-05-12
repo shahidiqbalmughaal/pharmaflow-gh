@@ -40,16 +40,26 @@ interface QuickProductSearchProps {
 
 export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedTerm, setDebouncedTerm] = useState('');
   const [searchType, setSearchType] = useState<'all' | 'medicine' | 'cosmetic'>('all');
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Debounce searchTerm to avoid query on every keystroke
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedTerm(searchTerm.trim()), 120);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchTerm]);
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ['quickProductSearch', searchTerm, searchType],
+    queryKey: ['quickProductSearch', debouncedTerm, searchType],
     queryFn: async () => {
-      if (!searchTerm.trim() || searchTerm.length < 2) return [];
+      if (!debouncedTerm || debouncedTerm.length < 2) return [];
+      const searchValue = debouncedTerm;
       
       const results: Product[] = [];
 
@@ -60,7 +70,7 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
         let query = supabase
           .from('medicines')
           .select('id, medicine_name, batch_no, company_name, quantity, selling_price, purchase_price, rack_no, expiry_date, selling_type, tablets_per_packet, price_per_packet')
-          .or(`medicine_name.ilike.%${searchTerm}%,batch_no.ilike.%${searchTerm}%`)
+          .or(`medicine_name.ilike.%${searchValue}%,batch_no.ilike.%${searchValue}%`)
           .gt('quantity', 0)
           .order('medicine_name')
           .limit(searchType === 'all' ? 5 : 8);
@@ -82,7 +92,7 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
         const { data: cosmetics, error: cosError } = await supabase
           .from('cosmetics')
           .select('id, product_name, batch_no, brand, quantity, selling_price, purchase_price, rack_no, expiry_date')
-          .or(`product_name.ilike.%${searchTerm}%,batch_no.ilike.%${searchTerm}%`)
+          .or(`product_name.ilike.%${searchValue}%,batch_no.ilike.%${searchValue}%`)
           .gt('quantity', 0)
           .order('product_name')
           .limit(searchType === 'all' ? 5 : 8);
@@ -96,7 +106,10 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
 
       return results;
     },
-    enabled: searchTerm.length >= 2,
+    enabled: debouncedTerm.length >= 2,
+    staleTime: 30_000,
+    gcTime: 300_000,
+    placeholderData: (prev) => prev,
   });
 
   // Global keyboard shortcut (Ctrl+K or Cmd+K)
