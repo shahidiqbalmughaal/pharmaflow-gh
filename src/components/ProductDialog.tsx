@@ -317,24 +317,72 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
                     </Label>
                   </div>
                 </div>
-                {availableCategories.length > 0 && (
-                  <div className="space-y-2 col-span-2">
-                    <Label htmlFor="product_category">Product Category {productType === 'herbal_medicine' ? '*' : '(Optional)'}</Label>
-                    <Select
-                      value={watchedProductCategory || ""}
-                      onValueChange={(val) => setValue("product_category", val)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[300px]">
-                        {availableCategories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                {productType === 'herbal_medicine' && availableCategories.length > 0 && (() => {
+                  const categoryValue = watchedProductCategory || "";
+                  const isInvalid = categoryValue.length > 0 && !availableCategories.includes(categoryValue);
+                  const isMissing = !categoryValue;
+                  // Register field for RHF required validation
+                  register("product_category", {
+                    validate: (val) => {
+                      if (!val) return "Product category is required";
+                      if (!availableCategories.includes(val)) return "Selected category is not in the catalog";
+                      return true;
+                    },
+                  });
+                  return (
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="product_category">Product Category *</Label>
+                      <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={categoryPopoverOpen}
+                            className={cn(
+                              "w-full justify-between font-normal",
+                              !categoryValue && "text-muted-foreground",
+                              (isInvalid || (errors.product_category && isMissing)) && "border-destructive"
+                            )}
+                          >
+                            {categoryValue || "Search and select category..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Type to search category..." />
+                            <CommandList className="max-h-[280px]">
+                              <CommandEmpty>No matching category found.</CommandEmpty>
+                              <CommandGroup>
+                                {availableCategories.map((cat) => (
+                                  <CommandItem
+                                    key={cat}
+                                    value={cat}
+                                    onSelect={(val) => {
+                                      const matched = availableCategories.find(c => c.toLowerCase() === val.toLowerCase()) || val;
+                                      setValue("product_category", matched, { shouldValidate: true });
+                                      setCategoryPopoverOpen(false);
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", categoryValue === cat ? "opacity-100" : "opacity-0")} />
+                                    {cat}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      {isInvalid && (
+                        <p className="text-sm text-destructive">Selected category is not in the catalog. Please pick from the list.</p>
+                      )}
+                      {errors.product_category && !isInvalid && (
+                        <p className="text-sm text-destructive">{errors.product_category.message as string}</p>
+                      )}
+                    </div>
+                  );
+                })()}
               </>
             )}
 
