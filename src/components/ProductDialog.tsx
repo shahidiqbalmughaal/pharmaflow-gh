@@ -24,7 +24,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { SearchableCategoryCombobox } from "@/components/SearchableCategoryCombobox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { toMedicineRecord, toCosmeticRecord } from "@/lib/productTypes";
 
@@ -41,6 +44,7 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
   const { categories, getSubcategories } = useCosmeticCategories();
   const [productType, setProductType] = useState<ProductType>(defaultType);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm();
 
@@ -177,34 +181,7 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
     },
   });
 
-  const isEditing = !!product;
-  const availableCategories = getCategoriesForType(productType);
-
-  // Register product_category with RHF so submit blocks on missing/invalid values.
-  // Required for medicine + herbal_medicine; cosmetics use category_id/subcategory_id instead.
-  const requireCategory = productType === 'medicine' || productType === 'herbal_medicine';
-  register("product_category", {
-    validate: (val) => {
-      if (!requireCategory) return true;
-      if (!val) return "Product category is required";
-      if (!availableCategories.includes(val)) return "Selected category is not in the catalog";
-      return true;
-    },
-  });
-
   const onSubmit = (data: any) => {
-    // Hard guard: block save if category missing or not in catalog (defense in depth)
-    if (requireCategory) {
-      const cat = (data.product_category || "").toString();
-      if (!cat) {
-        toast.error("Product category is required");
-        return;
-      }
-      if (!availableCategories.includes(cat)) {
-        toast.error("Selected product category is not in the catalog. Please pick from the list.");
-        return;
-      }
-    }
     data.quantity = Number(data.quantity);
     data.purchase_price = Number(data.purchase_price);
     data.selling_price = Number(data.selling_price);
@@ -213,6 +190,9 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
     if (data.price_per_packet) data.price_per_packet = Number(data.price_per_packet);
     saveMutation.mutate(data);
   };
+
+  const isEditing = !!product;
+  const availableCategories = getCategoriesForType(productType);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -337,19 +317,72 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
                     </Label>
                   </div>
                 </div>
-                {availableCategories.length > 0 && (
-                  <div className="col-span-2">
-                    <SearchableCategoryCombobox
-                      id="product_category"
-                      label="Product Category"
-                      required
-                      value={watchedProductCategory || ""}
-                      onChange={(val) => setValue("product_category", val, { shouldValidate: true })}
-                      options={availableCategories}
-                      errorMessage={errors.product_category?.message as string | undefined}
-                    />
-                  </div>
-                )}
+                {productType === 'herbal_medicine' && availableCategories.length > 0 && (() => {
+                  const categoryValue = watchedProductCategory || "";
+                  const isInvalid = categoryValue.length > 0 && !availableCategories.includes(categoryValue);
+                  const isMissing = !categoryValue;
+                  // Register field for RHF required validation
+                  register("product_category", {
+                    validate: (val) => {
+                      if (!val) return "Product category is required";
+                      if (!availableCategories.includes(val)) return "Selected category is not in the catalog";
+                      return true;
+                    },
+                  });
+                  return (
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="product_category">Product Category *</Label>
+                      <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={categoryPopoverOpen}
+                            className={cn(
+                              "w-full justify-between font-normal",
+                              !categoryValue && "text-muted-foreground",
+                              (isInvalid || (errors.product_category && isMissing)) && "border-destructive"
+                            )}
+                          >
+                            {categoryValue || "Search and select category..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Type to search category..." />
+                            <CommandList className="max-h-[280px]">
+                              <CommandEmpty>No matching category found.</CommandEmpty>
+                              <CommandGroup>
+                                {availableCategories.map((cat) => (
+                                  <CommandItem
+                                    key={cat}
+                                    value={cat}
+                                    onSelect={(val) => {
+                                      const matched = availableCategories.find(c => c.toLowerCase() === val.toLowerCase()) || val;
+                                      setValue("product_category", matched, { shouldValidate: true });
+                                      setCategoryPopoverOpen(false);
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", categoryValue === cat ? "opacity-100" : "opacity-0")} />
+                                    {cat}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      {isInvalid && (
+                        <p className="text-sm text-destructive">Selected category is not in the catalog. Please pick from the list.</p>
+                      )}
+                      {errors.product_category && !isInvalid && (
+                        <p className="text-sm text-destructive">{errors.product_category.message as string}</p>
+                      )}
+                    </div>
+                  );
+                })()}
               </>
             )}
 
