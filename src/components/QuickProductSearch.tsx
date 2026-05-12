@@ -92,7 +92,7 @@ export function QuickProductSearch({ onSelectProduct }: QuickProductSearchProps)
         const { data: cosmetics, error: cosError } = await supabase
           .from('cosmetics')
           .select('id, product_name, batch_no, brand, quantity, selling_price, purchase_price, rack_no, expiry_date')
-          .or(`product_name.ilike.%${searchTerm}%,batch_no.ilike.%${searchTerm}%`)
+          .or(`product_name.ilike.%${searchValue}%,batch_no.ilike.%${searchValue}%`)
           .gt('quantity', 0)
           .order('product_name')
           .limit(searchType === 'all' ? 5 : 8);
