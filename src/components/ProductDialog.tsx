@@ -177,7 +177,34 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
     },
   });
 
+  const isEditing = !!product;
+  const availableCategories = getCategoriesForType(productType);
+
+  // Register product_category with RHF so submit blocks on missing/invalid values.
+  // Required for medicine + herbal_medicine; cosmetics use category_id/subcategory_id instead.
+  const requireCategory = productType === 'medicine' || productType === 'herbal_medicine';
+  register("product_category", {
+    validate: (val) => {
+      if (!requireCategory) return true;
+      if (!val) return "Product category is required";
+      if (!availableCategories.includes(val)) return "Selected category is not in the catalog";
+      return true;
+    },
+  });
+
   const onSubmit = (data: any) => {
+    // Hard guard: block save if category missing or not in catalog (defense in depth)
+    if (requireCategory) {
+      const cat = (data.product_category || "").toString();
+      if (!cat) {
+        toast.error("Product category is required");
+        return;
+      }
+      if (!availableCategories.includes(cat)) {
+        toast.error("Selected product category is not in the catalog. Please pick from the list.");
+        return;
+      }
+    }
     data.quantity = Number(data.quantity);
     data.purchase_price = Number(data.purchase_price);
     data.selling_price = Number(data.selling_price);
@@ -186,9 +213,6 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
     if (data.price_per_packet) data.price_per_packet = Number(data.price_per_packet);
     saveMutation.mutate(data);
   };
-
-  const isEditing = !!product;
-  const availableCategories = getCategoriesForType(productType);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
