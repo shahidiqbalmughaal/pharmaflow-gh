@@ -41,7 +41,6 @@ export function ProductDialog({ open, onClose, product, defaultType = 'medicine'
   const { categories, getSubcategories } = useCosmeticCategories();
   const [productType, setProductType] = useState<ProductType>(defaultType);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
-  const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm();
 
