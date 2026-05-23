@@ -88,7 +88,7 @@ const Products = () => {
   // Debounce search
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    timerRef.current = setTimeout(() => setDebouncedSearch(searchQuery), 150);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [searchQuery]);
 
