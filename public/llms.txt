@@ -1,0 +1,8 @@
+# Al-Rehman Pharmacy & Cosmetics
+
+> Internal management system for Al-Rehman Pharmacy & Cosmetics shops — handles inventory, sales, expenses, returns, customers and reporting. Most pages require staff authentication.
+
+## Pages
+
+- [Sign in](/login): Staff sign-in page.
+- [Sign up](/signup): Request a staff account.
