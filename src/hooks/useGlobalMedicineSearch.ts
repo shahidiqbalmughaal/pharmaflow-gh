@@ -7,7 +7,7 @@ interface UseGlobalMedicineSearchOptions {
   debounceMs?: number;
 }
 
-export function useGlobalMedicineSearch({ enabled = false, debounceMs = 250 }: UseGlobalMedicineSearchOptions = {}) {
+export function useGlobalMedicineSearch({ enabled = false, debounceMs = 150 }: UseGlobalMedicineSearchOptions = {}) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
