@@ -22,29 +22,33 @@ export function useGlobalMedicineSearch({ enabled = false, debounceMs = 150 }: U
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [searchQuery, debounceMs]);
 
-  // Only query when search is active and has content
-  const shouldSearch = enabled && debouncedQuery.trim().length > 0;
+  // Only query when search is active and has at least 2 characters (avoids 1-letter wildcard scans)
+  const shouldSearch = enabled && debouncedQuery.trim().length >= 2;
 
   const { data: searchResults, isLoading: isSearchLoading, error } = useQuery({
     queryKey: ['medicines-global-search', debouncedQuery],
     queryFn: async () => {
-      if (!debouncedQuery.trim()) return [];
-      
-      const query = debouncedQuery.toLowerCase();
-      
+      const q = debouncedQuery.trim();
+      if (!q) return [];
+
+      const like = q.replace(/[%_]/g, '\\$&');
+
       const { data, error } = await supabase
         .from('medicines')
         .select('*')
-        .or(`medicine_name.ilike.%${query}%,batch_no.ilike.%${query}%,company_name.ilike.%${query}%,barcode.ilike.%${query}%`)
+        .or(
+          `medicine_name.ilike.%${like}%,batch_no.ilike.%${like}%,company_name.ilike.%${like}%,barcode.ilike.${like}%`
+        )
         .order('medicine_name')
-        .limit(500);
-      
+        .limit(200);
+
       if (error) throw error;
       return data || [];
     },
     enabled: shouldSearch,
     staleTime: 60000,
     gcTime: 300000,
+    placeholderData: (prev) => prev,
   });
 
   const handleSearchChange = useCallback((value: string) => {
