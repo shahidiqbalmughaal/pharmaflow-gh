@@ -32,10 +32,13 @@ export function useRealtimeInventory({
           filter: `shop_id=eq.${currentShop.shop_id}`,
         },
         (payload) => {
-          // Invalidate queries to refresh data
-          queryClient.invalidateQueries({ queryKey });
-          // Also invalidate count query for pagination
-          queryClient.invalidateQueries({ queryKey: [`${tableName}-count`] });
+          // Force-refetch active queries so edits/inserts/deletes appear instantly,
+          // bypassing any staleTime gating.
+          queryClient.invalidateQueries({ queryKey, refetchType: 'active' });
+          queryClient.invalidateQueries({ queryKey: [`${tableName}-count`], refetchType: 'active' });
+          // Also refresh unified Products page queries when on that screen.
+          queryClient.invalidateQueries({ queryKey: [`products-${tableName}`], refetchType: 'active' });
+          queryClient.invalidateQueries({ queryKey: [`products-${tableName}-count`], refetchType: 'active' });
           // Show notification based on event type
           if (showNotifications) {
             const itemName = payload.new && typeof payload.new === 'object' 
