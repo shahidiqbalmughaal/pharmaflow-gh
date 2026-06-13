@@ -85,10 +85,10 @@ const Products = () => {
   const { currentShop } = useShop();
   const { categories, getSubcategories, getCategoryName, getSubcategoryName } = useCosmeticCategories();
 
-  // Debounce search
+  // Debounce search (250ms — balances responsiveness and request volume)
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setDebouncedSearch(searchQuery), 150);
+    timerRef.current = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 250);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [searchQuery]);
 
