@@ -123,21 +123,22 @@ const Products = () => {
     },
   });
 
-  // Search medicines globally (min 2 chars; barcode uses prefix match for index speed)
+  // Search medicines globally: min 2 chars, top 30 matches, trigram + barcode prefix indexed
   const { data: medSearchResults } = useQuery({
     queryKey: ['products-med-search', debouncedSearch],
     queryFn: async () => {
       const q = debouncedSearch.trim();
       if (q.length < 2) return [];
-      const like = q.replace(/[%_]/g, '\\$&');
+      const like = q.replace(/[%_\\]/g, '\\$&');
       const { data, error } = await supabase.from('medicines').select('*')
         .or(`medicine_name.ilike.%${like}%,batch_no.ilike.%${like}%,company_name.ilike.%${like}%,barcode.ilike.${like}%`)
-        .order('medicine_name').limit(200);
+        .order('medicine_name').limit(30);
       if (error) throw error;
       return data || [];
     },
     enabled: debouncedSearch.trim().length >= 2,
-    staleTime: 30000,
+    staleTime: 60_000,
+    gcTime: 300_000,
     placeholderData: (prev) => prev,
   });
 
